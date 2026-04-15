@@ -1,0 +1,1173 @@
+import type { Course } from "../types";
+
+export const COURSES: Course[] = [
+  // Photography
+  {
+    id: "photo-fundamentals",
+    title: "Photography Fundamentals",
+    category: "photography",
+    mode: "hybrid",
+    image:
+      "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=600&q=80",
+    description:
+      "Master the basics of photography — composition, exposure, and storytelling through the lens.",
+    duration: "4 weeks",
+    price: 5,
+    instructor: "Ruchitha B S",
+    syllabusHighlights: [
+      "Camera basics",
+      "Exposure triangle",
+      "Composition rules",
+      "Lighting fundamentals",
+    ],
+    totalStudents: 248,
+    rating: 4.9,
+  },
+  {
+    id: "lighting-mastery",
+    title: "Lighting Mastery",
+    category: "photography",
+    mode: "offline",
+    image:
+      "https://images.unsplash.com/photo-1542038784456-1ea8e935640e?w=600&q=80",
+    description:
+      "From natural light to studio setups — learn to sculpt light like a professional.",
+    duration: "3 weeks",
+    price: 5,
+    instructor: "Ashitha S",
+    syllabusHighlights: [
+      "Natural light",
+      "Studio lighting",
+      "Flash techniques",
+      "Colour temperature",
+    ],
+    totalStudents: 189,
+    rating: 4.8,
+  },
+  {
+    id: "portrait-photography",
+    title: "Portrait Photography",
+    category: "photography",
+    mode: "hybrid",
+    image:
+      "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=600&q=80",
+    description:
+      "Create compelling portraits that capture personality and emotion.",
+    duration: "4 weeks",
+    price: 5,
+    instructor: "Prarthana R",
+    syllabusHighlights: [
+      "Posing techniques",
+      "Expression coaching",
+      "Retouching portraits",
+      "Studio vs outdoor",
+    ],
+    totalStudents: 312,
+    rating: 4.9,
+  },
+  {
+    id: "wedding-photography",
+    title: "Wedding Photography",
+    category: "photography",
+    mode: "hybrid",
+    image:
+      "https://images.unsplash.com/photo-1519741497674-611481863552?w=600&q=80",
+    description:
+      "Professional wedding photography from preparation to reception.",
+    duration: "6 weeks",
+    price: 5,
+    instructor: "Ruchitha B S",
+    syllabusHighlights: [
+      "Pre-shoot planning",
+      "Ceremony coverage",
+      "Candid techniques",
+      "Post-processing",
+    ],
+    totalStudents: 425,
+    rating: 5.0,
+  },
+  {
+    id: "fashion-photography",
+    title: "Fashion Photography",
+    category: "photography",
+    mode: "offline",
+    image:
+      "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=600&q=80",
+    description:
+      "High-fashion photography for editorial, lookbooks, and brand campaigns.",
+    duration: "5 weeks",
+    price: 5,
+    instructor: "Ashitha S",
+    syllabusHighlights: [
+      "Fashion lighting",
+      "Model direction",
+      "Editorial styling",
+      "Post-processing",
+    ],
+    totalStudents: 156,
+    rating: 4.7,
+  },
+  {
+    id: "street-photography",
+    title: "Street Photography",
+    category: "photography",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=600&q=80",
+    description:
+      "Capture authentic urban life with decisive moments and storytelling.",
+    duration: "3 weeks",
+    price: 5,
+    instructor: "Prarthana R",
+    syllabusHighlights: [
+      "The decisive moment",
+      "Urban composition",
+      "Ethical practice",
+      "Documentary approach",
+    ],
+    totalStudents: 198,
+    rating: 4.6,
+  },
+  {
+    id: "landscape-photography",
+    title: "Landscape Photography",
+    category: "photography",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80",
+    description:
+      "Stunning landscape and nature photography from golden hour to night sky.",
+    duration: "4 weeks",
+    price: 5,
+    instructor: "Ruchitha B S",
+    syllabusHighlights: [
+      "Golden hour",
+      "Long exposure",
+      "ND filters",
+      "Composition in nature",
+    ],
+    totalStudents: 221,
+    rating: 4.8,
+  },
+  {
+    id: "product-photography-course",
+    title: "Product Photography",
+    category: "photography",
+    mode: "hybrid",
+    image:
+      "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80",
+    description:
+      "Commercial product photography for e-commerce and advertising.",
+    duration: "3 weeks",
+    price: 5,
+    instructor: "Ashitha S",
+    syllabusHighlights: [
+      "Light box setup",
+      "Reflections control",
+      "Lifestyle photography",
+      "Batch editing",
+    ],
+    totalStudents: 167,
+    rating: 4.7,
+  },
+  {
+    id: "food-photography-course",
+    title: "Food Photography",
+    category: "photography",
+    mode: "offline",
+    image:
+      "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80",
+    description:
+      "Appetizing food photography for restaurants, menus, and food brands.",
+    duration: "2 weeks",
+    price: 5,
+    instructor: "Prarthana R",
+    syllabusHighlights: [
+      "Food styling",
+      "Overhead shots",
+      "Natural vs artificial light",
+      "Color grading food",
+    ],
+    totalStudents: 143,
+    rating: 4.8,
+  },
+  {
+    id: "architectural-photography",
+    title: "Architectural Photography",
+    category: "photography",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1486325212027-8081e485255e?w=600&q=80",
+    description:
+      "Capture buildings and spaces with technical precision and artistic vision.",
+    duration: "3 weeks",
+    price: 5,
+    instructor: "Ruchitha B S",
+    syllabusHighlights: [
+      "Perspective control",
+      "Interior lighting",
+      "HDR techniques",
+      "Real estate workflow",
+    ],
+    totalStudents: 98,
+    rating: 4.5,
+  },
+  {
+    id: "night-long-exposure",
+    title: "Night & Long Exposure",
+    category: "photography",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1502134249126-9f3755a50d78?w=600&q=80",
+    description:
+      "Magical long exposure photography — light trails, star trails, and cityscapes at night.",
+    duration: "2 weeks",
+    price: 5,
+    instructor: "Ashitha S",
+    syllabusHighlights: [
+      "Tripod mastery",
+      "Bulb mode",
+      "Light painting",
+      "Noise reduction",
+    ],
+    totalStudents: 134,
+    rating: 4.7,
+  },
+  {
+    id: "bw-photography",
+    title: "Black & White Photography",
+    category: "photography",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=600&q=80",
+    description:
+      "The timeless art of black and white photography — tones, contrast, and emotion.",
+    duration: "2 weeks",
+    price: 5,
+    instructor: "Prarthana R",
+    syllabusHighlights: [
+      "Zone system",
+      "Film simulation",
+      "Darkroom tones",
+      "Printing for B&W",
+    ],
+    totalStudents: 112,
+    rating: 4.6,
+  },
+  {
+    id: "mobile-photography",
+    title: "Mobile Photography",
+    category: "photography",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=600&q=80",
+    description:
+      "Capture stunning images with your smartphone — tools, apps, and creative techniques.",
+    duration: "2 weeks",
+    price: 5,
+    instructor: "Ruchitha B S",
+    syllabusHighlights: [
+      "Pro mode mastery",
+      "Composition on mobile",
+      "Editing apps",
+      "Social media ready",
+    ],
+    totalStudents: 389,
+    rating: 4.8,
+  },
+  {
+    id: "photo-composition",
+    title: "Photo Composition & Framing",
+    category: "photography",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1455165814004-1126a7199f9b?w=600&q=80",
+    description:
+      "Mastering visual composition for compelling and memorable photographs.",
+    duration: "2 weeks",
+    price: 5,
+    instructor: "Ashitha S",
+    syllabusHighlights: [
+      "Rule of thirds",
+      "Leading lines",
+      "Negative space",
+      "Visual balance",
+    ],
+    totalStudents: 267,
+    rating: 4.9,
+  },
+  {
+    id: "camera-settings-mastery",
+    title: "Camera Settings Mastery",
+    category: "photography",
+    mode: "hybrid",
+    image:
+      "https://images.unsplash.com/photo-1582979512210-99b6a53386f9?w=600&q=80",
+    description:
+      "Deep dive into every camera setting and mode — from auto to full manual control.",
+    duration: "3 weeks",
+    price: 5,
+    instructor: "Prarthana R",
+    syllabusHighlights: [
+      "Manual mode",
+      "Custom settings",
+      "Metering modes",
+      "Focus systems",
+    ],
+    totalStudents: 334,
+    rating: 4.9,
+  },
+
+  // Videography & Film
+  {
+    id: "videography-basics",
+    title: "Videography Basics",
+    category: "videography",
+    mode: "hybrid",
+    image:
+      "https://images.unsplash.com/photo-1601520493833-ab2a1c8c6e22?w=600&q=80",
+    description:
+      "Everything you need to start filming professional-quality videos.",
+    duration: "4 weeks",
+    price: 5,
+    instructor: "Ruchitha B S",
+    syllabusHighlights: [
+      "Video settings",
+      "Audio basics",
+      "Shot types",
+      "Movement techniques",
+    ],
+    totalStudents: 276,
+    rating: 4.8,
+  },
+  {
+    id: "dslr-video",
+    title: "DSLR Video Production",
+    category: "videography",
+    mode: "offline",
+    image:
+      "https://images.unsplash.com/photo-1535016120720-40c646be5580?w=600&q=80",
+    description:
+      "Cinema-quality video production using DSLR and mirrorless cameras.",
+    duration: "5 weeks",
+    price: 5,
+    instructor: "Ashitha S",
+    syllabusHighlights: [
+      "Cinematic look",
+      "Log profiles",
+      "Audio sync",
+      "Gimbal operation",
+    ],
+    totalStudents: 198,
+    rating: 4.7,
+  },
+  {
+    id: "short-film-direction",
+    title: "Short Film Direction",
+    category: "videography",
+    mode: "offline",
+    image:
+      "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=600&q=80",
+    description:
+      "Direct, produce, and deliver compelling short films from concept to screen.",
+    duration: "8 weeks",
+    price: 5,
+    instructor: "Prarthana R",
+    syllabusHighlights: [
+      "Screenplay basics",
+      "Shot lists",
+      "Directing actors",
+      "Post-production workflow",
+    ],
+    totalStudents: 87,
+    rating: 4.9,
+  },
+  {
+    id: "cinematic-storytelling",
+    title: "Cinematic Storytelling",
+    category: "videography",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=600&q=80",
+    description:
+      "Craft visual narratives that captivate audiences through cinematic language.",
+    duration: "4 weeks",
+    price: 5,
+    instructor: "Ruchitha B S",
+    syllabusHighlights: [
+      "Visual narrative",
+      "Pacing",
+      "Music selection",
+      "Colour story",
+    ],
+    totalStudents: 156,
+    rating: 4.8,
+  },
+  {
+    id: "documentary-filmmaking",
+    title: "Documentary Filmmaking",
+    category: "videography",
+    mode: "hybrid",
+    image:
+      "https://images.unsplash.com/photo-1563394480-a7835e72ce22?w=600&q=80",
+    description: "Create powerful documentary films that inspire and inform.",
+    duration: "6 weeks",
+    price: 5,
+    instructor: "Ashitha S",
+    syllabusHighlights: [
+      "Research methods",
+      "Interview techniques",
+      "Cinéma vérité",
+      "Ethical storytelling",
+    ],
+    totalStudents: 65,
+    rating: 4.7,
+  },
+  {
+    id: "drone-photography-videography",
+    title: "Drone Photography & Videography",
+    category: "videography",
+    mode: "offline",
+    image:
+      "https://images.unsplash.com/photo-1508614589041-895b88991e3e?w=600&q=80",
+    description:
+      "Aerial imaging mastery — from regulations to cinematic drone shots.",
+    duration: "3 weeks",
+    price: 5,
+    instructor: "Prarthana R",
+    syllabusHighlights: [
+      "DGCA regulations",
+      "Flight planning",
+      "Aerial composition",
+      "RAW processing",
+    ],
+    totalStudents: 112,
+    rating: 4.8,
+  },
+  {
+    id: "event-videography",
+    title: "Event Videography",
+    category: "videography",
+    mode: "hybrid",
+    image:
+      "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&q=80",
+    description:
+      "Capture live events with multi-camera coverage and professional delivery.",
+    duration: "3 weeks",
+    price: 5,
+    instructor: "Ruchitha B S",
+    syllabusHighlights: [
+      "Multi-cam setup",
+      "Run-and-gun",
+      "Live audio",
+      "Quick turnaround editing",
+    ],
+    totalStudents: 134,
+    rating: 4.6,
+  },
+  {
+    id: "wedding-cinematography",
+    title: "Wedding Cinematography",
+    category: "videography",
+    mode: "offline",
+    image:
+      "https://images.unsplash.com/photo-1465495976277-4387d4b0e4a6?w=600&q=80",
+    description:
+      "Cinematic wedding films from traditional ceremonies to contemporary celebrations.",
+    duration: "6 weeks",
+    price: 5,
+    instructor: "Ashitha S",
+    syllabusHighlights: [
+      "Ceremony coverage",
+      "Cinematic techniques",
+      "Same-day edits",
+      "Film delivery",
+    ],
+    totalStudents: 267,
+    rating: 4.9,
+  },
+  {
+    id: "youtube-content-creation",
+    title: "YouTube Content Creation",
+    category: "videography",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?w=600&q=80",
+    description:
+      "Build a successful YouTube channel with professional production quality.",
+    duration: "4 weeks",
+    price: 5,
+    instructor: "Prarthana R",
+    syllabusHighlights: [
+      "Channel branding",
+      "Scripting",
+      "Thumbnail design",
+      "SEO for YouTube",
+    ],
+    totalStudents: 445,
+    rating: 4.8,
+  },
+  {
+    id: "reels-shorts",
+    title: "Instagram Reels & Shorts",
+    category: "videography",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1611162616475-46b635cb6868?w=600&q=80",
+    description:
+      "Viral short-form video content for Instagram Reels and YouTube Shorts.",
+    duration: "2 weeks",
+    price: 5,
+    instructor: "Ruchitha B S",
+    syllabusHighlights: [
+      "Trending formats",
+      "Transition effects",
+      "Music sync",
+      "Engagement strategies",
+    ],
+    totalStudents: 523,
+    rating: 4.9,
+  },
+
+  // Editing & Post-Production
+  {
+    id: "lightroom-mastery",
+    title: "Lightroom Mastery",
+    category: "editing",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1572044162444-ad60f128bdea?w=600&q=80",
+    description:
+      "Complete Lightroom workflow from culling to export-ready masterpieces.",
+    duration: "3 weeks",
+    price: 5,
+    instructor: "Ashitha S",
+    syllabusHighlights: [
+      "Catalog management",
+      "Global adjustments",
+      "Local masking",
+      "Presets",
+    ],
+    totalStudents: 398,
+    rating: 4.9,
+  },
+  {
+    id: "photoshop-photographers",
+    title: "Photoshop for Photographers",
+    category: "editing",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1561736778-92e52a7769ef?w=600&q=80",
+    description:
+      "Advanced Photoshop techniques specifically for photography post-processing.",
+    duration: "4 weeks",
+    price: 5,
+    instructor: "Prarthana R",
+    syllabusHighlights: [
+      "Layer masking",
+      "Frequency separation",
+      "Compositing",
+      "Sky replacement",
+    ],
+    totalStudents: 312,
+    rating: 4.8,
+  },
+  {
+    id: "premiere-pro",
+    title: "Adobe Premiere Pro",
+    category: "editing",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80",
+    description:
+      "Professional video editing in Premiere Pro — from cuts to final export.",
+    duration: "5 weeks",
+    price: 5,
+    instructor: "Ruchitha B S",
+    syllabusHighlights: [
+      "Timeline mastery",
+      "Transitions",
+      "Audio mixing",
+      "Export settings",
+    ],
+    totalStudents: 289,
+    rating: 4.8,
+  },
+  {
+    id: "final-cut-pro",
+    title: "Final Cut Pro",
+    category: "editing",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1551650975-87deedd944c3?w=600&q=80",
+    description:
+      "Master Apple's Final Cut Pro for fast, professional video editing.",
+    duration: "4 weeks",
+    price: 5,
+    instructor: "Ashitha S",
+    syllabusHighlights: [
+      "Magnetic timeline",
+      "Multicam editing",
+      "Effects",
+      "Mac workflow",
+    ],
+    totalStudents: 167,
+    rating: 4.7,
+  },
+  {
+    id: "davinci-resolve",
+    title: "DaVinci Resolve Color Grading",
+    category: "editing",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1536240478700-b869ad10e2ab?w=600&q=80",
+    description:
+      "Hollywood-level color grading using DaVinci Resolve's powerful tools.",
+    duration: "4 weeks",
+    price: 5,
+    instructor: "Prarthana R",
+    syllabusHighlights: [
+      "Color wheels",
+      "Node structure",
+      "LUTs",
+      "Film emulation",
+    ],
+    totalStudents: 223,
+    rating: 4.9,
+  },
+  {
+    id: "after-effects-basics",
+    title: "After Effects Basics",
+    category: "editing",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1600861195091-690c92f1d2cc?w=600&q=80",
+    description:
+      "Motion graphics and visual effects fundamentals in Adobe After Effects.",
+    duration: "4 weeks",
+    price: 5,
+    instructor: "Ruchitha B S",
+    syllabusHighlights: [
+      "Keyframe animation",
+      "Text animations",
+      "Motion blur",
+      "Compositing basics",
+    ],
+    totalStudents: 198,
+    rating: 4.7,
+  },
+  {
+    id: "video-color-grading",
+    title: "Video Color Grading",
+    category: "editing",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1620121692029-d088224ddc74?w=600&q=80",
+    description:
+      "Create signature looks and moods through masterful color grading.",
+    duration: "3 weeks",
+    price: 5,
+    instructor: "Ashitha S",
+    syllabusHighlights: [
+      "Color theory",
+      "Primary grading",
+      "Secondary grading",
+      "Cinematic LUTs",
+    ],
+    totalStudents: 187,
+    rating: 4.8,
+  },
+  {
+    id: "photo-retouching",
+    title: "Photo Retouching",
+    category: "editing",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1560472355-536de3962603?w=600&q=80",
+    description:
+      "Natural, high-end retouching techniques for portraits and commercial photography.",
+    duration: "3 weeks",
+    price: 5,
+    instructor: "Prarthana R",
+    syllabusHighlights: [
+      "Skin retouching",
+      "Dodge and burn",
+      "Frequency separation",
+      "Beauty retouching",
+    ],
+    totalStudents: 267,
+    rating: 4.8,
+  },
+  {
+    id: "batch-editing",
+    title: "Batch Editing Workflows",
+    category: "editing",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?w=600&q=80",
+    description:
+      "Efficiently edit hundreds of photos with consistent results and speed.",
+    duration: "2 weeks",
+    price: 5,
+    instructor: "Ruchitha B S",
+    syllabusHighlights: [
+      "Preset creation",
+      "Sync editing",
+      "Actions automation",
+      "Culling strategies",
+    ],
+    totalStudents: 234,
+    rating: 4.7,
+  },
+  {
+    id: "ai-tools-editing",
+    title: "AI Tools for Editing",
+    category: "editing",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=600&q=80",
+    description:
+      "Leverage AI-powered tools to accelerate your editing workflow significantly.",
+    duration: "2 weeks",
+    price: 5,
+    instructor: "Ashitha S",
+    syllabusHighlights: [
+      "AI masking",
+      "Generative fill",
+      "Luminar Neo",
+      "Topaz tools",
+    ],
+    totalStudents: 312,
+    rating: 4.8,
+  },
+
+  // Business & Studio
+  {
+    id: "studio-management",
+    title: "Studio Management",
+    category: "business",
+    mode: "hybrid",
+    image:
+      "https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&q=80",
+    description:
+      "Complete studio business management — from bookings to team coordination.",
+    duration: "4 weeks",
+    price: 5,
+    instructor: "Prarthana R",
+    syllabusHighlights: [
+      "Studio setup",
+      "Booking systems",
+      "Team management",
+      "Financial basics",
+    ],
+    totalStudents: 156,
+    rating: 4.9,
+  },
+  {
+    id: "client-communication",
+    title: "Client Communication & Sales",
+    category: "business",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=600&q=80",
+    description:
+      "Win more clients with effective communication, proposals, and sales skills.",
+    duration: "3 weeks",
+    price: 5,
+    instructor: "Ruchitha B S",
+    syllabusHighlights: [
+      "Inquiry handling",
+      "Proposal writing",
+      "Negotiation",
+      "Client onboarding",
+    ],
+    totalStudents: 189,
+    rating: 4.8,
+  },
+  {
+    id: "photography-business",
+    title: "Building a Photography Business",
+    category: "business",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=600&q=80",
+    description:
+      "Transform your passion into a profitable photography business.",
+    duration: "6 weeks",
+    price: 5,
+    instructor: "Ashitha S",
+    syllabusHighlights: [
+      "Business model",
+      "Niche selection",
+      "Pricing strategy",
+      "Client retention",
+    ],
+    totalStudents: 298,
+    rating: 4.9,
+  },
+  {
+    id: "social-media-studios",
+    title: "Social Media Marketing for Studios",
+    category: "business",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=600&q=80",
+    description:
+      "Grow your studio brand on social media with a strategic content approach.",
+    duration: "4 weeks",
+    price: 5,
+    instructor: "Prarthana R",
+    syllabusHighlights: [
+      "Content calendar",
+      "Instagram growth",
+      "Hashtag strategy",
+      "Analytics",
+    ],
+    totalStudents: 245,
+    rating: 4.7,
+  },
+  {
+    id: "pricing-packages",
+    title: "Pricing & Packages Strategy",
+    category: "business",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=600&q=80",
+    description:
+      "Set profitable prices and create irresistible packages for your services.",
+    duration: "2 weeks",
+    price: 5,
+    instructor: "Ruchitha B S",
+    syllabusHighlights: [
+      "Cost calculation",
+      "Value-based pricing",
+      "Package design",
+      "Upselling",
+    ],
+    totalStudents: 178,
+    rating: 4.8,
+  },
+  {
+    id: "brand-building",
+    title: "Brand Building for Photographers",
+    category: "business",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1493421419110-74f4e85ba126?w=600&q=80",
+    description:
+      "Create a distinctive brand that attracts your ideal clients consistently.",
+    duration: "3 weeks",
+    price: 5,
+    instructor: "Ashitha S",
+    syllabusHighlights: [
+      "Brand identity",
+      "Visual consistency",
+      "Voice and tone",
+      "Storytelling",
+    ],
+    totalStudents: 167,
+    rating: 4.8,
+  },
+  {
+    id: "portfolio-website",
+    title: "Creating a Portfolio Website",
+    category: "business",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1467232004584-a241de8bcf5d?w=600&q=80",
+    description:
+      "Build a stunning photography portfolio website that converts visitors to clients.",
+    duration: "3 weeks",
+    price: 5,
+    instructor: "Prarthana R",
+    syllabusHighlights: [
+      "Platform selection",
+      "SEO basics",
+      "Gallery curation",
+      "Contact forms",
+    ],
+    totalStudents: 212,
+    rating: 4.7,
+  },
+  {
+    id: "ecommerce-business",
+    title: "E-commerce Photography Business",
+    category: "business",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=600&q=80",
+    description:
+      "Build a thriving e-commerce photography business for brands and sellers.",
+    duration: "4 weeks",
+    price: 5,
+    instructor: "Ruchitha B S",
+    syllabusHighlights: [
+      "E-comm workflow",
+      "Studio efficiency",
+      "Client acquisition",
+      "Scaling",
+    ],
+    totalStudents: 134,
+    rating: 4.7,
+  },
+  {
+    id: "instagram-growth",
+    title: "Instagram Growth for Photographers",
+    category: "business",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1563986768494-4dee2763ff3f?w=600&q=80",
+    description:
+      "Grow an engaged Instagram audience and convert followers into clients.",
+    duration: "3 weeks",
+    price: 5,
+    instructor: "Ashitha S",
+    syllabusHighlights: [
+      "Profile optimization",
+      "Reels strategy",
+      "Engagement tactics",
+      "DM selling",
+    ],
+    totalStudents: 356,
+    rating: 4.8,
+  },
+  {
+    id: "legal-contracts",
+    title: "Legal & Contracts for Creatives",
+    category: "business",
+    mode: "online",
+    image:
+      "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=600&q=80",
+    description:
+      "Protect your business with proper contracts, copyright, and legal knowledge.",
+    duration: "2 weeks",
+    price: 5,
+    instructor: "Prarthana R",
+    syllabusHighlights: [
+      "Copyright basics",
+      "Model releases",
+      "Contract templates",
+      "Dispute resolution",
+    ],
+    totalStudents: 145,
+    rating: 4.8,
+  },
+
+  // Specialized
+  {
+    id: "newborn-baby-photography",
+    title: "Newborn & Baby Photography",
+    category: "specialized",
+    mode: "offline",
+    image:
+      "https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=600&q=80",
+    description:
+      "Safe, beautiful newborn and baby photography with professional safety protocols.",
+    duration: "3 weeks",
+    price: 5,
+    instructor: "Ruchitha B S",
+    syllabusHighlights: [
+      "Safety first",
+      "Posing techniques",
+      "Wrapping",
+      "Parent coaching",
+    ],
+    totalStudents: 123,
+    rating: 4.9,
+  },
+  {
+    id: "pet-photography-course",
+    title: "Pet Photography",
+    category: "specialized",
+    mode: "hybrid",
+    image:
+      "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=600&q=80",
+    description:
+      "Capture amazing pet portraits with patience, technique, and creativity.",
+    duration: "2 weeks",
+    price: 5,
+    instructor: "Ashitha S",
+    syllabusHighlights: [
+      "Animal behaviour",
+      "Focus techniques",
+      "Natural light for pets",
+      "Outdoor sessions",
+    ],
+    totalStudents: 89,
+    rating: 4.7,
+  },
+  {
+    id: "fitness-lifestyle-shooting",
+    title: "Fitness & Lifestyle Shooting",
+    category: "specialized",
+    mode: "hybrid",
+    image:
+      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&q=80",
+    description:
+      "Dynamic fitness photography capturing movement, strength, and lifestyle.",
+    duration: "3 weeks",
+    price: 5,
+    instructor: "Prarthana R",
+    syllabusHighlights: [
+      "Action photography",
+      "Gym lighting",
+      "Athlete posing",
+      "Lifestyle storytelling",
+    ],
+    totalStudents: 112,
+    rating: 4.7,
+  },
+  {
+    id: "real-estate-photography-course",
+    title: "Real Estate Photography",
+    category: "specialized",
+    mode: "hybrid",
+    image:
+      "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600&q=80",
+    description:
+      "Professional real estate photography that sells properties faster.",
+    duration: "2 weeks",
+    price: 5,
+    instructor: "Ruchitha B S",
+    syllabusHighlights: [
+      "Wide angle mastery",
+      "HDR blending",
+      "Virtual staging",
+      "Drone integration",
+    ],
+    totalStudents: 98,
+    rating: 4.6,
+  },
+  {
+    id: "automobile-photography-course",
+    title: "Automobile Photography",
+    category: "specialized",
+    mode: "offline",
+    image:
+      "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=600&q=80",
+    description:
+      "Sleek automotive photography for showrooms, ads, and editorial.",
+    duration: "2 weeks",
+    price: 5,
+    instructor: "Ashitha S",
+    syllabusHighlights: [
+      "Light painting cars",
+      "Outdoor shoots",
+      "Motion pans",
+      "Post-processing",
+    ],
+    totalStudents: 76,
+    rating: 4.7,
+  },
+  {
+    id: "maternity-photography",
+    title: "Maternity Photography",
+    category: "specialized",
+    mode: "offline",
+    image:
+      "https://images.unsplash.com/photo-1490375930658-8a3073d2e6ab?w=600&q=80",
+    description:
+      "Graceful maternity photography celebrating the beauty of motherhood.",
+    duration: "2 weeks",
+    price: 5,
+    instructor: "Prarthana R",
+    syllabusHighlights: [
+      "Safe posing",
+      "Wardrobe guidance",
+      "Lighting for maternity",
+      "Partner posing",
+    ],
+    totalStudents: 134,
+    rating: 4.9,
+  },
+  {
+    id: "boudoir-glamour",
+    title: "Boudoir & Glamour Photography",
+    category: "specialized",
+    mode: "offline",
+    image:
+      "https://images.unsplash.com/photo-1471341971476-ae15ff5dd4ea?w=600&q=80",
+    description:
+      "Empowering boudoir and glamour photography with professionalism and artistry.",
+    duration: "3 weeks",
+    price: 5,
+    instructor: "Ruchitha B S",
+    syllabusHighlights: [
+      "Boudoir lighting",
+      "Elegant posing",
+      "Client comfort",
+      "Luxury retouching",
+    ],
+    totalStudents: 87,
+    rating: 4.8,
+  },
+  {
+    id: "stage-event-lighting",
+    title: "Stage & Event Lighting",
+    category: "specialized",
+    mode: "offline",
+    image:
+      "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600&q=80",
+    description:
+      "Master event and stage lighting for concerts, functions, and live performances.",
+    duration: "3 weeks",
+    price: 5,
+    instructor: "Ashitha S",
+    syllabusHighlights: [
+      "Stage lighting design",
+      "Fast lenses",
+      "High ISO mastery",
+      "Flash at events",
+    ],
+    totalStudents: 65,
+    rating: 4.7,
+  },
+  {
+    id: "green-screen-studio",
+    title: "Green Screen & Studio Setup",
+    category: "specialized",
+    mode: "offline",
+    image:
+      "https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=600&q=80",
+    description:
+      "Professional green screen photography and complete studio infrastructure setup.",
+    duration: "2 weeks",
+    price: 5,
+    instructor: "Prarthana R",
+    syllabusHighlights: [
+      "Chroma key setup",
+      "Lighting green screen",
+      "Background replacement",
+      "Studio layout",
+    ],
+    totalStudents: 78,
+    rating: 4.6,
+  },
+  {
+    id: "drone-certification",
+    title: "Aerial & Drone Certification",
+    category: "specialized",
+    mode: "hybrid",
+    image:
+      "https://images.unsplash.com/photo-1508614589041-895b88991e3e?w=600&q=80",
+    description:
+      "Professional drone certification with DGCA compliance and aerial photography mastery.",
+    duration: "4 weeks",
+    price: 5,
+    instructor: "Ruchitha B S",
+    syllabusHighlights: [
+      "DGCA certification prep",
+      "Flight safety",
+      "Aerial composition",
+      "Legal requirements",
+    ],
+    totalStudents: 145,
+    rating: 4.9,
+  },
+];
+
+export const getCourseById = (id: string): Course | undefined =>
+  COURSES.find((c) => c.id === id);
+
+export const getCoursesByCategory = (category: string): Course[] =>
+  COURSES.filter((c) => c.category === category);

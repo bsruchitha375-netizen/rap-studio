@@ -1,0 +1,287 @@
+// Version: 1.0.0
+type BookingId__572944220 = Nat;
+type BookingRequest__171831595 =
+  {
+    createdAt : Timestamp__301639476;
+    date : Text;
+    duration : Text;
+    id : BookingId__572944220;
+    location : LocationType__723490647;
+    notes : ?Text;
+    serviceId : Text;
+    status : BookingStatus__449923126;
+    subService : Text;
+    timeSlot : TimeSlot__993672216;
+    userId : UserId__158757552
+  };
+type BookingStatus__449923126 =
+  {
+    #Cancelled;
+    #Completed;
+    #Confirmed;
+    #PaymentPending;
+    #Pending;
+    #WorkDelivered
+  };
+type CertificateId__417577722 = Nat;
+type Certificate__592097419 =
+  {
+    code : Text;
+    courseId : CourseId__927523888;
+    courseName : Text;
+    enrollmentId : EnrollmentId__165279902;
+    id : CertificateId__417577722;
+    issuedAt : Timestamp__301639476;
+    studentName : Text;
+    verified : Bool
+  };
+type CmsContentType__644513860 = {#color; #imageUrl; #text};
+type CmsContent__152746357 =
+  {
+    contentType : CmsContentType__644513860;
+    key : Text;
+    updatedAt : Timestamp__301639476;
+    updatedBy : UserId__158757552;
+    value : Text
+  };
+type CourseEnrollment__722931068 =
+  {
+    certificateCode : ?Text;
+    completedAt : ?Timestamp__301639476;
+    courseId : CourseId__927523888;
+    enrolledAt : Timestamp__301639476;
+    id : EnrollmentId__165279902;
+    paymentStatus : PaymentStatus__692151104;
+    progress : Nat;
+    userId : UserId__158757552
+  };
+type CourseId__927523888 = Nat;
+type Data__791452850<K, V> =
+  {var count : Nat__490723111; kvs : [var ?(K, V)]};
+type EmailLog__162491839 =
+  {
+    body : Text;
+    createdAt : Timestamp__301639476;
+    id : Nat;
+    relatedId : ?Text;
+    subject : Text;
+    to : Text
+  };
+type EnrollmentId__165279902 = Nat;
+type ExternalBlob__246066408 = Blob;
+type FeedbackTargetType__508199193 = {#Course; #Service};
+type Feedback__34322984 =
+  {
+    comment : Text;
+    createdAt : Timestamp__301639476;
+    id : Nat;
+    rating : Nat;
+    responderComment : ?Text;
+    targetId : Text;
+    targetType : FeedbackTargetType__508199193;
+    userId : UserId__158757552
+  };
+type FileType__654645595 = {#Photo; #Video};
+type Internal__8484328<K, V> =
+  {children : [var ?Node__46230540<K, V>]; data : Data__791452850<K, V>};
+type Leaf__809889148<K, V> = {data : Data__791452850<K, V>};
+type LocationType__723490647 = {#Custom : Text; #Indoor; #Outdoor; #Studio};
+type Map__158565046<K, V> = Map__297112838<K, V>;
+type Map__297112838<K, V> =
+  {var root : Node__46230540<K, V>; var size : Nat__490723111};
+type Map__605269027<K, V> = Map__158565046<K, V>;
+type MediaId__168331846 = Nat;
+type MediaItem__124138707 =
+  {
+    blob : ExternalBlob__246066408;
+    date : Timestamp__301639476;
+    featured : Bool;
+    fileType : FileType__654645595;
+    id : MediaId__168331846;
+    serviceCategory : Text;
+    title : Text;
+    uploadedBy : UserId__158757552
+  };
+type MultiServiceBooking__848862285 =
+  {
+    adminNotes : ?Text;
+    createdAt : Timestamp__301639476;
+    date : Text;
+    id : BookingId__572944220;
+    location : Text;
+    notes : ?Text;
+    selectedServices : [SelectedServiceItem__172742105];
+    status : Text;
+    timeSlot : Text;
+    totalAmount : Nat;
+    userId : UserId__158757552
+  };
+type Nat__490723111 = Nat__920180692;
+type Nat__920180692 = Nat;
+type Node__46230540<K, V> =
+  {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
+type NotificationId__307495059 = Nat;
+type NotificationRecord__666145773 =
+  {
+    createdAt : Timestamp__301639476;
+    id : NotificationId__307495059;
+    message : Text;
+    notificationType : NotificationType__908192046;
+    read : Bool;
+    userId : UserId__158757552
+  };
+type NotificationType__908192046 =
+  {
+    #BookingConfirmed;
+    #CourseEnrolled;
+    #GeneralInfo;
+    #PaymentRequired;
+    #WorkDelivered
+  };
+type PaymentId__1028686908 = Nat;
+type PaymentOrderExtended__243936633 =
+  {
+    adminNotes : ?Text;
+    amount : Nat;
+    createdAt : Timestamp__301639476;
+    currency : Text;
+    id : PaymentId__1028686908;
+    orderId : Text;
+    paidAt : ?Timestamp__301639476;
+    paymentType : Text;
+    razorpayOrderId : Text;
+    razorpayPaymentId : ?Text;
+    referenceId : Text;
+    selectedServices : [SelectedServiceItem__172742105];
+    status : Text;
+    userId : UserId__158757552
+  };
+type PaymentOrder__73532144 =
+  {
+    amount : Nat;
+    createdAt : Timestamp__301639476;
+    currency : Text;
+    id : PaymentId__1028686908;
+    orderId : Text;
+    paidAt : ?Timestamp__301639476;
+    paymentType : PaymentType__716647387;
+    razorpayOrderId : Text;
+    razorpayPaymentId : ?Text;
+    referenceId : Text;
+    signatureVerified : Bool;
+    status : PaymentStatus__296016569;
+    userId : UserId__158757552;
+    verifiedAt : ?Timestamp__301639476
+  };
+type PaymentStatus__296016569 = {#Created; #Failed; #Paid; #Refunded};
+type PaymentStatus__692151104 =
+  {#FullyPaid; #Overdue; #PartiallyPaid; #Pending};
+type PaymentType__716647387 =
+  {#BookingBalance; #BookingUpfront; #CourseEnrollment};
+type SelectedServiceItem__172742105 =
+  {name : Text; price : Nat; serviceId : Text; subServiceId : Text};
+type TimeSlot__993672216 =
+  {#Afternoon; #Evening; #FullDay; #HalfDay; #Morning; #Night};
+type Timestamp__301639476 = Int;
+type UserId__158757552 = Principal;
+type UserProfile__277265826 =
+  {
+    created : Timestamp__301639476;
+    email : ?Text;
+    name : Text;
+    phone : Text;
+    principal : UserId__158757552;
+    role : UserRole__41952412;
+    status : UserStatus__357598751
+  };
+type UserRole__1054455867 = {#admin; #guest; #user};
+type UserRole__41952412 = {#Admin; #Client; #Receptionist; #Staff; #Student};
+type UserStatus__357598751 = {#Active; #Pending; #Suspended};
+actor {
+  stable accessControlState :
+    {
+      var adminAssigned : Bool;
+      userRoles : Map__605269027<Principal, UserRole__1054455867>
+    };
+  stable bookings :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?BookingRequest__171831595]];
+      var elementIndex : Nat__490723111
+    };
+  stable certificates :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Certificate__592097419]];
+      var elementIndex : Nat__490723111
+    };
+  stable cmsStore :
+    {
+      var root : Node__46230540<Text, CmsContent__152746357>;
+      var size : Nat__490723111
+    };
+  stable emailLogs :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?EmailLog__162491839]];
+      var elementIndex : Nat__490723111
+    };
+  stable enrollments :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?CourseEnrollment__722931068]];
+      var elementIndex : Nat__490723111
+    };
+  stable feedbacks :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Feedback__34322984]];
+      var elementIndex : Nat__490723111
+    };
+  stable mediaItems :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?MediaItem__124138707]];
+      var elementIndex : Nat__490723111
+    };
+  stable multiBookingCounter : {var value : Nat};
+  stable multiBookings :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?MultiServiceBooking__848862285]];
+      var elementIndex : Nat__490723111
+    };
+  stable nextBookingId : {var value : Nat};
+  stable nextCertId : {var value : Nat};
+  stable nextEmailLogId : {var value : Nat};
+  stable nextEnrollmentId : {var value : Nat};
+  stable nextFeedbackId : {var value : Nat};
+  stable nextMediaId : {var value : Nat};
+  stable nextNotifId : {var value : Nat};
+  stable nextPaymentId : {var value : Nat};
+  stable notifications :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?NotificationRecord__666145773]];
+      var elementIndex : Nat__490723111
+    };
+  stable paymentExtended :
+    {
+      var root :
+        Node__46230540<PaymentId__1028686908, PaymentOrderExtended__243936633>;
+      var size : Nat__490723111
+    };
+  stable paymentOrders :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?PaymentOrder__73532144]];
+      var elementIndex : Nat__490723111
+    };
+  stable profiles :
+    {
+      var root : Node__46230540<UserId__158757552, UserProfile__277265826>;
+      var size : Nat__490723111
+    };
+  stable subServiceImages :
+    {var root : Node__46230540<Text, Text>; var size : Nat__490723111}
+};

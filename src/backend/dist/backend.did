@@ -1,0 +1,493 @@
+type http_request_result = 
+ record {
+   body: blob;
+   headers: vec http_header;
+   status: nat;
+ };
+type http_header = 
+ record {
+   name: text;
+   value: text;
+ };
+type _ImmutableObjectStorageRefillResult = 
+ record {
+   success: opt bool;
+   topped_up_amount: opt nat;
+ };
+type _ImmutableObjectStorageRefillInformation = record {
+                                                  proposed_top_up_amount:
+                                                   opt nat;};
+type _ImmutableObjectStorageCreateCertificateResult = 
+ record {
+   blob_hash: text;
+   method: text;
+ };
+type UserStatus = 
+ variant {
+   Active;
+   Pending;
+   Suspended;
+ };
+type UserRole__1 = 
+ variant {
+   admin;
+   guest;
+   user;
+ };
+type UserRole = 
+ variant {
+   Admin;
+   Client;
+   Receptionist;
+   Staff;
+   Student;
+ };
+type UserProfile = 
+ record {
+   created: Timestamp;
+   email: opt text;
+   name: text;
+   phone: text;
+   "principal": UserId;
+   role: UserRole;
+   status: UserStatus;
+ };
+type UserId = principal;
+type TransformationOutput = 
+ record {
+   body: blob;
+   headers: vec http_header;
+   status: nat;
+ };
+type TransformationInput = 
+ record {
+   context: blob;
+   response: http_request_result;
+ };
+type Timestamp = int;
+type TimeSlot = 
+ variant {
+   Afternoon;
+   Evening;
+   FullDay;
+   HalfDay;
+   Morning;
+   Night;
+ };
+type SubService = 
+ record {
+   id: text;
+   name: text;
+ };
+type SlotStatus = 
+ variant {
+   Available;
+   Taken;
+ };
+type ServiceRevenue = 
+ record {
+   bookingCount: nat;
+   revenue: nat;
+   serviceId: text;
+   serviceName: text;
+ };
+type ServiceCategory = 
+ record {
+   description: text;
+   icon: text;
+   id: text;
+   name: text;
+   subServices: vec SubService;
+ };
+type SelectedServiceItem = 
+ record {
+   name: text;
+   price: nat;
+   serviceId: text;
+   subServiceId: text;
+ };
+type PaymentVerificationStatus = 
+ record {
+   orderId: text;
+   paymentId: PaymentId;
+   razorpayOrderId: text;
+   razorpayPaymentId: opt text;
+   signatureVerified: bool;
+   status: PaymentStatus;
+   verifiedAt: opt Timestamp;
+ };
+type PaymentVerification = 
+ record {
+   razorpayOrderId: text;
+   razorpayPaymentId: text;
+   razorpaySignature: text;
+ };
+type PaymentType = 
+ variant {
+   BookingBalance;
+   BookingUpfront;
+   CourseEnrollment;
+ };
+type PaymentStatus__1 = 
+ variant {
+   FullyPaid;
+   Overdue;
+   PartiallyPaid;
+   Pending;
+ };
+type PaymentStatus = 
+ variant {
+   Created;
+   Failed;
+   Paid;
+   Refunded;
+ };
+type PaymentOrderExtended = 
+ record {
+   adminNotes: opt text;
+   amount: nat;
+   createdAt: Timestamp;
+   currency: text;
+   id: PaymentId;
+   orderId: text;
+   paidAt: opt Timestamp;
+   paymentType: text;
+   razorpayOrderId: text;
+   razorpayPaymentId: opt text;
+   referenceId: text;
+   selectedServices: vec SelectedServiceItem;
+   status: text;
+   userId: UserId;
+ };
+type PaymentOrder = 
+ record {
+   amount: nat;
+   createdAt: Timestamp;
+   currency: text;
+   id: PaymentId;
+   orderId: text;
+   paidAt: opt Timestamp;
+   paymentType: PaymentType;
+   razorpayOrderId: text;
+   razorpayPaymentId: opt text;
+   referenceId: text;
+   signatureVerified: bool;
+   status: PaymentStatus;
+   userId: UserId;
+   verifiedAt: opt Timestamp;
+ };
+type PaymentId = nat;
+type PaymentAdminAction = 
+ variant {
+   adjustAmount: nat;
+   confirm;
+   refund;
+ };
+type NotificationType = 
+ variant {
+   BookingConfirmed;
+   CourseEnrolled;
+   GeneralInfo;
+   PaymentRequired;
+   WorkDelivered;
+ };
+type NotificationRecord = 
+ record {
+   createdAt: Timestamp;
+   id: NotificationId;
+   message: text;
+   notificationType: NotificationType;
+   read: bool;
+   userId: UserId;
+ };
+type NotificationId = nat;
+type MultiServiceBookingInput = 
+ record {
+   date: text;
+   location: text;
+   notes: opt text;
+   selectedServices: vec SelectedServiceItem;
+   timeSlot: text;
+   totalAmount: nat;
+ };
+type MultiServiceBooking = 
+ record {
+   adminNotes: opt text;
+   createdAt: Timestamp;
+   date: text;
+   id: BookingId;
+   location: text;
+   notes: opt text;
+   selectedServices: vec SelectedServiceItem;
+   status: text;
+   timeSlot: text;
+   totalAmount: nat;
+   userId: UserId;
+ };
+type MediaItem = 
+ record {
+   "blob": ExternalBlob;
+   date: Timestamp;
+   featured: bool;
+   fileType: FileType;
+   id: MediaId;
+   serviceCategory: text;
+   title: text;
+   uploadedBy: UserId;
+ };
+type MediaInput = 
+ record {
+   "blob": ExternalBlob;
+   fileType: FileType;
+   serviceCategory: text;
+   title: text;
+ };
+type MediaId = nat;
+type LocationType = 
+ variant {
+   Custom: text;
+   Indoor;
+   Outdoor;
+   Studio;
+ };
+type FileType = 
+ variant {
+   Photo;
+   Video;
+ };
+type FeedbackTargetType = 
+ variant {
+   Course;
+   Service;
+ };
+type Feedback = 
+ record {
+   comment: text;
+   createdAt: Timestamp;
+   id: nat;
+   rating: nat;
+   responderComment: opt text;
+   targetId: text;
+   targetType: FeedbackTargetType;
+   userId: UserId;
+ };
+type ExternalBlob = blob;
+type EnrollmentId = nat;
+type EmailLog = 
+ record {
+   body: text;
+   createdAt: Timestamp;
+   id: nat;
+   relatedId: opt text;
+   subject: text;
+   to: text;
+ };
+type CourseStatus = 
+ variant {
+   Active;
+   ComingSoon;
+   Inactive;
+ };
+type CourseMode = 
+ variant {
+   Hybrid;
+   Offline;
+   Online;
+ };
+type CourseId = nat;
+type CourseEnrollment = 
+ record {
+   certificateCode: opt text;
+   completedAt: opt Timestamp;
+   courseId: CourseId;
+   enrolledAt: Timestamp;
+   id: EnrollmentId;
+   paymentStatus: PaymentStatus__1;
+   progress: nat;
+   userId: UserId;
+ };
+type Course = 
+ record {
+   category: text;
+   description: text;
+   duration: text;
+   id: CourseId;
+   imageUrl: text;
+   mode: CourseMode;
+   prerequisites: vec text;
+   price: nat;
+   status: CourseStatus;
+   title: text;
+ };
+type CmsContentType = 
+ variant {
+   color;
+   imageUrl;
+   "text";
+ };
+type CmsContent = 
+ record {
+   contentType: CmsContentType;
+   key: text;
+   updatedAt: Timestamp;
+   updatedBy: UserId;
+   value: text;
+ };
+type CertificateId = nat;
+type Certificate = 
+ record {
+   code: text;
+   courseId: CourseId;
+   courseName: text;
+   enrollmentId: EnrollmentId;
+   id: CertificateId;
+   issuedAt: Timestamp;
+   studentName: text;
+   verified: bool;
+ };
+type BookingStatus = 
+ variant {
+   Cancelled;
+   Completed;
+   Confirmed;
+   PaymentPending;
+   Pending;
+   WorkDelivered;
+ };
+type BookingStats = 
+ record {
+   cancelledBookings: nat;
+   completedBookings: nat;
+   confirmedBookings: nat;
+   emailLogCount: nat;
+   pendingBookings: nat;
+   pendingFeedbackCount: nat;
+   revenueByService: vec ServiceRevenue;
+   totalBookings: nat;
+   totalCmsEntries: nat;
+   totalCourseRevenue: nat;
+   totalEnrollments: nat;
+   totalFeedback: nat;
+   totalMultiServiceBookings: nat;
+   totalRevenue: nat;
+ };
+type BookingSlot = 
+ record {
+   date: text;
+   status: SlotStatus;
+   timeSlot: TimeSlot;
+ };
+type BookingRequest = 
+ record {
+   createdAt: Timestamp;
+   date: text;
+   duration: text;
+   id: BookingId;
+   location: LocationType;
+   notes: opt text;
+   serviceId: text;
+   status: BookingStatus;
+   subService: text;
+   timeSlot: TimeSlot;
+   userId: UserId;
+ };
+type BookingInput = 
+ record {
+   date: text;
+   duration: text;
+   location: LocationType;
+   notes: opt text;
+   serviceId: text;
+   subService: text;
+   timeSlot: TimeSlot;
+ };
+type BookingId = nat;
+service : {
+  _immutableObjectStorageBlobsAreLive: (hashes: vec blob) -> (vec bool) query;
+  _immutableObjectStorageBlobsToDelete: () -> (vec blob) query;
+  _immutableObjectStorageConfirmBlobDeletion: (blobs: vec blob) -> ();
+  _immutableObjectStorageCreateCertificate: (blobHash: text) ->
+   (_ImmutableObjectStorageCreateCertificateResult);
+  _immutableObjectStorageRefillCashier: (refillInformation:
+   opt _ImmutableObjectStorageRefillInformation) ->
+   (_ImmutableObjectStorageRefillResult);
+  _immutableObjectStorageUpdateGatewayPrincipals: () -> ();
+  _initializeAccessControl: () -> ();
+  addFeedback: (targetId: text, targetType: FeedbackTargetType, rating: 
+   nat, comment: text) -> (Feedback);
+  adminUpdatePayment: (paymentId: PaymentId, action: PaymentAdminAction,
+   adminNote: opt text) -> (bool);
+  assignCallerUserRole: (user: principal, role: UserRole__1) -> ();
+  confirmBooking: (bookingId: BookingId) -> (bool);
+  createBookingRequest: (input: BookingInput) -> (BookingRequest);
+  createMultiServiceBooking: (input: MultiServiceBookingInput) -> (BookingId);
+  createPaymentOrder: (amount: nat, referenceId: text, paymentType:
+   PaymentType) -> (PaymentOrder);
+  createSystemNotification: (userId: UserId, message: text, notifType:
+   NotificationType) -> (NotificationRecord);
+  deleteCmsContent: (key: text) -> ();
+  deleteMedia: (mediaId: MediaId) -> (bool);
+  deleteSubServiceImage: (categoryId: text, subServiceId: text) -> ();
+  enrollCourse: (courseId: CourseId) -> (CourseEnrollment);
+  generateCertificate: (enrollmentId: EnrollmentId) -> (Certificate);
+  getAdminPayments: () -> (vec PaymentOrderExtended);
+  getAllBookings: () -> (vec BookingRequest) query;
+  getAllCmsContent: () -> (vec CmsContent) query;
+  getAllCourses: () -> (vec Course) query;
+  getAllEnrollments: () -> (vec CourseEnrollment) query;
+  getAllFeedback: () -> (vec Feedback) query;
+  getAllPayments: () -> (vec PaymentOrder) query;
+  getAllSubServiceImages: () -> (vec record {
+                                       text;
+                                       text;
+                                     }) query;
+  getAllUsers: () -> (vec UserProfile) query;
+  getAnalytics: () -> (BookingStats) query;
+  getCallerUserProfile: () -> (opt UserProfile) query;
+  getCallerUserRole: () -> (UserRole__1) query;
+  getCertificate: (code: text) -> (opt Certificate) query;
+  getCmsContent: (key: text) -> (opt CmsContent) query;
+  getCourse: (courseId: CourseId) -> (opt Course) query;
+  getEmailLogs: () -> (vec EmailLog) query;
+  getFeedbackForTarget: (targetId: text) -> (vec Feedback) query;
+  getMediaItems: (category: opt text) -> (vec MediaItem) query;
+  getMyBookings: () -> (vec BookingRequest) query;
+  getMyEnrollments: () -> (vec CourseEnrollment) query;
+  getMyFeedback: () -> (vec Feedback) query;
+  getMyMultiServiceBookings: () -> (vec MultiServiceBooking) query;
+  getMyNotifications: () -> (vec NotificationRecord) query;
+  getMyPayments: () -> (vec PaymentOrder) query;
+  getMyProfile: () -> (opt UserProfile) query;
+  getPaymentDetails: (paymentId: PaymentId) ->
+   (opt PaymentOrderExtended) query;
+  getPaymentVerificationStatus: (internalPaymentId: nat) ->
+   (opt PaymentVerificationStatus) query;
+  getPublicCalendar: () -> (vec BookingSlot) query;
+  getServiceCategories: () -> (vec ServiceCategory) query;
+  getSubServiceImage: (categoryId: text, subServiceId: text) ->
+   (opt text) query;
+  isCallerAdmin: () -> (bool) query;
+  logBookingConfirmedEmail: (toAddress: text, bookingId: text, serviceName:
+   text, date: text) -> (EmailLog);
+  logEnrollmentConfirmedEmail: (toAddress: text, enrollmentId: text,
+   courseTitle: text) -> (EmailLog);
+  manageUser: (userId: UserId, action: text) -> (bool);
+  markEnrollmentPaid: (enrollmentId: EnrollmentId) -> (bool);
+  markNotificationRead: (notificationId: NotificationId) -> (bool);
+  markWorkDelivered: (bookingId: BookingId) -> (bool);
+  register: (name: text, phone: text, role: UserRole) -> (UserProfile);
+  respondToFeedback: (feedbackId: nat, responderComment: text) -> (bool);
+  saveCallerUserProfile: (name: text, phone: text, role: UserRole) -> ();
+  sendWhatsAppNotification: (phone: text, message: text) -> (bool);
+  setCmsContent: (key: text, value: text, contentType: CmsContentType) -> ();
+  setFeatured: (mediaId: MediaId, featured: bool) -> (bool);
+  setSubServiceImage: (categoryId: text, subServiceId: text, imageUrl:
+   text) -> ();
+  transform: (input: TransformationInput) -> (TransformationOutput) query;
+  triggerPaymentRequest: (bookingId: BookingId, paymentType: text) -> (text);
+  updateCourseProgress: (courseId: CourseId, completed: bool) -> (bool);
+  updateProfile: (name: text, phone: text) -> (bool);
+  uploadMedia: (input: MediaInput) -> (MediaItem);
+  verifyCertificate: (code: text) -> (bool) query;
+  verifyPayment: (verification: PaymentVerification) -> (bool);
+}
