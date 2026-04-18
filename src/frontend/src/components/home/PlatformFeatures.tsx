@@ -3,7 +3,7 @@ import {
   CalendarCheck,
   CreditCard,
   ImagePlay,
-  MessageCircle,
+  Mail,
   ShieldCheck,
 } from "lucide-react";
 import { motion, useInView } from "motion/react";
@@ -55,10 +55,10 @@ const FEATURES: Feature[] = [
       "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&h=200&fit=crop",
   },
   {
-    icon: <MessageCircle size={26} />,
-    title: "WhatsApp Notifications",
+    icon: <Mail size={26} />,
+    title: "Instant Email Confirmations",
     description:
-      "Get booking confirmations, payment links and updates directly on WhatsApp — no app needed.",
+      "Get booking confirmations, payment receipts and course updates straight to your inbox — automatically.",
     accentColor: "oklch(0.6 0.2 155)",
     image:
       "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=400&h=200&fit=crop",

@@ -2,6 +2,7 @@ import { LoginForm } from "@/components/auth/LoginForm";
 import { RoleSelector } from "@/components/auth/RoleSelector";
 import { Button } from "@/components/ui/button";
 import {
+  readStoredProfile,
   useAuth,
   useIIConnectionState,
   useStoredRole,
@@ -11,10 +12,9 @@ import {
 import type { UserRole } from "@/types";
 import { useNavigate } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
-// Module-level warmup: fires as soon as this file is imported (before mount)
-// giving the maximum possible head-start for the II AuthClient connection.
+// Fire warmup as soon as module is imported — maximum head-start for II
 warmupInternetIdentity();
 
 const ROLE_REDIRECTS: Record<UserRole, string> = {
@@ -25,33 +25,57 @@ const ROLE_REDIRECTS: Record<UserRole, string> = {
   student: "/dashboard/student",
 };
 
+type AuthStage =
+  | "idle" // showing role selector
+  | "connecting" // user clicked, II opening
+  | "success" // II auth succeeded, checking profile
+  | "profile" // new user, fill profile
+  | "error"; // auth failed
+
 export function LoginPage() {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading, login } = useAuth();
   const [storedRole, setStoredRole] = useStoredRole();
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(
+  const [selectedRole, setSelectedRole] = useState<UserRole>(
     storedRole ?? "client",
   );
   const { data: profile } = useUserProfile();
-  const [showProfileForm, setShowProfileForm] = useState(false);
-  // isSigningIn: true only AFTER user clicked the Sign In button
-  const [isSigningIn, setIsSigningIn] = useState(false);
-
-  // Deferred "Connecting…" indicator — only shows after 300ms if II not warmed
   const { isConnecting } = useIIConnectionState();
+  const [stage, setStage] = useState<AuthStage>("idle");
+  const [errorMsg, setErrorMsg] = useState<string>("");
+  // Prevent double-redirect
+  const hasRedirected = useRef(false);
 
   const isAdminSelected = selectedRole === "admin";
 
-  // After II auth resolves, redirect or show profile form
+  // ── Fast path: already have a valid stored session → redirect immediately ──
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (hasRedirected.current) return;
+    const stored = readStoredProfile();
+    if (stored?.name && stored?.role) {
+      hasRedirected.current = true;
+      const dest = ROLE_REDIRECTS[stored.role] ?? "/dashboard/client";
+      void navigate({ to: dest });
+    }
+    // navigate is stable (TanStack Router), readStoredProfile is pure — safe to omit
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate]);
+
+  // ── After II auth resolves, redirect or show profile form ─────────────────
+  useEffect(() => {
+    if (!isAuthenticated || hasRedirected.current) return;
+    if (isLoading) return; // wait for isInitializing to settle
+
+    // Has a saved profile → go straight to dashboard
     if (profile?.name) {
+      hasRedirected.current = true;
       const dest = ROLE_REDIRECTS[profile.role] ?? "/dashboard/client";
       void navigate({ to: dest });
-    } else if (!isLoading) {
-      setShowProfileForm(true);
-      setIsSigningIn(false);
+      return;
     }
+
+    // No profile yet → show profile completion form
+    setStage("profile");
   }, [isAuthenticated, isLoading, profile, navigate]);
 
   const handleRoleSelect = (role: UserRole) => {
@@ -62,18 +86,46 @@ export function LoginPage() {
   const handleSignIn = async () => {
     if (!selectedRole) return;
 
-    // Admin (Owner) → go directly to /admin/login, no II needed
+    // Admin → redirect to password-based admin login
     if (selectedRole === "admin") {
       void navigate({ to: "/admin/login" });
       return;
     }
 
-    setIsSigningIn(true);
+    setStage("connecting");
+    setErrorMsg("");
+
     try {
       await login();
-    } catch {
-      setIsSigningIn(false);
+      setStage("success");
+    } catch (err: unknown) {
+      // User cancelled the II popup — treat as idle, not error
+      const msg = err instanceof Error ? err.message : String(err);
+      if (
+        msg.toLowerCase().includes("cancel") ||
+        msg.toLowerCase().includes("closed") ||
+        msg.toLowerCase().includes("user abort")
+      ) {
+        setStage("idle");
+      } else if (
+        msg.toLowerCase().includes("network") ||
+        msg.toLowerCase().includes("fetch") ||
+        msg.toLowerCase().includes("timeout")
+      ) {
+        setErrorMsg(
+          "Network error — please check your connection and try again.",
+        );
+        setStage("error");
+      } else {
+        setErrorMsg("Authentication failed. Please try again.");
+        setStage("error");
+      }
     }
+  };
+
+  const handleRetry = () => {
+    setStage("idle");
+    setErrorMsg("");
   };
 
   const handleProfileComplete = (
@@ -82,21 +134,24 @@ export function LoginPage() {
     role: UserRole,
   ) => {
     setStoredRole(role);
+    hasRedirected.current = true;
     void navigate({ to: ROLE_REDIRECTS[role] ?? "/dashboard/client" });
   };
 
-  // Label for the sign-in button
+  const isConnectingToII = stage === "connecting" || stage === "success";
+
+  // ── Sign In button label ───────────────────────────────────────────────────
   const buttonLabel = (() => {
-    if (isSigningIn) {
+    if (isConnectingToII) {
       return (
         <span className="flex items-center gap-2">
           <svg
-            className="animate-spin w-4 h-4"
+            className="animate-spin w-4 h-4 shrink-0"
             viewBox="0 0 24 24"
             fill="none"
             aria-hidden="true"
           >
-            <title>Loading</title>
+            <title>Authenticating</title>
             <circle
               className="opacity-25"
               cx="12"
@@ -123,7 +178,7 @@ export function LoginPage() {
             fill="none"
             stroke="currentColor"
             strokeWidth={2}
-            className="w-5 h-5"
+            className="w-5 h-5 shrink-0"
             aria-hidden="true"
           >
             <title>Shield</title>
@@ -144,10 +199,10 @@ export function LoginPage() {
           fill="none"
           stroke="currentColor"
           strokeWidth={2}
-          className="w-5 h-5"
+          className="w-5 h-5 shrink-0"
           aria-hidden="true"
         >
-          <title>Key</title>
+          <title>Sign In</title>
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -193,7 +248,6 @@ export function LoginPage() {
             delay: 2,
           }}
         />
-        {/* Admin golden glow */}
         <AnimatePresence>
           {isAdminSelected && (
             <motion.div
@@ -212,11 +266,11 @@ export function LoginPage() {
         </AnimatePresence>
       </div>
 
-      {/* Shutter decoration lines */}
+      {/* Cinematic shutter lines */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {[0, 1, 2, 3, 4, 5].map((i) => (
           <motion.div
-            key={`shutter-line-${i}`}
+            key={`shutter-${i}`}
             className="absolute h-px"
             style={{
               top: `${15 + i * 14}%`,
@@ -235,7 +289,7 @@ export function LoginPage() {
         ))}
       </div>
 
-      {/* Card — renders immediately, no loading gate */}
+      {/* Card */}
       <motion.div
         initial={{ opacity: 0, y: 32, scale: 0.97 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -245,8 +299,8 @@ export function LoginPage() {
         <div
           className="rounded-2xl border shadow-elevated overflow-hidden"
           style={{
-            background: "oklch(0.155 0.018 280 / 0.85)",
-            backdropFilter: "blur(20px)",
+            background: "oklch(0.155 0.018 280 / 0.92)",
+            backdropFilter: "blur(24px)",
             borderColor: isAdminSelected
               ? "oklch(0.7 0.18 85 / 0.5)"
               : "oklch(0.3 0.02 280 / 0.5)",
@@ -262,9 +316,10 @@ export function LoginPage() {
               className="inline-flex items-center justify-center mb-5"
             >
               <div
-                className="w-16 h-16 rounded-full flex items-center justify-center font-display font-bold text-2xl text-primary-foreground"
+                className="w-16 h-16 rounded-full flex items-center justify-center font-display font-bold text-2xl"
                 style={{
                   background: "var(--gradient-gold)",
+                  color: "oklch(0.12 0.02 280)",
                   boxShadow:
                     "0 0 32px oklch(0.7 0.22 70 / 0.45), 0 8px 24px rgba(0,0,0,0.4)",
                 }}
@@ -272,11 +327,13 @@ export function LoginPage() {
                 RAP
               </div>
             </motion.div>
+
             <motion.h1
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.5 }}
-              className="text-2xl font-display font-semibold text-foreground text-glow-gold"
+              className="text-2xl font-display font-semibold text-foreground"
+              style={{ textShadow: "0 0 24px oklch(0.7 0.22 70 / 0.4)" }}
             >
               Welcome Back to RAP Studio
             </motion.h1>
@@ -291,9 +348,9 @@ export function LoginPage() {
                 : "Sign in to access your account"}
             </motion.p>
 
-            {/* Deferred "Connecting…" pill — only appears if II warmup takes >1s */}
+            {/* II warmup connecting pill */}
             <AnimatePresence>
-              {isConnecting && !isAdminSelected && (
+              {isConnecting && !isAdminSelected && stage === "idle" && (
                 <motion.div
                   key="connecting-pill"
                   initial={{ opacity: 0, y: -4 }}
@@ -308,28 +365,40 @@ export function LoginPage() {
                   aria-live="polite"
                 >
                   <span
-                    className="w-1.5 h-1.5 rounded-full animate-pulse"
+                    className="w-1.5 h-1.5 rounded-full animate-pulse shrink-0"
                     style={{ background: "oklch(0.7 0.22 70)" }}
                   />
-                  Connecting to Internet Identity…
+                  Preparing secure connection…
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
 
-          {/* Body — always renders immediately, no auth-gate */}
+          {/* Body */}
           <div className="px-8 py-7">
             <AnimatePresence mode="wait">
-              {!showProfileForm ? (
+              {stage === "profile" ? (
+                <LoginForm
+                  key="profile-form"
+                  prefilledRole={selectedRole}
+                  onComplete={handleProfileComplete}
+                />
+              ) : (
                 <motion.div
-                  key="login"
+                  key="role-select"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0, x: -20 }}
                   transition={{ duration: 0.3 }}
                 >
+                  {/* Role selector */}
                   <div className="mb-5">
-                    <p className="section-label mb-3">Select Your Role</p>
+                    <p
+                      className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-3"
+                      style={{ letterSpacing: "0.12em" }}
+                    >
+                      Select Your Role
+                    </p>
                     <RoleSelector
                       selectedRole={selectedRole}
                       onRoleSelect={handleRoleSelect}
@@ -343,60 +412,107 @@ export function LoginPage() {
                     />
                   </div>
 
+                  {/* Error state */}
+                  <AnimatePresence>
+                    {stage === "error" && errorMsg && (
+                      <motion.div
+                        key="error-banner"
+                        initial={{ opacity: 0, y: -8, height: 0 }}
+                        animate={{ opacity: 1, y: 0, height: "auto" }}
+                        exit={{ opacity: 0, y: -8, height: 0 }}
+                        transition={{ duration: 0.3 }}
+                        className="mb-4 rounded-xl border px-4 py-3 flex items-start gap-3"
+                        style={{
+                          background: "oklch(0.28 0.06 25 / 0.15)",
+                          borderColor: "oklch(0.58 0.22 25 / 0.4)",
+                        }}
+                        role="alert"
+                        data-ocid="login.error_state"
+                      >
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="currentColor"
+                          className="w-4 h-4 mt-0.5 shrink-0"
+                          style={{ color: "oklch(0.7 0.22 25)" }}
+                          aria-hidden="true"
+                        >
+                          <title>Error</title>
+                          <path
+                            fillRule="evenodd"
+                            d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
+                            clipRule="evenodd"
+                          />
+                        </svg>
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className="text-sm"
+                            style={{ color: "oklch(0.85 0.05 25)" }}
+                          >
+                            {errorMsg}
+                          </p>
+                        </div>
+                        <button
+                          onClick={handleRetry}
+                          type="button"
+                          className="text-xs font-semibold shrink-0 transition-colors duration-200"
+                          style={{ color: "oklch(0.7 0.22 70)" }}
+                          data-ocid="login.retry_button"
+                        >
+                          Try Again
+                        </button>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Sign In button */}
                   <Button
                     onClick={() => void handleSignIn()}
-                    disabled={!selectedRole || isSigningIn}
-                    data-ocid="btn-sign-in-ii"
-                    className="w-full h-12 text-base font-semibold"
+                    disabled={isConnectingToII}
+                    data-ocid="login.primary_button"
+                    className="w-full h-12 text-base font-semibold transition-all duration-300"
                     style={{
-                      background: selectedRole
-                        ? isAdminSelected
-                          ? "linear-gradient(135deg, oklch(0.72 0.18 85), oklch(0.85 0.2 90), oklch(0.72 0.18 85))"
-                          : "var(--gradient-gold)"
-                        : undefined,
-                      boxShadow: selectedRole
-                        ? isAdminSelected
-                          ? "0 4px 24px oklch(0.8 0.18 85 / 0.45)"
-                          : "0 4px 20px oklch(0.7 0.22 70 / 0.35)"
-                        : undefined,
-                      color: selectedRole ? "oklch(0.12 0.02 280)" : undefined,
+                      background: isAdminSelected
+                        ? "linear-gradient(135deg, oklch(0.72 0.18 85), oklch(0.85 0.2 90), oklch(0.72 0.18 85))"
+                        : "var(--gradient-gold)",
+                      boxShadow: isAdminSelected
+                        ? "0 4px 24px oklch(0.8 0.18 85 / 0.45)"
+                        : "0 4px 20px oklch(0.7 0.22 70 / 0.35)",
+                      color: "oklch(0.12 0.02 280)",
                     }}
                   >
                     {buttonLabel}
                   </Button>
+
+                  {/* Helper text */}
+                  <p className="text-xs text-center text-muted-foreground mt-4 leading-relaxed">
+                    {isAdminSelected ? (
+                      "You will be redirected to a secure password-protected portal."
+                    ) : (
+                      <>
+                        Secure login via{" "}
+                        <span className="text-foreground/70 font-medium">
+                          Internet Identity
+                        </span>
+                        . No passwords stored.
+                      </>
+                    )}
+                  </p>
                 </motion.div>
-              ) : (
-                <LoginForm
-                  key="profile-form"
-                  prefilledRole={selectedRole ?? "client"}
-                  onComplete={handleProfileComplete}
-                />
               )}
             </AnimatePresence>
           </div>
 
           {/* Footer */}
-          <div className="px-8 pb-7 flex flex-col items-center gap-4 border-t border-border/20 pt-5">
-            <a
-              href="https://wa.me/917338501228"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors duration-200"
-              data-ocid="link-whatsapp-support"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="currentColor"
-                className="w-4 h-4"
-                aria-hidden="true"
-                style={{ color: "oklch(0.72 0.18 155)" }}
+          <div className="px-8 pb-6 pt-4 border-t border-border/20 text-center">
+            <p className="text-xs text-muted-foreground/60">
+              © {new Date().getFullYear()} RAP Integrated Studio.{" "}
+              <a
+                href="mailto:ruchithabs550@gmail.com"
+                className="hover:text-muted-foreground transition-colors duration-200"
               >
-                <title>WhatsApp</title>
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
-                <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.553 4.126 1.527 5.862L.057 23.52a.5.5 0 0 0 .622.609l5.806-1.522A11.94 11.94 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.908 0-3.7-.51-5.242-1.4l-.373-.215-3.87 1.015 1.032-3.763-.23-.389A9.951 9.951 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z" />
-              </svg>
-              WhatsApp Support
-            </a>
+                Contact Support
+              </a>
+            </p>
           </div>
         </div>
       </motion.div>

@@ -4,12 +4,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { useActor } from "@caffeineai/core-infrastructure";
 import { useMutation } from "@tanstack/react-query";
 import {
+  AlertCircle,
   CalendarDays,
   CheckCircle2,
   ChevronDown,
   ChevronUp,
   Clock,
   Loader2,
+  Mail,
   MessageCircle,
   ShieldCheck,
   ShoppingCart,
@@ -26,7 +28,11 @@ import {
   createActor,
 } from "../../backend";
 import { SERVICE_CATEGORIES } from "../../data/services";
-import { useRazorpay } from "../../hooks/useRazorpay";
+import {
+  calcDepositPerService,
+  depositRateLabel,
+  useRazorpay,
+} from "../../hooks/useRazorpay";
 import type { ServiceCategory, SubService } from "../../types";
 import { MultiSubServiceSelector } from "../services/SubServiceSelector";
 
@@ -101,6 +107,7 @@ const DURATIONS = [
   "Full Day",
   "Custom",
 ];
+
 const INDOOR_VENUES = ["Studio A", "Studio B", "Conference Room"];
 
 type UILocationType = "indoor" | "outdoor" | "studio" | "custom";
@@ -123,6 +130,9 @@ const UNSELECTED_STYLE = {
 };
 const COLOR_SELECTED = "oklch(0.85 0.18 70)";
 const COLOR_UNSELECTED = "oklch(0.93 0.01 280)";
+
+const SUPPORT_EMAIL = "ruchithabs550@gmail.com";
+const WHATSAPP_NUMBER = "917338501228";
 
 type FormStep = "form" | "success" | "verifying" | "pay_failed";
 
@@ -176,17 +186,44 @@ function saveToLocalStorage(booking: {
   localStorage.setItem("rap_bookings", JSON.stringify(existing));
 }
 
+// ─── Dynamic Deposit Info ─────────────────────────────────────────────────────
+
+function DepositBadge({ duration }: { duration: string }) {
+  if (!duration) return null;
+  const rate = calcDepositPerService(duration);
+  const label = depositRateLabel(duration);
+  return (
+    <motion.span
+      key={duration}
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium"
+      style={{
+        background: "oklch(0.7 0.22 70 / 0.15)",
+        color: "oklch(0.88 0.18 70)",
+        border: "1px solid oklch(0.7 0.22 70 / 0.3)",
+      }}
+    >
+      ₹{rate}/service · {label}
+    </motion.span>
+  );
+}
+
 // ─── Order Summary Panel ──────────────────────────────────────────────────────
 
 function OrderSummary({
   items,
+  duration,
   onRemove,
 }: {
   items: SelectedServiceItem[];
+  duration: string;
   onRemove: (item: SelectedServiceItem) => void;
 }) {
   const total = items.reduce((s, i) => s + i.price, 0);
-  const deposit = items.length * 2;
+  const depositPerService = calcDepositPerService(duration);
+  const deposit = items.length * depositPerService;
+  const rateLabel = depositRateLabel(duration);
 
   if (items.length === 0) {
     return (
@@ -219,10 +256,11 @@ function OrderSummary({
         className="px-4 py-3 border-b"
         style={{ borderColor: "oklch(0.7 0.22 70 / 0.2)" }}
       >
-        <p className="font-semibold text-primary text-sm flex items-center gap-2">
-          <ShoppingCart className="w-4 h-4" />
+        <p className="font-semibold text-primary text-sm flex items-center gap-2 flex-wrap">
+          <ShoppingCart className="w-4 h-4 shrink-0" />
           Order Summary ({items.length}{" "}
           {items.length === 1 ? "service" : "services"})
+          {duration && <DepositBadge duration={duration} />}
         </p>
       </div>
       <div className="px-4 py-3 space-y-2">
@@ -263,10 +301,20 @@ function OrderSummary({
         className="px-4 py-3 border-t space-y-1"
         style={{ borderColor: "oklch(0.7 0.22 70 / 0.2)" }}
       >
-        <div className="flex justify-between text-sm text-muted-foreground">
-          <span>Deposit now (₹2 × {items.length})</span>
-          <span className="font-semibold">₹{deposit}</span>
-        </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`${items.length}-${depositPerService}`}
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="flex justify-between text-sm text-muted-foreground"
+          >
+            <span>
+              Deposit (₹{depositPerService} × {items.length}
+              {duration ? ` · ${rateLabel}` : ""})
+            </span>
+            <span className="font-semibold text-foreground">₹{deposit}</span>
+          </motion.div>
+        </AnimatePresence>
         <div className="flex justify-between">
           <span className="font-bold text-foreground">Total</span>
           <span className="font-bold text-primary text-lg">₹{total}</span>
@@ -314,7 +362,18 @@ function PaymentVerifyingScreen() {
 function PaymentFailedScreen({
   onRetry,
   onClose,
-}: { onRetry: () => void; onClose: () => void }) {
+  errorMessage,
+}: {
+  onRetry: () => void;
+  onClose: () => void;
+  errorMessage?: string;
+}) {
+  const isSdkUnavailable =
+    !!errorMessage &&
+    (errorMessage.includes("temporarily unavailable") ||
+      errorMessage.includes("contact us at") ||
+      errorMessage.includes("gateway"));
+
   return (
     <motion.div
       initial={{ opacity: 0, scale: 0.94 }}
@@ -323,16 +382,55 @@ function PaymentFailedScreen({
       data-ocid="booking-pay-failed-state"
     >
       <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center">
-        <XCircle className="w-10 h-10 text-destructive" />
+        {isSdkUnavailable ? (
+          <AlertCircle className="w-10 h-10 text-destructive" />
+        ) : (
+          <XCircle className="w-10 h-10 text-destructive" />
+        )}
       </div>
       <div>
         <h3 className="text-xl font-display font-bold text-foreground">
-          Payment Verification Failed
+          {isSdkUnavailable ? "Payment Gateway Unavailable" : "Payment Failed"}
         </h3>
         <p className="text-muted-foreground text-sm mt-1 max-w-xs">
-          Payment verification failed. Please contact support or try again.
+          {isSdkUnavailable
+            ? "The payment gateway couldn't be reached. Reach us directly to complete your booking."
+            : "Payment could not be verified. Please try again or contact support."}
         </p>
       </div>
+
+      {/* Fallback contact options */}
+      <div
+        className="w-full rounded-xl border p-4 space-y-3"
+        style={{
+          background: "oklch(0.7 0.22 70 / 0.05)",
+          borderColor: "oklch(0.7 0.22 70 / 0.25)",
+        }}
+      >
+        <p className="text-xs font-semibold text-primary uppercase tracking-wider">
+          Contact us to complete your booking
+        </p>
+        <a
+          href={`https://wa.me/${WHATSAPP_NUMBER}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center gap-2.5 w-full px-4 py-2.5 rounded-lg text-sm font-semibold transition-colors"
+          style={{ background: "#25D366", color: "#fff" }}
+          data-ocid="pay-failed-whatsapp-link"
+        >
+          <MessageCircle className="w-4 h-4 shrink-0" />
+          Chat on WhatsApp
+        </a>
+        <a
+          href={`mailto:${SUPPORT_EMAIL}`}
+          className="flex items-center gap-2.5 w-full px-4 py-2.5 rounded-lg text-sm font-medium transition-colors border border-border text-foreground hover:border-primary"
+          data-ocid="pay-failed-email-link"
+        >
+          <Mail className="w-4 h-4 shrink-0" />
+          {SUPPORT_EMAIL}
+        </a>
+      </div>
+
       <div className="flex gap-3 w-full">
         <Button
           variant="outline"
@@ -342,18 +440,20 @@ function PaymentFailedScreen({
         >
           Cancel
         </Button>
-        <Button
-          className="flex-1 font-semibold"
-          style={{
-            background:
-              "linear-gradient(135deg, oklch(0.7 0.22 70), oklch(0.62 0.18 65))",
-            color: "oklch(0.99 0.002 70)",
-          }}
-          onClick={onRetry}
-          data-ocid="booking-pay-retry-btn"
-        >
-          Retry Payment
-        </Button>
+        {!isSdkUnavailable && (
+          <Button
+            className="flex-1 font-semibold"
+            style={{
+              background:
+                "linear-gradient(135deg, oklch(0.7 0.22 70), oklch(0.62 0.18 65))",
+              color: "oklch(0.99 0.002 70)",
+            }}
+            onClick={onRetry}
+            data-ocid="booking-pay-retry-btn"
+          >
+            Retry Payment
+          </Button>
+        )}
       </div>
     </motion.div>
   );
@@ -367,7 +467,12 @@ export function BookingForm({
   onSuccess,
 }: BookingFormProps) {
   const { actor } = useActor(createActor);
-  const { initiatePayment, isLoading: isPaymentLoading } = useRazorpay();
+  const {
+    initiatePayment,
+    isLoading: isPaymentLoading,
+    verificationState,
+    error: paymentError,
+  } = useRazorpay();
 
   const [expandedServiceId, setExpandedServiceId] = useState<string | null>(
     initialService?.id ?? null,
@@ -399,9 +504,12 @@ export function BookingForm({
   const [notes, setNotes] = useState("");
   const [step, setStep] = useState<FormStep>("form");
   const [bookingRef, setBookingRef] = useState("");
+  const [payFailedMsg, setPayFailedMsg] = useState<string | undefined>();
 
+  // Dynamic pricing based on duration
+  const depositPerService = calcDepositPerService(duration);
   const totalAmount = selectedItems.reduce((s, i) => s + i.price, 0);
-  const depositAmount = selectedItems.length * 2;
+  const depositAmount = selectedItems.length * depositPerService;
 
   const toggleSubService = (service: ServiceCategory, sub: SubService) => {
     setSelectedItems((prev) => {
@@ -525,7 +633,7 @@ export function BookingForm({
     initiatePayment({
       amount: depositAmount,
       name: "RAP Studio Booking",
-      description: `Booking deposit — ${selectedItems.length} service${selectedItems.length > 1 ? "s" : ""}`,
+      description: `${selectedItems.length} service${selectedItems.length > 1 ? "s" : ""} · ${duration || "booking"} · ₹${depositPerService}/service deposit`,
       referenceId: bookingRef,
       paymentType: "booking_initial",
       prefillName: "Client",
@@ -539,12 +647,18 @@ export function BookingForm({
         onSuccess();
       },
       onFailure: (err) => {
-        if (err === "Payment verification failed. Please contact support.") {
+        const isFailed =
+          err.includes("verification failed") ||
+          err.includes("unavailable") ||
+          err.includes("gateway") ||
+          err.includes("contact us");
+        if (isFailed) {
+          setPayFailedMsg(err);
           setStep("pay_failed");
         } else if (err !== "Payment cancelled") {
           toast.error("Payment failed. Please retry.");
+          setStep("success");
         } else {
-          // Cancelled — go back to success screen so they can try again
           setStep("success");
         }
       },
@@ -560,7 +674,9 @@ export function BookingForm({
   if (step === "pay_failed") {
     return (
       <PaymentFailedScreen
+        errorMessage={payFailedMsg ?? paymentError ?? undefined}
         onRetry={() => {
+          setPayFailedMsg(undefined);
           setStep("success");
           triggerDeposit();
         }}
@@ -620,6 +736,9 @@ export function BookingForm({
             <p className="text-muted-foreground">
               📅 {date} at {formatDisplayTime(customTime)}
             </p>
+            {duration && (
+              <p className="text-muted-foreground">⏱ Duration: {duration}</p>
+            )}
             <p className="text-muted-foreground">
               💰 Total:{" "}
               <span className="text-foreground font-bold">₹{totalAmount}</span>
@@ -628,6 +747,16 @@ export function BookingForm({
               Deposit now: ₹{depositAmount} · Balance after delivery: ₹
               {totalAmount - depositAmount}
             </p>
+            {duration && (
+              <p
+                className="text-xs mt-1"
+                style={{ color: "oklch(0.88 0.18 70)" }}
+              >
+                ₹{depositPerService} × {selectedItems.length} service
+                {selectedItems.length > 1 ? "s" : ""} = ₹{depositAmount} deposit
+                ({depositRateLabel(duration)})
+              </p>
+            )}
           </div>
         </div>
 
@@ -642,10 +771,14 @@ export function BookingForm({
           onClick={triggerDeposit}
           data-ocid="booking-pay-deposit-btn"
         >
-          {isPaymentLoading ? (
+          {isPaymentLoading ||
+          verificationState === "loading_sdk" ||
+          verificationState === "opening_popup" ? (
             <span className="flex items-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin" />
-              Processing…
+              {verificationState === "loading_sdk"
+                ? "Loading payment gateway…"
+                : "Opening checkout…"}
             </span>
           ) : (
             `Pay ₹${depositAmount} Deposit via Razorpay`
@@ -653,10 +786,11 @@ export function BookingForm({
         </Button>
 
         <a
-          href={`https://wa.me/917338501228?text=Hi%20RAP%20Studio!%20I%20just%20made%20a%20booking%20(${bookingRef}).%20Please%20confirm%20my%20slot.`}
+          href={`https://wa.me/${WHATSAPP_NUMBER}?text=Hi%20RAP%20Studio!%20I%20just%20made%20a%20booking%20(${bookingRef}).%20Please%20confirm%20my%20slot.`}
           target="_blank"
           rel="noopener noreferrer"
           className="flex items-center gap-2 text-sm font-semibold text-emerald-400 hover:text-emerald-300 transition-colors"
+          data-ocid="booking-whatsapp-confirm"
         >
           <MessageCircle className="w-4 h-4" />
           Confirm on WhatsApp too
@@ -680,7 +814,11 @@ export function BookingForm({
           Your Order
         </Label>
         <AnimatePresence mode="popLayout">
-          <OrderSummary items={selectedItems} onRemove={removeItem} />
+          <OrderSummary
+            items={selectedItems}
+            duration={duration}
+            onRemove={removeItem}
+          />
         </AnimatePresence>
       </div>
 
@@ -865,9 +1003,11 @@ export function BookingForm({
         </div>
       </div>
 
-      {/* Duration */}
+      {/* Duration — affects deposit amount */}
       <div className="space-y-2">
-        <Label className="text-foreground font-semibold">Duration *</Label>
+        <Label className="text-foreground font-semibold flex items-center gap-2 flex-wrap">
+          Duration *{duration && <DepositBadge duration={duration} />}
+        </Label>
         <select
           className="w-full bg-card border border-border rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-primary"
           style={{ color: "black" }}
@@ -882,6 +1022,20 @@ export function BookingForm({
             </option>
           ))}
         </select>
+        {duration && (
+          <motion.p
+            key={duration}
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-xs text-muted-foreground"
+          >
+            Deposit rate:{" "}
+            <span style={{ color: "oklch(0.88 0.18 70)" }}>
+              ₹{calcDepositPerService(duration)} per service
+            </span>{" "}
+            · {depositRateLabel(duration)}
+          </motion.p>
+        )}
       </div>
 
       {/* Location */}
@@ -990,32 +1144,54 @@ export function BookingForm({
         />
       </div>
 
-      {/* Payment Breakdown */}
+      {/* Dynamic Payment Breakdown */}
       {selectedItems.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="rounded-xl p-4 border text-sm space-y-1"
-          style={{
-            background: "oklch(0.7 0.22 70 / 0.08)",
-            borderColor: "oklch(0.7 0.22 70 / 0.3)",
-          }}
-        >
-          <p className="font-semibold text-primary">💰 Payment Breakdown</p>
-          <p className="text-muted-foreground">
-            Total:{" "}
-            <span className="text-foreground font-bold">₹{totalAmount}</span> (
-            {selectedItems.length} service{selectedItems.length > 1 ? "s" : ""})
-          </p>
-          <p className="text-muted-foreground">
-            • ₹{depositAmount} deposit via Razorpay — paid right after you
-            submit
-          </p>
-          <p className="text-muted-foreground">
-            • ₹{totalAmount - depositAmount} after delivery of your
-            photos/videos
-          </p>
-        </motion.div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`${selectedItems.length}-${depositPerService}`}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="rounded-xl p-4 border text-sm space-y-1.5"
+            style={{
+              background: "oklch(0.7 0.22 70 / 0.08)",
+              borderColor: "oklch(0.7 0.22 70 / 0.3)",
+            }}
+            data-ocid="payment-breakdown"
+          >
+            <p className="font-semibold text-primary">💰 Payment Breakdown</p>
+            <p className="text-muted-foreground font-medium">
+              {selectedItems.length} service
+              {selectedItems.length > 1 ? "s" : ""} × ₹{depositPerService}{" "}
+              {duration
+                ? `(${depositRateLabel(duration)})`
+                : "(select duration)"}{" "}
+              ={" "}
+              <span style={{ color: "oklch(0.88 0.18 70)" }}>
+                ₹{depositAmount} deposit
+              </span>
+            </p>
+            <p className="text-muted-foreground">
+              Full total:{" "}
+              <span className="text-foreground font-bold">₹{totalAmount}</span>
+            </p>
+            <p className="text-muted-foreground text-xs">
+              • ₹{depositAmount} deposit paid now via Razorpay
+            </p>
+            <p className="text-muted-foreground text-xs">
+              • ₹{totalAmount - depositAmount} balance paid after service
+              delivery
+            </p>
+            {!duration && (
+              <p
+                className="text-xs mt-1"
+                style={{ color: "oklch(0.68 0.2 290)" }}
+              >
+                ⚡ Select a duration above to see your exact deposit amount
+              </p>
+            )}
+          </motion.div>
+        </AnimatePresence>
       )}
 
       <Button

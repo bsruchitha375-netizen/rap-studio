@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Camera, ChevronDown, MessageCircle, Play } from "lucide-react";
+import { Camera, ChevronDown, Play } from "lucide-react";
 import { motion, useScroll, useTransform } from "motion/react";
 import { useRef } from "react";
 
@@ -292,23 +292,6 @@ export function HeroSection() {
               Book a Session
             </motion.button>
           </Link>
-          <motion.a
-            href="https://wa.me/917338501228"
-            target="_blank"
-            rel="noopener noreferrer"
-            data-ocid="hero-whatsapp-cta"
-            className="flex items-center gap-2 px-8 py-4 rounded-xl font-semibold text-base transition-smooth"
-            style={{
-              background: "oklch(0.45 0.18 155 / 0.2)",
-              border: "1px solid oklch(0.55 0.2 155 / 0.5)",
-              color: "oklch(0.78 0.2 155)",
-            }}
-            whileHover={{ scale: 1.06 }}
-            whileTap={{ scale: 0.97 }}
-          >
-            <MessageCircle size={18} />
-            WhatsApp Us
-          </motion.a>
           <Link to="/services">
             <motion.button
               type="button"
@@ -329,24 +312,6 @@ export function HeroSection() {
             </motion.button>
           </Link>
         </motion.div>
-
-        {/* WhatsApp CTA badge */}
-        <motion.a
-          href="https://wa.me/917338501228"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center gap-2 mt-1 transition-smooth"
-          style={{ color: "oklch(0.55 0.01 280)" }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 1 }}
-          whileHover={{ opacity: 0.8 }}
-          aria-label="Chat with us on WhatsApp"
-          data-ocid="hero-whatsapp-badge"
-        >
-          <MessageCircle size={14} style={{ color: "oklch(0.65 0.2 155)" }} />
-          <span className="text-sm font-mono">Chat on WhatsApp</span>
-        </motion.a>
       </motion.div>
 
       {/* Film strip bottom with real images */}

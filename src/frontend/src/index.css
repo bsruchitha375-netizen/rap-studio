@@ -146,6 +146,17 @@
     scroll-behavior: smooth;
   }
 
+  /* Smooth scrolling on all overflow containers */
+  .overflow-y-auto,
+  .overflow-x-auto,
+  .overflow-y-scroll,
+  .overflow-x-scroll,
+  [data-radix-scroll-area-viewport],
+  [role="dialog"],
+  [role="alertdialog"] {
+    scroll-behavior: smooth;
+  }
+
   * {
     @apply border-border;
   }

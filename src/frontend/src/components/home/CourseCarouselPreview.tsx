@@ -34,6 +34,8 @@ interface CourseCardProps {
 
 function CourseCard({ course, isActive, onClick }: CourseCardProps) {
   const navigate = useNavigate();
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
 
   return (
     <motion.div
@@ -56,8 +58,33 @@ function CourseCard({ course, isActive, onClick }: CourseCardProps) {
         className="h-36 flex items-center justify-center relative overflow-hidden"
         style={{ background: CATEGORY_GRADIENTS[course.category] }}
       >
-        <BookOpen size={36} style={{ color: "oklch(0.7 0.22 70 / 0.5)" }} />
-        <div className="absolute top-2 right-2">
+        {/* Fallback icon */}
+        {(!imgLoaded || imgError) && (
+          <BookOpen size={36} style={{ color: "oklch(0.7 0.22 70 / 0.5)" }} />
+        )}
+
+        {/* Real course image */}
+        {course.image && !imgError && (
+          <img
+            src={course.image}
+            alt={course.title}
+            loading="lazy"
+            onLoad={() => setImgLoaded(true)}
+            onError={() => setImgError(true)}
+            className="absolute inset-0 w-full h-full object-cover"
+            style={{
+              opacity: imgLoaded ? 1 : 0,
+              transition: "opacity 0.4s ease",
+            }}
+          />
+        )}
+
+        {/* Gradient overlay on top of image */}
+        {imgLoaded && !imgError && (
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+        )}
+
+        <div className="absolute top-2 right-2 z-10">
           <Badge
             className="text-xs px-2 py-0.5 rounded-full border-0"
             style={{
@@ -68,7 +95,7 @@ function CourseCard({ course, isActive, onClick }: CourseCardProps) {
             {course.mode}
           </Badge>
         </div>
-        <div className="absolute bottom-2 left-2">
+        <div className="absolute bottom-2 left-2 z-10">
           <Badge
             className="text-xs px-2 py-0.5 rounded-full border-0 capitalize"
             style={{

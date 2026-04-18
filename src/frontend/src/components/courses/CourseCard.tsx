@@ -90,6 +90,7 @@ export function CourseCard({
   const navigate = useNavigate();
   const [enrollOpen, setEnrollOpen] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
+  const [imgError, setImgError] = useState(false);
   const [showOverlay, setShowOverlay] = useState(false);
 
   const catStyle = CATEGORY_STYLES[course.category];
@@ -123,28 +124,38 @@ export function CourseCard({
       >
         {/* Thumbnail */}
         <div className="relative h-44 overflow-hidden">
-          {/* Shimmer placeholder */}
-          {!imgLoaded && (
+          {/* Shimmer / gradient fallback */}
+          {(!imgLoaded || imgError) && (
             <div
-              className={`absolute inset-0 bg-gradient-to-br ${catStyle.gradient} animate-pulse`}
-            />
+              className={`absolute inset-0 bg-gradient-to-br ${catStyle.gradient} ${!imgError ? "animate-pulse" : ""} flex items-center justify-center`}
+            >
+              {imgError && (
+                <catStyle.icon className="w-10 h-10 opacity-30 text-white" />
+              )}
+            </div>
           )}
 
           {/* Course-specific image */}
-          <motion.img
-            src={imgSrc}
-            alt={course.title}
-            loading="lazy"
-            onLoad={() => setImgLoaded(true)}
-            className="absolute inset-0 w-full h-full object-cover"
-            style={{
-              scale: 1.08,
-              opacity: imgLoaded ? 1 : 0,
-              transition: "opacity 0.4s ease",
-            }}
-            whileHover={{ scale: 1.14 }}
-            transition={{ duration: 0.5 }}
-          />
+          {!imgError && (
+            <motion.img
+              src={imgSrc}
+              alt={course.title}
+              loading="lazy"
+              onLoad={() => setImgLoaded(true)}
+              onError={() => {
+                setImgError(true);
+                setImgLoaded(false);
+              }}
+              className="absolute inset-0 w-full h-full object-cover"
+              style={{
+                scale: 1.08,
+                opacity: imgLoaded ? 1 : 0,
+                transition: "opacity 0.4s ease",
+              }}
+              whileHover={{ scale: 1.14 }}
+              transition={{ duration: 0.5 }}
+            />
+          )}
 
           {/* Gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />

@@ -1,14 +1,14 @@
 import type { Course } from "../types";
 
 export const COURSES: Course[] = [
-  // Photography
+  // Photography (15)
   {
     id: "photo-fundamentals",
     title: "Photography Fundamentals",
     category: "photography",
     mode: "hybrid",
     image:
-      "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=600&q=80",
+      "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=400&h=600&fit=crop",
     description:
       "Master the basics of photography — composition, exposure, and storytelling through the lens.",
     duration: "4 weeks",
@@ -29,7 +29,7 @@ export const COURSES: Course[] = [
     category: "photography",
     mode: "offline",
     image:
-      "https://images.unsplash.com/photo-1542038784456-1ea8e935640e?w=600&q=80",
+      "https://images.unsplash.com/photo-1542038784456-1ea8e935640e?w=400&h=600&fit=crop",
     description:
       "From natural light to studio setups — learn to sculpt light like a professional.",
     duration: "3 weeks",
@@ -50,7 +50,7 @@ export const COURSES: Course[] = [
     category: "photography",
     mode: "hybrid",
     image:
-      "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=600&q=80",
+      "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=600&fit=crop",
     description:
       "Create compelling portraits that capture personality and emotion.",
     duration: "4 weeks",
@@ -71,7 +71,7 @@ export const COURSES: Course[] = [
     category: "photography",
     mode: "hybrid",
     image:
-      "https://images.unsplash.com/photo-1519741497674-611481863552?w=600&q=80",
+      "https://images.unsplash.com/photo-1519741497674-611481863552?w=400&h=600&fit=crop",
     description:
       "Professional wedding photography from preparation to reception.",
     duration: "6 weeks",
@@ -92,7 +92,7 @@ export const COURSES: Course[] = [
     category: "photography",
     mode: "offline",
     image:
-      "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=600&q=80",
+      "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400&h=600&fit=crop",
     description:
       "High-fashion photography for editorial, lookbooks, and brand campaigns.",
     duration: "5 weeks",
@@ -113,7 +113,7 @@ export const COURSES: Course[] = [
     category: "photography",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=600&q=80",
+      "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?w=400&h=600&fit=crop",
     description:
       "Capture authentic urban life with decisive moments and storytelling.",
     duration: "3 weeks",
@@ -134,7 +134,7 @@ export const COURSES: Course[] = [
     category: "photography",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=600&q=80",
+      "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=600&fit=crop",
     description:
       "Stunning landscape and nature photography from golden hour to night sky.",
     duration: "4 weeks",
@@ -155,7 +155,7 @@ export const COURSES: Course[] = [
     category: "photography",
     mode: "hybrid",
     image:
-      "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=600&q=80",
+      "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=600&fit=crop",
     description:
       "Commercial product photography for e-commerce and advertising.",
     duration: "3 weeks",
@@ -176,7 +176,7 @@ export const COURSES: Course[] = [
     category: "photography",
     mode: "offline",
     image:
-      "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600&q=80",
+      "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=600&fit=crop",
     description:
       "Appetizing food photography for restaurants, menus, and food brands.",
     duration: "2 weeks",
@@ -197,7 +197,7 @@ export const COURSES: Course[] = [
     category: "photography",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1486325212027-8081e485255e?w=600&q=80",
+      "https://images.unsplash.com/photo-1486325212027-8081e485255e?w=400&h=600&fit=crop",
     description:
       "Capture buildings and spaces with technical precision and artistic vision.",
     duration: "3 weeks",
@@ -218,7 +218,7 @@ export const COURSES: Course[] = [
     category: "photography",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1502134249126-9f3755a50d78?w=600&q=80",
+      "https://images.unsplash.com/photo-1502134249126-9f3755a50d78?w=400&h=600&fit=crop",
     description:
       "Magical long exposure photography — light trails, star trails, and cityscapes at night.",
     duration: "2 weeks",
@@ -239,7 +239,7 @@ export const COURSES: Course[] = [
     category: "photography",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=600&q=80",
+      "https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400&h=600&fit=crop",
     description:
       "The timeless art of black and white photography — tones, contrast, and emotion.",
     duration: "2 weeks",
@@ -260,7 +260,7 @@ export const COURSES: Course[] = [
     category: "photography",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=600&q=80",
+      "https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400&h=600&fit=crop",
     description:
       "Capture stunning images with your smartphone — tools, apps, and creative techniques.",
     duration: "2 weeks",
@@ -281,7 +281,7 @@ export const COURSES: Course[] = [
     category: "photography",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1455165814004-1126a7199f9b?w=600&q=80",
+      "https://images.unsplash.com/photo-1455165814004-1126a7199f9b?w=400&h=600&fit=crop",
     description:
       "Mastering visual composition for compelling and memorable photographs.",
     duration: "2 weeks",
@@ -302,7 +302,7 @@ export const COURSES: Course[] = [
     category: "photography",
     mode: "hybrid",
     image:
-      "https://images.unsplash.com/photo-1582979512210-99b6a53386f9?w=600&q=80",
+      "https://images.unsplash.com/photo-1495707902641-75cac588d2e9?w=400&h=600&fit=crop",
     description:
       "Deep dive into every camera setting and mode — from auto to full manual control.",
     duration: "3 weeks",
@@ -318,14 +318,14 @@ export const COURSES: Course[] = [
     rating: 4.9,
   },
 
-  // Videography & Film
+  // Videography & Film (10)
   {
     id: "videography-basics",
     title: "Videography Basics",
     category: "videography",
     mode: "hybrid",
     image:
-      "https://images.unsplash.com/photo-1601520493833-ab2a1c8c6e22?w=600&q=80",
+      "https://images.unsplash.com/photo-1601520493833-ab2a1c8c6e22?w=400&h=600&fit=crop",
     description:
       "Everything you need to start filming professional-quality videos.",
     duration: "4 weeks",
@@ -346,7 +346,7 @@ export const COURSES: Course[] = [
     category: "videography",
     mode: "offline",
     image:
-      "https://images.unsplash.com/photo-1535016120720-40c646be5580?w=600&q=80",
+      "https://images.unsplash.com/photo-1535016120720-40c646be5580?w=400&h=600&fit=crop",
     description:
       "Cinema-quality video production using DSLR and mirrorless cameras.",
     duration: "5 weeks",
@@ -367,7 +367,7 @@ export const COURSES: Course[] = [
     category: "videography",
     mode: "offline",
     image:
-      "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=600&q=80",
+      "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=400&h=600&fit=crop",
     description:
       "Direct, produce, and deliver compelling short films from concept to screen.",
     duration: "8 weeks",
@@ -388,7 +388,7 @@ export const COURSES: Course[] = [
     category: "videography",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=600&q=80",
+      "https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=400&h=600&fit=crop",
     description:
       "Craft visual narratives that captivate audiences through cinematic language.",
     duration: "4 weeks",
@@ -409,7 +409,7 @@ export const COURSES: Course[] = [
     category: "videography",
     mode: "hybrid",
     image:
-      "https://images.unsplash.com/photo-1563394480-a7835e72ce22?w=600&q=80",
+      "https://images.unsplash.com/photo-1563394480-a7835e72ce22?w=400&h=600&fit=crop",
     description: "Create powerful documentary films that inspire and inform.",
     duration: "6 weeks",
     price: 5,
@@ -429,7 +429,7 @@ export const COURSES: Course[] = [
     category: "videography",
     mode: "offline",
     image:
-      "https://images.unsplash.com/photo-1508614589041-895b88991e3e?w=600&q=80",
+      "https://images.unsplash.com/photo-1508614589041-895b88991e3e?w=400&h=600&fit=crop",
     description:
       "Aerial imaging mastery — from regulations to cinematic drone shots.",
     duration: "3 weeks",
@@ -450,7 +450,7 @@ export const COURSES: Course[] = [
     category: "videography",
     mode: "hybrid",
     image:
-      "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=600&q=80",
+      "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=600&fit=crop",
     description:
       "Capture live events with multi-camera coverage and professional delivery.",
     duration: "3 weeks",
@@ -471,7 +471,7 @@ export const COURSES: Course[] = [
     category: "videography",
     mode: "offline",
     image:
-      "https://images.unsplash.com/photo-1465495976277-4387d4b0e4a6?w=600&q=80",
+      "https://images.unsplash.com/photo-1465495976277-4387d4b0e4a6?w=400&h=600&fit=crop",
     description:
       "Cinematic wedding films from traditional ceremonies to contemporary celebrations.",
     duration: "6 weeks",
@@ -492,7 +492,7 @@ export const COURSES: Course[] = [
     category: "videography",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?w=600&q=80",
+      "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?w=400&h=600&fit=crop",
     description:
       "Build a successful YouTube channel with professional production quality.",
     duration: "4 weeks",
@@ -513,7 +513,7 @@ export const COURSES: Course[] = [
     category: "videography",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1611162616475-46b635cb6868?w=600&q=80",
+      "https://images.unsplash.com/photo-1611162616475-46b635cb6868?w=400&h=600&fit=crop",
     description:
       "Viral short-form video content for Instagram Reels and YouTube Shorts.",
     duration: "2 weeks",
@@ -529,14 +529,14 @@ export const COURSES: Course[] = [
     rating: 4.9,
   },
 
-  // Editing & Post-Production
+  // Editing & Post-Production (10)
   {
     id: "lightroom-mastery",
     title: "Lightroom Mastery",
     category: "editing",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1572044162444-ad60f128bdea?w=600&q=80",
+      "https://images.unsplash.com/photo-1572044162444-ad60f128bdea?w=400&h=600&fit=crop",
     description:
       "Complete Lightroom workflow from culling to export-ready masterpieces.",
     duration: "3 weeks",
@@ -557,7 +557,7 @@ export const COURSES: Course[] = [
     category: "editing",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1561736778-92e52a7769ef?w=600&q=80",
+      "https://images.unsplash.com/photo-1561736778-92e52a7769ef?w=400&h=600&fit=crop",
     description:
       "Advanced Photoshop techniques specifically for photography post-processing.",
     duration: "4 weeks",
@@ -578,7 +578,7 @@ export const COURSES: Course[] = [
     category: "editing",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=600&q=80",
+      "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&h=600&fit=crop",
     description:
       "Professional video editing in Premiere Pro — from cuts to final export.",
     duration: "5 weeks",
@@ -599,7 +599,7 @@ export const COURSES: Course[] = [
     category: "editing",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1551650975-87deedd944c3?w=600&q=80",
+      "https://images.unsplash.com/photo-1551650975-87deedd944c3?w=400&h=600&fit=crop",
     description:
       "Master Apple's Final Cut Pro for fast, professional video editing.",
     duration: "4 weeks",
@@ -620,7 +620,7 @@ export const COURSES: Course[] = [
     category: "editing",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1536240478700-b869ad10e2ab?w=600&q=80",
+      "https://images.unsplash.com/photo-1536240478700-b869ad10e2ab?w=400&h=600&fit=crop",
     description:
       "Hollywood-level color grading using DaVinci Resolve's powerful tools.",
     duration: "4 weeks",
@@ -641,7 +641,7 @@ export const COURSES: Course[] = [
     category: "editing",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1600861195091-690c92f1d2cc?w=600&q=80",
+      "https://images.unsplash.com/photo-1600861195091-690c92f1d2cc?w=400&h=600&fit=crop",
     description:
       "Motion graphics and visual effects fundamentals in Adobe After Effects.",
     duration: "4 weeks",
@@ -662,7 +662,7 @@ export const COURSES: Course[] = [
     category: "editing",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1620121692029-d088224ddc74?w=600&q=80",
+      "https://images.unsplash.com/photo-1620121692029-d088224ddc74?w=400&h=600&fit=crop",
     description:
       "Create signature looks and moods through masterful color grading.",
     duration: "3 weeks",
@@ -683,7 +683,7 @@ export const COURSES: Course[] = [
     category: "editing",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1560472355-536de3962603?w=600&q=80",
+      "https://images.unsplash.com/photo-1560472355-536de3962603?w=400&h=600&fit=crop",
     description:
       "Natural, high-end retouching techniques for portraits and commercial photography.",
     duration: "3 weeks",
@@ -704,7 +704,7 @@ export const COURSES: Course[] = [
     category: "editing",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?w=600&q=80",
+      "https://images.unsplash.com/photo-1587825140708-dfaf72ae4b04?w=400&h=600&fit=crop",
     description:
       "Efficiently edit hundreds of photos with consistent results and speed.",
     duration: "2 weeks",
@@ -725,7 +725,7 @@ export const COURSES: Course[] = [
     category: "editing",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=600&q=80",
+      "https://images.unsplash.com/photo-1677442135703-1787eea5ce01?w=400&h=600&fit=crop",
     description:
       "Leverage AI-powered tools to accelerate your editing workflow significantly.",
     duration: "2 weeks",
@@ -741,14 +741,14 @@ export const COURSES: Course[] = [
     rating: 4.8,
   },
 
-  // Business & Studio
+  // Business & Studio (10)
   {
     id: "studio-management",
     title: "Studio Management",
     category: "business",
     mode: "hybrid",
     image:
-      "https://images.unsplash.com/photo-1497366216548-37526070297c?w=600&q=80",
+      "https://images.unsplash.com/photo-1497366216548-37526070297c?w=400&h=600&fit=crop",
     description:
       "Complete studio business management — from bookings to team coordination.",
     duration: "4 weeks",
@@ -769,7 +769,7 @@ export const COURSES: Course[] = [
     category: "business",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=600&q=80",
+      "https://images.unsplash.com/photo-1551836022-d5d88e9218df?w=400&h=600&fit=crop",
     description:
       "Win more clients with effective communication, proposals, and sales skills.",
     duration: "3 weeks",
@@ -790,7 +790,7 @@ export const COURSES: Course[] = [
     category: "business",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=600&q=80",
+      "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=400&h=600&fit=crop",
     description:
       "Transform your passion into a profitable photography business.",
     duration: "6 weeks",
@@ -811,7 +811,7 @@ export const COURSES: Course[] = [
     category: "business",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=600&q=80",
+      "https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?w=400&h=600&fit=crop",
     description:
       "Grow your studio brand on social media with a strategic content approach.",
     duration: "4 weeks",
@@ -832,7 +832,7 @@ export const COURSES: Course[] = [
     category: "business",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=600&q=80",
+      "https://images.unsplash.com/photo-1554224155-6726b3ff858f?w=400&h=600&fit=crop",
     description:
       "Set profitable prices and create irresistible packages for your services.",
     duration: "2 weeks",
@@ -853,7 +853,7 @@ export const COURSES: Course[] = [
     category: "business",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1493421419110-74f4e85ba126?w=600&q=80",
+      "https://images.unsplash.com/photo-1493421419110-74f4e85ba126?w=400&h=600&fit=crop",
     description:
       "Create a distinctive brand that attracts your ideal clients consistently.",
     duration: "3 weeks",
@@ -874,7 +874,7 @@ export const COURSES: Course[] = [
     category: "business",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1467232004584-a241de8bcf5d?w=600&q=80",
+      "https://images.unsplash.com/photo-1467232004584-a241de8bcf5d?w=400&h=600&fit=crop",
     description:
       "Build a stunning photography portfolio website that converts visitors to clients.",
     duration: "3 weeks",
@@ -895,7 +895,7 @@ export const COURSES: Course[] = [
     category: "business",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=600&q=80",
+      "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&h=600&fit=crop",
     description:
       "Build a thriving e-commerce photography business for brands and sellers.",
     duration: "4 weeks",
@@ -916,7 +916,7 @@ export const COURSES: Course[] = [
     category: "business",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1563986768494-4dee2763ff3f?w=600&q=80",
+      "https://images.unsplash.com/photo-1563986768494-4dee2763ff3f?w=400&h=600&fit=crop",
     description:
       "Grow an engaged Instagram audience and convert followers into clients.",
     duration: "3 weeks",
@@ -937,7 +937,7 @@ export const COURSES: Course[] = [
     category: "business",
     mode: "online",
     image:
-      "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=600&q=80",
+      "https://images.unsplash.com/photo-1450101499163-c8848c66ca85?w=400&h=600&fit=crop",
     description:
       "Protect your business with proper contracts, copyright, and legal knowledge.",
     duration: "2 weeks",
@@ -953,14 +953,14 @@ export const COURSES: Course[] = [
     rating: 4.8,
   },
 
-  // Specialized
+  // Specialized (10)
   {
     id: "newborn-baby-photography",
     title: "Newborn & Baby Photography",
     category: "specialized",
     mode: "offline",
     image:
-      "https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=600&q=80",
+      "https://images.unsplash.com/photo-1555252333-9f8e92e65df9?w=400&h=600&fit=crop",
     description:
       "Safe, beautiful newborn and baby photography with professional safety protocols.",
     duration: "3 weeks",
@@ -981,7 +981,7 @@ export const COURSES: Course[] = [
     category: "specialized",
     mode: "hybrid",
     image:
-      "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=600&q=80",
+      "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=400&h=600&fit=crop",
     description:
       "Capture amazing pet portraits with patience, technique, and creativity.",
     duration: "2 weeks",
@@ -1002,7 +1002,7 @@ export const COURSES: Course[] = [
     category: "specialized",
     mode: "hybrid",
     image:
-      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=600&q=80",
+      "https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=400&h=600&fit=crop",
     description:
       "Dynamic fitness photography capturing movement, strength, and lifestyle.",
     duration: "3 weeks",
@@ -1023,7 +1023,7 @@ export const COURSES: Course[] = [
     category: "specialized",
     mode: "hybrid",
     image:
-      "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=600&q=80",
+      "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=400&h=600&fit=crop",
     description:
       "Professional real estate photography that sells properties faster.",
     duration: "2 weeks",
@@ -1044,7 +1044,7 @@ export const COURSES: Course[] = [
     category: "specialized",
     mode: "offline",
     image:
-      "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=600&q=80",
+      "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=400&h=600&fit=crop",
     description:
       "Sleek automotive photography for showrooms, ads, and editorial.",
     duration: "2 weeks",
@@ -1065,7 +1065,7 @@ export const COURSES: Course[] = [
     category: "specialized",
     mode: "offline",
     image:
-      "https://images.unsplash.com/photo-1490375930658-8a3073d2e6ab?w=600&q=80",
+      "https://images.unsplash.com/photo-1490375930658-8a3073d2e6ab?w=400&h=600&fit=crop",
     description:
       "Graceful maternity photography celebrating the beauty of motherhood.",
     duration: "2 weeks",
@@ -1086,7 +1086,7 @@ export const COURSES: Course[] = [
     category: "specialized",
     mode: "offline",
     image:
-      "https://images.unsplash.com/photo-1471341971476-ae15ff5dd4ea?w=600&q=80",
+      "https://images.unsplash.com/photo-1471341971476-ae15ff5dd4ea?w=400&h=600&fit=crop",
     description:
       "Empowering boudoir and glamour photography with professionalism and artistry.",
     duration: "3 weeks",
@@ -1107,7 +1107,7 @@ export const COURSES: Course[] = [
     category: "specialized",
     mode: "offline",
     image:
-      "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=600&q=80",
+      "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=400&h=600&fit=crop",
     description:
       "Master event and stage lighting for concerts, functions, and live performances.",
     duration: "3 weeks",
@@ -1128,7 +1128,7 @@ export const COURSES: Course[] = [
     category: "specialized",
     mode: "offline",
     image:
-      "https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=600&q=80",
+      "https://images.unsplash.com/photo-1574267432553-4b4628081c31?w=400&h=600&fit=crop",
     description:
       "Professional green screen photography and complete studio infrastructure setup.",
     duration: "2 weeks",
@@ -1149,7 +1149,7 @@ export const COURSES: Course[] = [
     category: "specialized",
     mode: "hybrid",
     image:
-      "https://images.unsplash.com/photo-1508614589041-895b88991e3e?w=600&q=80",
+      "https://images.unsplash.com/photo-1473968512647-3e447244af8f?w=400&h=600&fit=crop",
     description:
       "Professional drone certification with DGCA compliance and aerial photography mastery.",
     duration: "4 weeks",

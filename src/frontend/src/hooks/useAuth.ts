@@ -9,14 +9,12 @@ const ROLE_STORAGE_KEY = "rap_user_role";
 const PROFILE_STORAGE_KEY = "rap_user_profile";
 const AUTH_CACHE_KEY = "rap_auth_cache";
 const II_WARMUP_KEY = "rap_ii_warmed";
-// 48hr TTL for II sessions — returning users skip II roundtrip for longer
+// 48hr TTL — returning users skip II roundtrip
 const CACHE_TTL_MS = 48 * 60 * 60 * 1000;
 
-// ── Resource hints injected eagerly at module load time ───────────────────────
-// Runs synchronously when the module is first imported (app boot), not on click.
+// ── Resource hints — injected eagerly at module load (app boot) ────────────
 (function injectResourceHints() {
   if (typeof document === "undefined") return;
-
   const hints: Array<{ rel: string; href: string; crossOrigin?: string }> = [
     {
       rel: "preconnect",
@@ -27,7 +25,6 @@ const CACHE_TTL_MS = 48 * 60 * 60 * 1000;
     { rel: "preconnect", href: "https://icp-api.io", crossOrigin: "anonymous" },
     { rel: "dns-prefetch", href: "https://icp-api.io" },
   ];
-
   for (const { rel, href, crossOrigin } of hints) {
     const id = `hint-${rel}-${href.replace(/[^a-z0-9]/gi, "-")}`;
     if (document.getElementById(id)) continue;
@@ -40,15 +37,14 @@ const CACHE_TTL_MS = 48 * 60 * 60 * 1000;
   }
 })();
 
-// ── Auth cache (principal + expiry) ──────────────────────────────────────────
-
+// ── Auth cache (principal + expiry) ───────────────────────────────────────
 interface AuthCache {
   principalText: string;
   cachedAt: number;
   expiry: number;
 }
 
-function readAuthCache(): AuthCache | null {
+export function readAuthCache(): AuthCache | null {
   try {
     const raw = localStorage.getItem(AUTH_CACHE_KEY);
     if (!raw) return null;
@@ -77,41 +73,44 @@ function clearAuthCache() {
   localStorage.removeItem(II_WARMUP_KEY);
 }
 
-// ── Eager II warmup — called once at app boot ─────────────────────────────────
-// Starts the AuthClient.create() promise in the background so by the time
-// the user clicks "Sign In" the client is already instantiated.
+// ── Eager II warmup — called once at app boot ──────────────────────────────
 let iiWarmupPromise: Promise<void> | null = null;
 
 export function warmupInternetIdentity(): void {
-  if (iiWarmupPromise) return; // already started
+  if (iiWarmupPromise) return;
   if (typeof window === "undefined") return;
 
-  // Mark warmup as started (survives re-renders)
   iiWarmupPromise = (async () => {
     try {
-      // Dynamically import the II auth-client so the main bundle isn't blocked
       const { AuthClient } = await import("@dfinity/auth-client");
       const client = await AuthClient.create({
         idleOptions: { disableIdle: true },
       });
-      // Cache the instance on window so useAuth can pick it up without re-creating
       (window as Window & { __iiAuthClient?: typeof client }).__iiAuthClient =
         client;
       localStorage.setItem(II_WARMUP_KEY, String(Date.now()));
     } catch {
-      // Silently ignore — warmup is best-effort
+      // warmup is best-effort
     }
   })();
 }
 
-// ── Main auth hook ────────────────────────────────────────────────────────────
+// ── Stored profile helpers ─────────────────────────────────────────────────
+export function readStoredProfile(): UserProfile | null {
+  try {
+    const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
+    return raw ? (JSON.parse(raw) as UserProfile) : null;
+  } catch {
+    return null;
+  }
+}
 
+// ── Main auth hook ─────────────────────────────────────────────────────────
 export function useAuth() {
   const { identity, loginStatus, login, clear, isInitializing } =
     useInternetIdentity();
   const isAuthenticated = loginStatus === "success";
 
-  // On first mount: persist auth cache if authenticated; clear if not
   useEffect(() => {
     if (isAuthenticated && identity) {
       const principalText = identity.getPrincipal().toString();
@@ -146,8 +145,7 @@ export function useAuth() {
   };
 }
 
-// ── Stored role ───────────────────────────────────────────────────────────────
-
+// ── Stored role ────────────────────────────────────────────────────────────
 export function useStoredRole(): [UserRole | null, (role: UserRole) => void] {
   const [role, setRoleState] = useState<UserRole | null>(() => {
     const stored = localStorage.getItem(ROLE_STORAGE_KEY);
@@ -162,18 +160,16 @@ export function useStoredRole(): [UserRole | null, (role: UserRole) => void] {
   return [role, setRole];
 }
 
-// ── User profile ──────────────────────────────────────────────────────────────
-
+// ── User profile ───────────────────────────────────────────────────────────
 export function useUserProfile() {
   const { actor, isFetching } = useActor(createActor);
   const { isAuthenticated } = useAuth();
   const queryClient = useQueryClient();
 
-  // Memoized so localStorage isn't re-read on every render
   const storedProfile = useMemo<UserProfile | null>(() => {
-    const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as UserProfile) : null;
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    return readStoredProfile();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const query = useQuery<UserProfile | null>({
     queryKey: ["userProfile"],
@@ -190,7 +186,6 @@ export function useUserProfile() {
     (profile: UserProfile) => {
       localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
       localStorage.setItem(ROLE_STORAGE_KEY, profile.role);
-      // Update React Query cache immediately so all subscribers see the update
       queryClient.setQueryData<UserProfile | null>(["userProfile"], profile);
     },
     [queryClient],
@@ -199,13 +194,11 @@ export function useUserProfile() {
   return { ...query, setProfile };
 }
 
-// ── Role helpers ──────────────────────────────────────────────────────────────
-
+// ── Role helpers ───────────────────────────────────────────────────────────
 export function useRole(): UserRole | null {
   const { isAuthenticated } = useAuth();
   const stored = useMemo(
     () => localStorage.getItem(ROLE_STORAGE_KEY),
-    // Re-read only when auth state changes
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
@@ -240,8 +233,7 @@ export function useIsReceptionist(): boolean {
   return role === "receptionist" || role === "admin";
 }
 
-// ── II connection state hook (used by LoginPage for "Connecting…" indicator) ──
-
+// ── II connection state (used by LoginPage for "Connecting…" indicator) ───
 export function useIIConnectionState(): { isConnecting: boolean } {
   const [isConnecting, setIsConnecting] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -249,13 +241,10 @@ export function useIIConnectionState(): { isConnecting: boolean } {
   useEffect(() => {
     const warmedAt = localStorage.getItem(II_WARMUP_KEY);
     const alreadyWarmed = warmedAt && Date.now() - Number(warmedAt) < 10_000;
-    // Only show connecting indicator if II hasn't warmed up yet
     if (!alreadyWarmed) {
-      // Show indicator after 300ms — much shorter than original 1s
-      timerRef.current = setTimeout(() => setIsConnecting(true), 300);
+      timerRef.current = setTimeout(() => setIsConnecting(true), 400);
     }
 
-    // When warmup promise resolves, hide indicator
     void iiWarmupPromise?.then(() => {
       if (timerRef.current) clearTimeout(timerRef.current);
       setIsConnecting(false);
@@ -269,8 +258,7 @@ export function useIIConnectionState(): { isConnecting: boolean } {
   return { isConnecting };
 }
 
-// ── Admin session helpers (password-only, no II required) ────────────────────
-
+// ── Admin session helpers (password-only, no II required) ─────────────────
 const ADMIN_SESSION_KEY = "rap_admin_session";
 
 interface AdminSession {
