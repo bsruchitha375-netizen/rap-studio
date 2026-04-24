@@ -66,20 +66,10 @@ const CATEGORY_STYLES: Record<
   },
 };
 
-// Bold solid mode badges: Online=blue, Offline=orange, Hybrid=purple
 const MODE_BADGE: Record<CourseMode, { label: string; cls: string }> = {
-  online: {
-    label: "Online",
-    cls: "bg-blue-600 text-white border-0",
-  },
-  offline: {
-    label: "Offline",
-    cls: "bg-orange-600 text-white border-0",
-  },
-  hybrid: {
-    label: "Hybrid",
-    cls: "bg-purple-600 text-white border-0",
-  },
+  online: { label: "Online", cls: "bg-blue-600 text-white border-0" },
+  offline: { label: "Offline", cls: "bg-orange-500 text-white border-0" },
+  hybrid: { label: "Hybrid", cls: "bg-purple-600 text-white border-0" },
 };
 
 export function CourseCard({
@@ -91,7 +81,7 @@ export function CourseCard({
   const [enrollOpen, setEnrollOpen] = useState(false);
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
-  const [showOverlay, setShowOverlay] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
 
   const catStyle = CATEGORY_STYLES[course.category];
   const modeBadge = MODE_BADGE[course.mode];
@@ -103,28 +93,33 @@ export function CourseCard({
         initial={{ opacity: 0, scale: 0.9 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.4, delay: index * 0.05 }}
-        whileHover={{ y: isCenter ? -8 : -4, scale: isCenter ? 1.03 : 1.02 }}
-        onMouseEnter={() => setShowOverlay(true)}
-        onMouseLeave={() => setShowOverlay(false)}
-        className={`relative flex flex-col rounded-2xl overflow-hidden border border-border/40 bg-card
-          cursor-pointer group transition-shadow duration-300
-          ${
-            isCenter
-              ? "shadow-2xl shadow-primary/20 border-primary/40"
-              : "shadow-lg hover:shadow-xl"
-          }`}
+        whileHover={{ y: isCenter ? -10 : -5, scale: isCenter ? 1.03 : 1.02 }}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className={`relative flex flex-col rounded-2xl overflow-hidden cursor-pointer group transition-all duration-300 ${
+          isCenter
+            ? "border-primary/50 shadow-2xl"
+            : "border-border/40 hover:border-primary/30 shadow-lg hover:shadow-xl"
+        }`}
         style={{
           width: 260,
-          minHeight: 380,
+          minHeight: 360,
+          background: "oklch(var(--card) / 0.45)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+          border: isCenter
+            ? "1px solid oklch(0.7 0.22 70 / 0.5)"
+            : "1px solid oklch(var(--border) / 0.4)",
           boxShadow: isCenter
             ? "0 0 40px oklch(0.7 0.22 70 / 0.2), 0 20px 60px rgba(0,0,0,0.4)"
-            : undefined,
+            : isHovered
+              ? "0 0 20px oklch(0.7 0.22 70 / 0.1), 0 12px 36px rgba(0,0,0,0.3)"
+              : "0 8px 24px rgba(0,0,0,0.2)",
         }}
         data-ocid="course-card"
       >
         {/* Thumbnail */}
         <div className="relative h-44 overflow-hidden">
-          {/* Shimmer / gradient fallback */}
           {(!imgLoaded || imgError) && (
             <div
               className={`absolute inset-0 bg-gradient-to-br ${catStyle.gradient} ${!imgError ? "animate-pulse" : ""} flex items-center justify-center`}
@@ -134,8 +129,6 @@ export function CourseCard({
               )}
             </div>
           )}
-
-          {/* Course-specific image */}
           {!imgError && (
             <motion.img
               src={imgSrc}
@@ -147,28 +140,30 @@ export function CourseCard({
                 setImgLoaded(false);
               }}
               className="absolute inset-0 w-full h-full object-cover"
-              style={{
-                scale: 1.08,
-                opacity: imgLoaded ? 1 : 0,
-                transition: "opacity 0.4s ease",
-              }}
-              whileHover={{ scale: 1.14 }}
+              animate={{ scale: isHovered ? 1.1 : 1.05 }}
               transition={{ duration: 0.5 }}
+              style={{ opacity: imgLoaded ? 1 : 0 }}
             />
           )}
-
           {/* Gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
+          {/* Gold border at top when center */}
           {isCenter && (
-            <div className="absolute inset-0 ring-inset ring-2 ring-primary/30 rounded-t-2xl" />
+            <div
+              className="absolute top-0 left-0 right-0 h-0.5"
+              style={{ background: "var(--gradient-gold)" }}
+            />
           )}
 
-          {/* View Details hover overlay */}
+          {/* Hover overlay */}
           <motion.div
-            className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-sm z-20"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: showOverlay ? 1 : 0 }}
+            className="absolute inset-0 flex items-center justify-center"
+            style={{
+              background: "oklch(0.06 0.01 280 / 0.55)",
+              backdropFilter: "blur(4px)",
+            }}
+            animate={{ opacity: isHovered ? 1 : 0 }}
             transition={{ duration: 0.2 }}
           >
             <span className="text-white text-sm font-bold tracking-wider uppercase border border-white/40 px-4 py-1.5 rounded-full">
@@ -184,7 +179,7 @@ export function CourseCard({
           </Badge>
         </div>
 
-        {/* Mode badge — top right, bold & clear */}
+        {/* Mode badge — top right */}
         <div className="absolute top-3 right-3 z-20">
           <span
             className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${modeBadge.cls}`}
@@ -201,8 +196,13 @@ export function CourseCard({
           >
             {course.title}
           </h3>
-          <p className="text-muted-foreground text-xs line-clamp-2 flex-1">
+          <p className="text-muted-foreground text-xs line-clamp-2 flex-1 leading-relaxed">
             {course.description}
+          </p>
+
+          {/* Instructor */}
+          <p className="text-xs text-muted-foreground/70">
+            {course.instructor}
           </p>
 
           {/* Meta */}
@@ -215,34 +215,34 @@ export function CourseCard({
               <Users className="w-3 h-3" />
               {course.totalStudents}
             </span>
-            <span className="flex items-center gap-1 text-amber-400">
-              <Star className="w-3 h-3 fill-amber-400" />
+            <span
+              className="flex items-center gap-1"
+              style={{ color: "oklch(0.8 0.18 70)" }}
+            >
+              <Star className="w-3 h-3 fill-current" />
               {course.rating}
             </span>
           </div>
 
-          {/* Price + Actions */}
-          <div className="flex items-center justify-between mt-2 pt-2 border-t border-border/30">
-            <span className="text-xl font-bold text-primary">₹5</span>
-            <div className="flex gap-1.5">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="text-xs h-7 px-2 text-muted-foreground hover:text-foreground"
-                onClick={() => void navigate({ to: `/courses/${course.id}` })}
-                data-ocid="course-detail-link"
-              >
-                Details
-              </Button>
-              <Button
-                size="sm"
-                className="text-xs h-7 px-3 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
-                onClick={() => setEnrollOpen(true)}
-                data-ocid="course-enroll-btn"
-              >
-                Enroll
-              </Button>
-            </div>
+          {/* Actions */}
+          <div className="flex items-center justify-end gap-1.5 mt-2 pt-2 border-t border-border/30">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="text-xs h-7 px-2 text-muted-foreground hover:text-foreground"
+              onClick={() => void navigate({ to: `/courses/${course.id}` })}
+              data-ocid="course.detail_button"
+            >
+              Details
+            </Button>
+            <Button
+              size="sm"
+              className="text-xs h-7 px-3 font-semibold border-0 btn-primary-luxury py-0"
+              onClick={() => setEnrollOpen(true)}
+              data-ocid="course.enroll_button"
+            >
+              Enroll
+            </Button>
           </div>
         </div>
       </motion.div>

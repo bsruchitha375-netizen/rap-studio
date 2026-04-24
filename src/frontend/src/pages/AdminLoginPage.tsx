@@ -14,6 +14,7 @@ export function AdminLoginPage() {
   const navigate = useNavigate();
   const [name, setName] = useState("Administrator");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [passwordError, setPasswordError] = useState("");
   const [attempts, setAttempts] = useState(0);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
@@ -24,13 +25,11 @@ export function AdminLoginPage() {
   const isLocked = lockedUntil !== null && Date.now() < lockedUntil;
   const remainingAttempts = MAX_ATTEMPTS - attempts;
 
-  // If admin is already logged in (valid session), skip straight to dashboard
   useEffect(() => {
     const session = getAdminSession();
     if (session?.loggedIn) {
       void navigate({ to: "/admin" });
     } else {
-      // Focus the password field immediately for fast entry
       setTimeout(() => passwordRef.current?.focus(), 150);
     }
   }, [navigate]);
@@ -45,8 +44,10 @@ export function AdminLoginPage() {
   const handlePasswordSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLocked) return;
-
     setIsVerifying(true);
+
+    // Simulate verification delay for security feel
+    await new Promise((r) => setTimeout(r, 400));
 
     if (password === ADMIN_PASSWORD) {
       saveAdminSession(name.trim() || "Administrator", "+917338501228");
@@ -75,23 +76,35 @@ export function AdminLoginPage() {
   return (
     <div
       className="min-h-screen flex items-center justify-center relative overflow-hidden"
-      style={{ background: "oklch(0.09 0.015 280)" }}
+      style={{
+        background:
+          "linear-gradient(135deg, oklch(0.07 0.015 280) 0%, oklch(0.11 0.018 270) 100%)",
+      }}
     >
-      {/* Grid background */}
+      {/* Grid overlay */}
       <div
-        className="absolute inset-0 pointer-events-none opacity-[0.025]"
+        className="absolute inset-0 pointer-events-none opacity-[0.022]"
         style={{
           backgroundImage:
             "linear-gradient(oklch(0.7 0.22 70) 1px, transparent 1px), linear-gradient(90deg, oklch(0.7 0.22 70) 1px, transparent 1px)",
           backgroundSize: "40px 40px",
         }}
       />
-      {/* Vignette */}
+      {/* Radial vignette */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse at center, transparent 40%, oklch(0.09 0.015 280) 100%)",
+            "radial-gradient(ellipse at center, transparent 40%, oklch(0.07 0.015 280) 100%)",
+        }}
+      />
+      {/* Gold glow top */}
+      <div
+        className="absolute top-0 left-1/2 -translate-x-1/2 w-96 h-48 pointer-events-none"
+        style={{
+          background:
+            "radial-gradient(ellipse, oklch(0.7 0.22 70 / 0.12), transparent 70%)",
+          filter: "blur(40px)",
         }}
       />
 
@@ -102,15 +115,23 @@ export function AdminLoginPage() {
         className="relative z-10 w-full max-w-sm mx-4"
       >
         <div
-          className="rounded-2xl border shadow-elevated overflow-hidden"
+          className="rounded-2xl border overflow-hidden"
           style={{
-            background: "oklch(0.135 0.018 280 / 0.92)",
-            backdropFilter: "blur(20px)",
-            borderColor: "oklch(0.3 0.02 280 / 0.5)",
+            background: "oklch(0.135 0.018 280 / 0.96)",
+            backdropFilter: "blur(24px)",
+            borderColor: "oklch(0.7 0.22 70 / 0.3)",
+            boxShadow:
+              "0 0 80px oklch(0.7 0.22 70 / 0.12), 0 32px 64px oklch(0.05 0.01 280 / 0.6), inset 0 1px 0 oklch(0.7 0.22 70 / 0.1)",
           }}
         >
+          {/* Top gold accent bar */}
+          <div
+            className="h-0.5 w-full"
+            style={{ background: "var(--gradient-gold)" }}
+          />
+
           {/* Header */}
-          <div className="px-8 pt-8 pb-6 text-center">
+          <div className="px-8 pt-8 pb-5 text-center">
             <motion.div
               initial={{ scale: 0.7, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
@@ -118,11 +139,12 @@ export function AdminLoginPage() {
               className="flex justify-center mb-5"
             >
               <div
-                className="w-14 h-14 rounded-full flex items-center justify-center font-display font-bold text-xl text-primary-foreground"
+                className="w-16 h-16 rounded-full flex items-center justify-center font-display font-bold text-xl"
                 style={{
                   background: "var(--gradient-gold)",
+                  color: "oklch(0.1 0.02 280)",
                   boxShadow:
-                    "0 0 24px oklch(0.7 0.22 70 / 0.4), 0 6px 20px rgba(0,0,0,0.5)",
+                    "0 0 32px oklch(0.7 0.22 70 / 0.5), 0 8px 24px rgba(0,0,0,0.6)",
                 }}
               >
                 RAP
@@ -134,51 +156,59 @@ export function AdminLoginPage() {
               animate={{ opacity: 1 }}
               transition={{ delay: 0.25 }}
             >
-              <div className="section-label mb-2">Restricted Access</div>
+              <div
+                className="inline-flex items-center gap-1.5 mb-2 px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-widest"
+                style={{
+                  background: "oklch(0.22 0.025 280)",
+                  color: "oklch(0.55 0.01 280)",
+                  border: "1px solid oklch(0.3 0.02 280)",
+                }}
+              >
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                  className="w-3 h-3"
+                  aria-hidden="true"
+                >
+                  <title>Shield</title>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"
+                  />
+                </svg>
+                Restricted Access
+              </div>
               <h1
-                className="text-2xl font-display font-bold text-glow-gold"
-                style={{ color: "oklch(0.7 0.22 70)" }}
+                className="text-2xl font-display font-bold mb-1"
+                style={{
+                  color: "oklch(0.7 0.22 70)",
+                  textShadow: "0 0 24px oklch(0.7 0.22 70 / 0.4)",
+                }}
               >
                 Admin Portal
               </h1>
-              <p className="text-xs text-muted-foreground mt-1.5">
+              <p className="text-xs text-muted-foreground">
                 Authorised personnel only
               </p>
             </motion.div>
           </div>
 
-          {/* Security badge */}
-          <div className="mx-8 mb-6 flex items-center gap-2 px-3 py-2 rounded-lg border border-border/30 bg-card/20">
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={1.5}
-              className="w-4 h-4 text-primary shrink-0"
-              aria-hidden="true"
-            >
-              <title>Shield</title>
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M9 12.75 11.25 15 15 9.75m-3-7.036A11.959 11.959 0 0 1 3.598 6 11.99 11.99 0 0 0 3 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285Z"
-              />
-            </svg>
-            <span className="text-xs text-muted-foreground">
-              Password-protected admin access
-            </span>
-          </div>
-
-          {/* Body — direct password entry, no II required */}
+          {/* Form body */}
           <div className="px-8 pb-8">
             <form
               onSubmit={(e) => void handlePasswordSubmit(e)}
               className="space-y-4"
               data-ocid="admin-login-form"
             >
-              {/* Optional name customisation */}
+              {/* Name field */}
               <div className="space-y-1.5">
-                <Label htmlFor="admin-name" className="text-sm font-medium">
+                <Label
+                  htmlFor="admin-name"
+                  className="text-xs font-semibold uppercase tracking-wider text-foreground/75"
+                >
                   Your Name
                 </Label>
                 <Input
@@ -187,21 +217,30 @@ export function AdminLoginPage() {
                   placeholder="Administrator"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="bg-card/40 border-border transition-all duration-300 focus:border-primary focus:shadow-[0_0_12px_oklch(0.7_0.22_70_/_0.2)]"
+                  className="h-11 text-sm"
+                  style={{
+                    color: "#000",
+                    backgroundColor: "#fff",
+                    WebkitTextFillColor: "#000",
+                  }}
                   data-ocid="input-admin-name"
                   autoComplete="name"
                 />
               </div>
 
+              {/* Password field */}
               <div className="space-y-1.5">
-                <Label htmlFor="admin-password" className="text-sm font-medium">
+                <Label
+                  htmlFor="admin-password"
+                  className="text-xs font-semibold uppercase tracking-wider text-foreground/75"
+                >
                   Admin Password
                 </Label>
-                <motion.div animate={shakeControls}>
+                <motion.div animate={shakeControls} className="relative">
                   <Input
                     id="admin-password"
                     ref={passwordRef}
-                    type="password"
+                    type={showPassword ? "text" : "password"}
                     placeholder="Enter admin password"
                     value={password}
                     onChange={(e) => {
@@ -210,13 +249,64 @@ export function AdminLoginPage() {
                     }}
                     disabled={isLocked}
                     className={[
-                      "bg-card/40 border-border transition-all duration-300",
-                      "focus:border-primary focus:shadow-[0_0_12px_oklch(0.7_0.22_70_/_0.2)]",
+                      "h-11 text-sm pr-10 transition-all duration-300",
                       passwordError ? "border-destructive" : "",
                     ].join(" ")}
+                    style={{
+                      color: "#000",
+                      backgroundColor: "#fff",
+                      WebkitTextFillColor: "#000",
+                    }}
                     data-ocid="input-admin-password"
                     autoComplete="current-password"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((p) => !p)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground/60 hover:text-muted-foreground transition-colors duration-200"
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
+                  >
+                    {showPassword ? (
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={1.5}
+                        className="w-4 h-4"
+                        aria-hidden="true"
+                      >
+                        <title>Hide</title>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"
+                        />
+                      </svg>
+                    ) : (
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={1.5}
+                        className="w-4 h-4"
+                        aria-hidden="true"
+                      >
+                        <title>Show</title>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+                        />
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+                        />
+                      </svg>
+                    )}
+                  </button>
                 </motion.div>
 
                 <AnimatePresence>
@@ -257,12 +347,19 @@ export function AdminLoginPage() {
                   )}
               </div>
 
+              {/* Submit button */}
               <Button
                 type="submit"
                 disabled={isVerifying || isLocked || !password}
-                className="w-full h-11 font-semibold"
+                className="w-full h-11 font-semibold text-sm mt-2"
                 style={
-                  !isLocked ? { background: "var(--gradient-gold)" } : undefined
+                  !isLocked
+                    ? {
+                        background: "var(--gradient-gold)",
+                        color: "oklch(0.1 0.02 280)",
+                        boxShadow: "0 4px 20px oklch(0.7 0.22 70 / 0.35)",
+                      }
+                    : undefined
                 }
                 data-ocid="btn-admin-submit"
               >
@@ -315,9 +412,39 @@ export function AdminLoginPage() {
                 )}
               </Button>
             </form>
+
+            {/* Security note */}
+            <div
+              className="mt-5 flex items-start gap-2 px-3 py-2.5 rounded-xl"
+              style={{
+                background: "oklch(0.18 0.02 280 / 0.5)",
+                border: "1px solid oklch(0.3 0.02 280 / 0.4)",
+              }}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.5}
+                className="w-3.5 h-3.5 mt-0.5 shrink-0 text-primary"
+                aria-hidden="true"
+              >
+                <title>Info</title>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="m11.25 11.25.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"
+                />
+              </svg>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                This portal is exclusively for studio owners and administrators.
+                Unauthorized access is prohibited.
+              </p>
+            </div>
           </div>
         </div>
 
+        {/* Back link */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -326,9 +453,24 @@ export function AdminLoginPage() {
         >
           <a
             href="/login"
-            className="text-xs text-muted-foreground/40 hover:text-muted-foreground transition-colors duration-200"
+            className="text-xs text-muted-foreground/40 hover:text-muted-foreground transition-colors duration-200 flex items-center justify-center gap-1.5"
           >
-            ← Return to Login
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              className="w-3 h-3"
+              aria-hidden="true"
+            >
+              <title>Back</title>
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18"
+              />
+            </svg>
+            Return to Login
           </a>
         </motion.div>
       </motion.div>

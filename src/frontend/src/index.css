@@ -3,9 +3,10 @@
 @tailwind utilities;
 
 @font-face {
-  font-family: "Fraunces";
-  src: url("/assets/fonts/Fraunces.woff2") format("woff2");
+  font-family: "Playfair Display";
+  src: url("/assets/fonts/PlayfairDisplay.woff2") format("woff2");
   font-display: swap;
+  font-weight: 400 900;
 }
 
 @font-face {
@@ -22,10 +23,12 @@
 
 @layer base {
   :root {
-    --font-display: "Fraunces";
+    --font-display: "Playfair Display";
     --font-body: "General Sans";
     --font-mono: "JetBrains Mono";
     --radius: 0.875rem;
+    --transition-base: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-smooth: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
 
     --background: 0.12 0.015 280;
     --foreground: 0.94 0.008 280;
@@ -45,12 +48,15 @@
     --accent: 0.68 0.2 290;
     --accent-foreground: 0.99 0.002 290;
 
+    --success: 0.65 0.18 150;
+    --success-foreground: 0.99 0.002 150;
     --destructive: 0.58 0.22 25;
     --destructive-foreground: 0.99 0.002 25;
 
     --border: 0.3 0.02 280;
     --input: 0.3 0.02 280;
     --ring: 0.7 0.22 70;
+    --divider-accent: 0.7 0.22 70;
 
     --chart-1: 0.68 0.2 70;
     --chart-2: 0.65 0.2 290;
@@ -69,18 +75,26 @@
 
     --gradient-gold: linear-gradient(
       135deg,
-      oklch(0.7 0.22 70),
-      oklch(0.62 0.18 65)
+      oklch(0.75 0.24 75) 0%,
+      oklch(0.7 0.22 70) 50%,
+      oklch(0.62 0.18 65) 100%
     );
     --gradient-purple: linear-gradient(
       135deg,
-      oklch(0.68 0.2 290),
-      oklch(0.58 0.18 280)
+      oklch(0.72 0.22 295) 0%,
+      oklch(0.68 0.2 290) 50%,
+      oklch(0.58 0.18 280) 100%
     );
     --gradient-subtle: linear-gradient(
       135deg,
-      oklch(0.165 0.018 280),
-      oklch(0.22 0.025 280)
+      oklch(0.165 0.018 280) 0%,
+      oklch(0.22 0.025 280) 100%
+    );
+    --gradient-hero: linear-gradient(
+      180deg,
+      oklch(0.12 0.015 280 / 0.8) 0%,
+      oklch(0.165 0.018 280 / 0.4) 50%,
+      oklch(0.12 0.015 280 / 0.8) 100%
     );
   }
 
@@ -103,12 +117,15 @@
     --accent: 0.68 0.2 290;
     --accent-foreground: 0.99 0.002 290;
 
+    --success: 0.65 0.18 150;
+    --success-foreground: 0.99 0.002 150;
     --destructive: 0.58 0.22 25;
     --destructive-foreground: 0.99 0.002 25;
 
     --border: 0.3 0.02 280;
     --input: 0.3 0.02 280;
     --ring: 0.7 0.22 70;
+    --divider-accent: 0.7 0.22 70;
 
     --chart-1: 0.68 0.2 70;
     --chart-2: 0.65 0.2 290;
@@ -127,18 +144,26 @@
 
     --gradient-gold: linear-gradient(
       135deg,
-      oklch(0.7 0.22 70),
-      oklch(0.62 0.18 65)
+      oklch(0.75 0.24 75) 0%,
+      oklch(0.7 0.22 70) 50%,
+      oklch(0.62 0.18 65) 100%
     );
     --gradient-purple: linear-gradient(
       135deg,
-      oklch(0.68 0.2 290),
-      oklch(0.58 0.18 280)
+      oklch(0.72 0.22 295) 0%,
+      oklch(0.68 0.2 290) 50%,
+      oklch(0.58 0.18 280) 100%
     );
     --gradient-subtle: linear-gradient(
       135deg,
-      oklch(0.165 0.018 280),
-      oklch(0.22 0.025 280)
+      oklch(0.165 0.018 280) 0%,
+      oklch(0.22 0.025 280) 100%
+    );
+    --gradient-hero: linear-gradient(
+      180deg,
+      oklch(0.12 0.015 280 / 0.8) 0%,
+      oklch(0.165 0.018 280 / 0.4) 50%,
+      oklch(0.12 0.015 280 / 0.8) 100%
     );
   }
 
@@ -162,6 +187,7 @@
   }
   body {
     @apply bg-background text-foreground font-body antialiased;
+    letter-spacing: -0.3px;
   }
 
   /* ── Input text visibility fix ──────────────────────────────────────
@@ -215,7 +241,11 @@
 
 @layer utilities {
   .transition-smooth {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: var(--transition-smooth);
+  }
+
+  .transition-base {
+    transition: var(--transition-base);
   }
 
   .gradient-gold {
@@ -230,22 +260,38 @@
     background: var(--gradient-subtle);
   }
 
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+
   .shadow-luxury {
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 16px 48px rgba(0, 0, 0, 0.25);
   }
 
   .shadow-elevated {
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4), 0 24px 64px rgba(0, 0, 0, 0.3);
   }
 
   .shadow-subtle {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .shadow-glow-gold {
+    box-shadow: 0 0 20px rgba(184, 147, 74, 0.15), 0 8px 24px rgba(0, 0, 0, 0.3);
   }
 
   .glass-effect {
-    background: rgba(22, 22, 45, 0.5);
-    backdrop-filter: blur(10px);
-    border: 1px solid oklch(var(--border) / 0.3);
+    background: rgba(22, 22, 45, 0.45);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid oklch(var(--border) / 0.4);
+  }
+
+  .glass-effect-subtle {
+    background: rgba(22, 22, 45, 0.35);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    border: 1px solid oklch(var(--border) / 0.25);
   }
 
   .text-glow-gold {
@@ -253,34 +299,295 @@
   }
 
   .hero-text {
-    @apply text-5xl md:text-7xl font-bold tracking-tight leading-tight;
+    @apply text-6xl md:text-7xl lg:text-8xl font-bold tracking-tight leading-tight;
+    font-family: var(--font-display);
+    letter-spacing: -1px;
   }
 
   .section-heading {
     @apply text-4xl md:text-5xl font-bold tracking-tight;
+    font-family: var(--font-display);
+  }
+
+  .section-subheading {
+    @apply text-2xl md:text-3xl font-semibold tracking-tight;
+    font-family: var(--font-display);
   }
 
   .section-label {
-    @apply text-sm font-semibold tracking-widest uppercase text-primary;
+    @apply text-xs font-semibold tracking-widest uppercase text-primary opacity-90;
+    letter-spacing: 1.5px;
   }
 
   .card-luxury {
-    @apply rounded-xl border border-border backdrop-blur-sm transition-smooth;
-    background: oklch(var(--card) / 0.4);
+    @apply rounded-2xl border border-border backdrop-blur-sm transition-smooth;
+    background: oklch(var(--card) / 0.35);
   }
   .card-luxury:hover {
-    background: oklch(var(--card) / 0.6);
+    background: oklch(var(--card) / 0.55);
+    border-color: oklch(var(--border) / 0.6);
   }
 
   .btn-primary-luxury {
-    @apply px-6 py-3 rounded-lg font-semibold bg-primary text-primary-foreground transition-smooth hover:shadow-luxury hover:scale-105 active:scale-95;
+    @apply px-8 py-3 rounded-xl font-semibold bg-primary text-primary-foreground transition-smooth cursor-pointer;
+    box-shadow: 0 4px 12px rgba(184, 147, 74, 0.2);
+  }
+  .btn-primary-luxury:hover {
+    @apply shadow-luxury scale-105;
+  }
+  .btn-primary-luxury:active {
+    @apply scale-95;
   }
 
   .btn-secondary-luxury {
-    @apply px-6 py-3 rounded-lg font-semibold border border-border text-foreground transition-smooth hover:border-primary;
-    background: oklch(var(--card) / 0.4);
+    @apply px-8 py-3 rounded-xl font-semibold border border-border text-foreground transition-smooth cursor-pointer;
+    background: oklch(var(--card) / 0.35);
   }
   .btn-secondary-luxury:hover {
+    background: oklch(var(--card) / 0.6);
+    border-color: oklch(var(--primary) / 0.6);
+  }
+
+  .btn-tertiary-luxury {
+    @apply px-6 py-2 rounded-lg font-medium text-primary transition-base cursor-pointer;
+    text-decoration: none;
+  }
+  .btn-tertiary-luxury:hover {
+    opacity: 0.8;
+  }
+
+  /* Login split panel styles */
+  .login-panel {
+    @apply rounded-2xl border border-border backdrop-blur-md transition-smooth;
+    background: oklch(var(--card) / 0.45);
+  }
+
+  .login-divider {
+    background: linear-gradient(
+      180deg,
+      transparent 0%,
+      oklch(var(--divider-accent) / 0.3) 25%,
+      oklch(var(--divider-accent) / 0.4) 50%,
+      oklch(var(--divider-accent) / 0.3) 75%,
+      transparent 100%
+    );
+  }
+
+  .form-field-icon {
+    @apply absolute left-4 top-1/2 transform -translate-y-1/2 text-primary opacity-70;
+  }
+
+  .input-luxury {
+    @apply pl-12 pr-4 py-3 bg-white text-black rounded-lg border border-gray-300 transition-base focus:outline-none focus:ring-2 focus:ring-primary;
+    font-family: var(--font-body);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  }
+  .input-luxury:focus {
+    box-shadow: 0 2px 8px rgba(184, 147, 74, 0.15);
+  }
+
+  .checkbox-luxury {
+    @apply w-5 h-5 rounded border border-gray-300 bg-white cursor-pointer transition-smooth accent-primary;
+  }
+
+  /* ── Login Page Premium Animations ──────────────────────────────────── */
+  @keyframes bokeh-float-1 {
+    0%,
+    100% {
+      transform: translate(0, 0) scale(1);
+    }
+    33% {
+      transform: translate(30px, -40px) scale(0.95);
+    }
+    66% {
+      transform: translate(-20px, 30px) scale(1.05);
+    }
+  }
+
+  @keyframes bokeh-float-2 {
+    0%,
+    100% {
+      transform: translate(0, 0) scale(1);
+    }
+    33% {
+      transform: translate(-35px, 25px) scale(1.05);
+    }
+    66% {
+      transform: translate(20px, -30px) scale(0.95);
+    }
+  }
+
+  .bokeh-orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.1;
+  }
+
+  .bokeh-orb-1 {
+    width: 400px;
+    height: 400px;
+    top: -100px;
+    right: -100px;
+    background: oklch(var(--primary) / 0.3);
+    animation: bokeh-float-1 25s ease-in-out infinite;
+  }
+
+  .bokeh-orb-2 {
+    width: 300px;
+    height: 300px;
+    bottom: -80px;
+    left: -80px;
+    background: oklch(var(--accent) / 0.3);
+    animation: bokeh-float-2 30s ease-in-out infinite;
+  }
+
+  .bokeh-orb-3 {
+    width: 350px;
+    height: 350px;
+    top: 50%;
+    left: -150px;
+    background: oklch(var(--primary) / 0.2);
+    animation: bokeh-float-2 35s ease-in-out infinite reverse;
+  }
+
+  /* ── Role Badge Styling ──────────────────────────────────────────────── */
+  .role-badge {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-smooth cursor-pointer;
+    background: oklch(var(--card) / 0.6);
+    border: 1px solid oklch(var(--border) / 0.4);
+  }
+
+  .role-badge:hover {
     background: oklch(var(--card) / 0.8);
+    border-color: oklch(var(--border) / 0.8);
+  }
+
+  .role-badge.active {
+    background: oklch(var(--primary) / 0.2);
+    border-color: oklch(var(--primary) / 0.6);
+    color: oklch(var(--primary));
+  }
+
+  .role-badge.admin {
+    --role-color: oklch(0.68 0.2 290);
+  }
+  .role-badge.client {
+    --role-color: oklch(0.7 0.22 70);
+  }
+  .role-badge.staff {
+    --role-color: oklch(0.66 0.18 190);
+  }
+  .role-badge.student {
+    --role-color: oklch(0.65 0.2 290);
+  }
+
+  /* ── Login Card Glow Effect ──────────────────────────────────────────── */
+  .login-card-glow {
+    position: relative;
+    border-radius: inherit;
+  }
+
+  .login-card-glow::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      oklch(var(--primary) / 0.4),
+      oklch(var(--accent) / 0.2),
+      oklch(var(--primary) / 0.2)
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  /* ── Password Strength Indicator ──────────────────────────────────────── */
+  .password-strength {
+    @apply flex gap-1 mt-2;
+  }
+
+  .strength-bar {
+    @apply h-1 flex-1 rounded-full bg-gray-300 transition-colors;
+  }
+
+  .strength-bar.weak {
+    @apply bg-red-500;
+  }
+  .strength-bar.fair {
+    @apply bg-yellow-500;
+  }
+  .strength-bar.good {
+    @apply bg-blue-500;
+  }
+  .strength-bar.strong {
+    @apply bg-green-500;
+  }
+  .strength-bar.empty {
+    @apply bg-gray-300;
+  }
+
+  /* ── Staggered Animation for Form Fields ──────────────────────────────── */
+  .form-field {
+    animation: slide-up 0.6s ease-out backwards;
+  }
+
+  .form-field:nth-child(1) {
+    animation-delay: 100ms;
+  }
+  .form-field:nth-child(2) {
+    animation-delay: 150ms;
+  }
+  .form-field:nth-child(3) {
+    animation-delay: 200ms;
+  }
+  .form-field:nth-child(4) {
+    animation-delay: 250ms;
+  }
+  .form-field:nth-child(5) {
+    animation-delay: 300ms;
+  }
+  .form-field:nth-child(6) {
+    animation-delay: 350ms;
+  }
+
+  /* ── Loading Spinner ──────────────────────────────────────────────────── */
+  .spinner {
+    @apply inline-block w-5 h-5 border-2 border-transparent rounded-full;
+    border-top-color: currentColor;
+    animation: spin 0.8s linear infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .btn-stripe {
+    @apply w-full px-6 py-3 rounded-lg font-semibold bg-blue-600 text-white transition-smooth hover:shadow-luxury hover:scale-105 active:scale-95;
+  }
+
+  /* Toast notification styles */
+  .toast-success {
+    @apply bg-green-600 text-white;
+  }
+
+  .toast-error {
+    @apply bg-red-600 text-white;
+  }
+
+  .toast-notification {
+    @apply fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-luxury animate-slide-up;
   }
 }

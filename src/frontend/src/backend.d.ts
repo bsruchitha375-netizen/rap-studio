@@ -35,6 +35,7 @@ export interface EmailLog {
     subject: string;
     body: string;
     createdAt: Timestamp;
+    sent: boolean;
     relatedId?: string;
 }
 export interface BookingRequest {
@@ -59,13 +60,17 @@ export interface NotificationRecord {
     message: string;
 }
 export interface PaymentVerificationStatus {
-    razorpayPaymentId?: string;
     signatureVerified: boolean;
     status: PaymentStatus;
     orderId: string;
-    razorpayOrderId: string;
     paymentId: PaymentId;
+    stripePaymentIntentId?: string;
+    stripeSessionId?: string;
     verifiedAt?: Timestamp;
+}
+export interface StripeConfirmation {
+    stripePaymentIntentId: string;
+    stripeSessionId: string;
 }
 export interface SubService {
     id: string;
@@ -74,17 +79,19 @@ export interface SubService {
 export type CourseId = bigint;
 export interface PaymentOrder {
     id: PaymentId;
-    razorpayPaymentId?: string;
     signatureVerified: boolean;
     status: PaymentStatus;
     userId: UserId;
     createdAt: Timestamp;
     referenceId: string;
     orderId: string;
-    razorpayOrderId: string;
     currency: string;
     paymentType: PaymentType;
+    stripePaymentIntentId?: string;
+    checkoutUrl?: string;
+    stripeSessionId?: string;
     amount: bigint;
+    adminNotes?: string;
     verifiedAt?: Timestamp;
     paidAt?: Timestamp;
 }
@@ -94,6 +101,15 @@ export interface ServiceCategory {
     icon: string;
     name: string;
     description: string;
+}
+export interface PaymentReceiptDetails {
+    clientEmail: string;
+    referenceId: string;
+    currency: string;
+    clientPhone: string;
+    paymentId: string;
+    amount: bigint;
+    paidAt: string;
 }
 export type EnrollmentId = bigint;
 export interface MultiServiceBookingInput {
@@ -129,6 +145,14 @@ export interface PaymentOrderExtended {
     adminNotes?: string;
     paidAt?: Timestamp;
 }
+export interface AdminPaymentEntry {
+    enrollmentId?: EnrollmentId;
+    bookingId?: BookingId;
+    clientName: string;
+    order: PaymentOrder;
+    clientPhone: string;
+    serviceId?: string;
+}
 export interface http_header {
     value: string;
     name: string;
@@ -145,6 +169,16 @@ export interface MediaInput {
     fileType: FileType;
 }
 export type UserId = Principal;
+export interface BookingDetails {
+    serviceName: string;
+    bookingId: string;
+    date: string;
+    time: string;
+    clientEmail: string;
+    totalAmount: bigint;
+    clientPhone: string;
+    location: string;
+}
 export type PaymentId = bigint;
 export type NotificationId = bigint;
 export interface Certificate {
@@ -168,11 +202,6 @@ export interface UserProfile {
 }
 export type MediaId = bigint;
 export type Timestamp = bigint;
-export interface PaymentVerification {
-    razorpayPaymentId: string;
-    razorpaySignature: string;
-    razorpayOrderId: string;
-}
 export interface MediaItem {
     id: MediaId;
     title: string;
@@ -242,6 +271,14 @@ export interface TransformationInput {
     response: http_request_result;
 }
 export type BookingId = bigint;
+export interface WhatsAppLog {
+    id: bigint;
+    createdAt: Timestamp;
+    sent: boolean;
+    message: string;
+    phone: string;
+    relatedId?: string;
+}
 export type CertificateId = bigint;
 export interface MultiServiceBooking {
     id: BookingId;
@@ -319,11 +356,14 @@ export enum FileType {
     Video = "Video"
 }
 export enum NotificationType {
+    BookingCompleted = "BookingCompleted",
+    CourseCompleted = "CourseCompleted",
     CourseEnrolled = "CourseEnrolled",
     WorkDelivered = "WorkDelivered",
     GeneralInfo = "GeneralInfo",
+    PaymentReceipt = "PaymentReceipt",
     BookingConfirmed = "BookingConfirmed",
-    PaymentRequired = "PaymentRequired"
+    BookingReminder = "BookingReminder"
 }
 export enum PaymentStatus {
     Failed = "Failed",
@@ -373,9 +413,14 @@ export enum UserStatus {
 }
 export interface backendInterface {
     addFeedback(targetId: string, targetType: FeedbackTargetType, rating: bigint, comment: string): Promise<Feedback>;
+    adminAdjustAmount(paymentId: PaymentId, newAmount: bigint, note: string): Promise<boolean>;
+    adminConfirmPayment(paymentId: PaymentId, note: string): Promise<boolean>;
+    adminGetAllPayments(): Promise<Array<PaymentOrder>>;
+    adminRefundPayment(paymentId: PaymentId, note: string): Promise<boolean>;
     adminUpdatePayment(paymentId: PaymentId, action: PaymentAdminAction, adminNote: string | null): Promise<boolean>;
     assignCallerUserRole(user: Principal, role: UserRole__1): Promise<void>;
     confirmBooking(bookingId: BookingId): Promise<boolean>;
+    confirmPayment(confirmation: StripeConfirmation): Promise<boolean>;
     createBookingRequest(input: BookingInput): Promise<BookingRequest>;
     createMultiServiceBooking(input: MultiServiceBookingInput): Promise<BookingId>;
     createPaymentOrder(amount: bigint, referenceId: string, paymentType: PaymentType): Promise<PaymentOrder>;
@@ -385,13 +430,13 @@ export interface backendInterface {
     deleteSubServiceImage(categoryId: string, subServiceId: string): Promise<void>;
     enrollCourse(courseId: CourseId): Promise<CourseEnrollment>;
     generateCertificate(enrollmentId: EnrollmentId): Promise<Certificate>;
+    getAdminPaymentDashboard(): Promise<Array<AdminPaymentEntry>>;
     getAdminPayments(): Promise<Array<PaymentOrderExtended>>;
     getAllBookings(): Promise<Array<BookingRequest>>;
     getAllCmsContent(): Promise<Array<CmsContent>>;
     getAllCourses(): Promise<Array<Course>>;
     getAllEnrollments(): Promise<Array<CourseEnrollment>>;
     getAllFeedback(): Promise<Array<Feedback>>;
-    getAllPayments(): Promise<Array<PaymentOrder>>;
     getAllSubServiceImages(): Promise<Array<[string, string]>>;
     getAllUsers(): Promise<Array<UserProfile>>;
     getAnalytics(): Promise<BookingStats>;
@@ -408,16 +453,15 @@ export interface backendInterface {
     getMyFeedback(): Promise<Array<Feedback>>;
     getMyMultiServiceBookings(): Promise<Array<MultiServiceBooking>>;
     getMyNotifications(): Promise<Array<NotificationRecord>>;
-    getMyPayments(): Promise<Array<PaymentOrder>>;
     getMyProfile(): Promise<UserProfile | null>;
     getPaymentDetails(paymentId: PaymentId): Promise<PaymentOrderExtended | null>;
-    getPaymentVerificationStatus(internalPaymentId: bigint): Promise<PaymentVerificationStatus | null>;
+    getPaymentStatus(internalPaymentId: bigint): Promise<PaymentVerificationStatus | null>;
     getPublicCalendar(): Promise<Array<BookingSlot>>;
     getServiceCategories(): Promise<Array<ServiceCategory>>;
     getSubServiceImage(categoryId: string, subServiceId: string): Promise<string | null>;
+    getWhatsAppLogs(): Promise<Array<WhatsAppLog>>;
     isCallerAdmin(): Promise<boolean>;
-    logBookingConfirmedEmail(toAddress: string, bookingId: string, serviceName: string, date: string): Promise<EmailLog>;
-    logEnrollmentConfirmedEmail(toAddress: string, enrollmentId: string, courseTitle: string): Promise<EmailLog>;
+    listMyPayments(): Promise<Array<PaymentOrder>>;
     manageUser(userId: UserId, action: string): Promise<boolean>;
     markEnrollmentPaid(enrollmentId: EnrollmentId): Promise<boolean>;
     markNotificationRead(notificationId: NotificationId): Promise<boolean>;
@@ -425,15 +469,18 @@ export interface backendInterface {
     register(name: string, phone: string, role: UserRole): Promise<UserProfile>;
     respondToFeedback(feedbackId: bigint, responderComment: string): Promise<boolean>;
     saveCallerUserProfile(name: string, phone: string, role: UserRole): Promise<void>;
-    sendWhatsAppNotification(phone: string, message: string): Promise<boolean>;
+    sendBookingConfirmation(userId: UserId, details: BookingDetails): Promise<boolean>;
+    sendCompletionMessage(userId: UserId, details: BookingDetails, feedbackLink: string): Promise<boolean>;
+    sendPaymentReceipt(userId: UserId, details: PaymentReceiptDetails): Promise<boolean>;
+    sendProgressReminder(userId: UserId, details: BookingDetails): Promise<boolean>;
     setCmsContent(key: string, value: string, contentType: CmsContentType): Promise<void>;
     setFeatured(mediaId: MediaId, featured: boolean): Promise<boolean>;
     setSubServiceImage(categoryId: string, subServiceId: string, imageUrl: string): Promise<void>;
     transform(input: TransformationInput): Promise<TransformationOutput>;
+    transformWhatsApp(input: TransformationInput): Promise<TransformationOutput>;
     triggerPaymentRequest(bookingId: BookingId, paymentType: string): Promise<string>;
     updateCourseProgress(courseId: CourseId, completed: boolean): Promise<boolean>;
     updateProfile(name: string, phone: string): Promise<boolean>;
     uploadMedia(input: MediaInput): Promise<MediaItem>;
     verifyCertificate(code: string): Promise<boolean>;
-    verifyPayment(verification: PaymentVerification): Promise<boolean>;
 }

@@ -49,7 +49,7 @@ const FEATURES: Feature[] = [
     icon: <CreditCard size={26} />,
     title: "Real-Time Payment",
     description:
-      "Powered by Razorpay — pay ₹2 to confirm booking, ₹3 after delivery. Secure and instant.",
+      "Powered by Stripe — secure deposit to confirm booking, remainder after delivery. Instant and reliable.",
     accentColor: "oklch(0.66 0.18 190)",
     image:
       "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=400&h=200&fit=crop",

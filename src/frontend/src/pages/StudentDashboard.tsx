@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Progress } from "@/components/ui/progress";
+
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
@@ -53,15 +53,15 @@ function formatRelativeTime(ts: bigint): string {
 function renderStars(rating: number) {
   return (
     <span
-      className="text-yellow-400 text-sm tracking-tight"
+      className="text-sm tracking-tight"
       aria-label={`${rating} out of 5 stars`}
     >
       {[1, 2, 3, 4, 5].map((s) => (
         <span
           key={s}
-          className={
-            s <= rating ? "text-yellow-400" : "text-muted-foreground/30"
-          }
+          style={{
+            color: s <= rating ? "oklch(0.8 0.2 70)" : "oklch(0.3 0.02 280)",
+          }}
         >
           ★
         </span>
@@ -93,7 +93,6 @@ export function StudentDashboard() {
   const { data: courses = [] } = useCourses();
   const { data: notifications = [] } = useMyNotifications();
   const [activeTab, setActiveTab] = useState("courses");
-
   const [submittedFeedback, setSubmittedFeedback] = useState<
     Record<string, FeedbackRecord>
   >({});
@@ -151,32 +150,46 @@ export function StudentDashboard() {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-10 max-w-4xl">
-        <motion.div
-          initial={{ opacity: 0, y: -16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-8"
-        >
-          <p className="section-label mb-1">Student Portal</p>
-          <h1 className="text-3xl font-display font-bold text-foreground">
-            Welcome back, {name} 🎓
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Track your learning journey at RAP Integrated Studio.
-          </p>
-        </motion.div>
+      {/* Dashboard banner */}
+      <div
+        className="border-b border-border/20"
+        style={{
+          background:
+            "linear-gradient(135deg, oklch(0.14 0.022 285), oklch(0.18 0.028 290))",
+        }}
+      >
+        <div className="container mx-auto px-4 py-10 max-w-4xl">
+          <motion.div
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <p className="section-label mb-1">Student Portal</p>
+            <h1 className="text-3xl font-display font-bold text-foreground">
+              Welcome back,{" "}
+              <span style={{ color: "oklch(0.78 0.18 290)" }}>{name}</span> 🎓
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Track your learning journey at RAP Integrated Studio.
+            </p>
+          </motion.div>
+        </div>
+      </div>
 
+      <div className="container mx-auto px-4 py-10 max-w-4xl">
         <Tabs
           value={activeTab}
           onValueChange={setActiveTab}
-          data-ocid="student-dashboard-tabs"
+          data-ocid="student-dashboard.tab"
         >
-          <TabsList className="bg-card border border-border/50 mb-6">
+          <TabsList
+            className="border border-border/50 mb-6"
+            style={{ background: "oklch(var(--card) / 0.5)" }}
+          >
             <TabsTrigger
               value="courses"
               className="gap-2"
-              data-ocid="tab-my-courses"
+              data-ocid="student-dashboard.courses.tab"
             >
               <BookOpen className="w-4 h-4" />
               My Courses
@@ -189,7 +202,7 @@ export function StudentDashboard() {
             <TabsTrigger
               value="certificates"
               className="gap-2"
-              data-ocid="tab-certificates"
+              data-ocid="student-dashboard.certificates.tab"
             >
               <Award className="w-4 h-4" />
               Certificates
@@ -197,7 +210,7 @@ export function StudentDashboard() {
             <TabsTrigger
               value="notifications"
               className="gap-2"
-              data-ocid="tab-notifications"
+              data-ocid="student-dashboard.notifications.tab"
             >
               <Bell className="w-4 h-4" />
               Alerts
@@ -209,7 +222,7 @@ export function StudentDashboard() {
             </TabsTrigger>
           </TabsList>
 
-          {/* ── Courses / Enrollments Tab ── */}
+          {/* Courses / Enrollments Tab */}
           <TabsContent value="courses">
             <AnimatePresence mode="wait">
               <motion.div
@@ -227,11 +240,26 @@ export function StudentDashboard() {
                   </div>
                 ) : enrolledCourses.length === 0 ? (
                   <div
-                    className="flex flex-col items-center py-16 text-muted-foreground"
-                    data-ocid="courses-empty-state"
+                    className="flex flex-col items-center py-20 text-muted-foreground rounded-2xl"
+                    style={{
+                      background: "oklch(var(--card) / 0.3)",
+                      border: "1px dashed oklch(var(--border) / 0.5)",
+                    }}
+                    data-ocid="courses.empty_state"
                   >
-                    <GraduationCap className="w-14 h-14 mb-4 opacity-30" />
-                    <p className="text-lg font-medium mb-2">
+                    <div
+                      className="w-20 h-20 rounded-full mb-5 flex items-center justify-center"
+                      style={{
+                        background: "oklch(0.68 0.2 290 / 0.1)",
+                        border: "1px solid oklch(0.68 0.2 290 / 0.3)",
+                      }}
+                    >
+                      <GraduationCap
+                        className="w-8 h-8"
+                        style={{ color: "oklch(0.7 0.18 290)" }}
+                      />
+                    </div>
+                    <p className="text-lg font-display font-semibold text-foreground mb-2">
                       No enrollments yet
                     </p>
                     <p className="text-sm opacity-60 mb-6">
@@ -240,7 +268,7 @@ export function StudentDashboard() {
                     <a
                       href="/courses"
                       className="btn-primary-luxury text-sm px-6 py-2"
-                      data-ocid="courses-empty-cta"
+                      data-ocid="courses.empty_state.primary_button"
                     >
                       Browse Courses
                     </a>
@@ -259,12 +287,17 @@ export function StudentDashboard() {
                           initial={{ opacity: 0, y: 16 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: i * 0.08 }}
-                          className="rounded-xl border border-border/50 bg-card p-5 hover:border-primary/30 transition-smooth"
-                          data-ocid={`enrolled-course-card.item.${i + 1}`}
+                          className="rounded-xl p-5 hover:border-primary/30 transition-smooth"
+                          style={{
+                            background: "oklch(var(--card) / 0.45)",
+                            backdropFilter: "blur(12px)",
+                            border: "1px solid oklch(var(--border) / 0.4)",
+                          }}
+                          data-ocid={`enrolled-course.item.${i + 1}`}
                         >
                           <div className="flex items-start justify-between gap-3 mb-3">
                             <div className="flex-1 min-w-0">
-                              <h3 className="font-semibold text-foreground truncate">
+                              <h3 className="font-display font-semibold text-foreground truncate">
                                 {course?.title ?? enrollment.courseId}
                               </h3>
                               <p className="text-xs text-muted-foreground mt-0.5">
@@ -287,24 +320,49 @@ export function StudentDashboard() {
                             </div>
                           </div>
 
+                          {/* Gold progress bar */}
                           <div className="mb-3">
                             <div className="flex justify-between text-xs mb-1.5">
                               <span className="text-muted-foreground">
                                 Progress
                               </span>
-                              <span className="text-foreground font-medium">
+                              <span
+                                className="font-medium"
+                                style={{ color: "oklch(0.7 0.22 70)" }}
+                              >
                                 {enrollment.progress}%
                               </span>
                             </div>
-                            <Progress
-                              value={enrollment.progress}
-                              className="h-2"
-                            />
+                            <div
+                              className="h-2 rounded-full overflow-hidden"
+                              style={{
+                                background: "oklch(var(--muted) / 0.5)",
+                              }}
+                            >
+                              <motion.div
+                                className="h-full rounded-full"
+                                style={{ background: "var(--gradient-gold)" }}
+                                initial={{ width: 0 }}
+                                animate={{ width: `${enrollment.progress}%` }}
+                                transition={{
+                                  duration: 1,
+                                  delay: i * 0.1,
+                                  ease: "easeOut",
+                                }}
+                              />
+                            </div>
                           </div>
 
                           <div className="flex items-center justify-between flex-wrap gap-2">
                             {certReady ? (
-                              <Badge className="text-xs bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+                              <Badge
+                                className="text-xs"
+                                style={{
+                                  background: "oklch(0.65 0.18 150 / 0.2)",
+                                  color: "oklch(0.75 0.18 150)",
+                                  borderColor: "oklch(0.65 0.18 150 / 0.4)",
+                                }}
+                              >
                                 ✓ Certificate Ready
                               </Badge>
                             ) : (
@@ -336,7 +394,7 @@ export function StudentDashboard() {
                                       "_blank",
                                     )
                                   }
-                                  data-ocid="view-certificate-btn"
+                                  data-ocid="course.view_certificate_button"
                                 >
                                   <ExternalLink className="w-3 h-3" />
                                   View Certificate
@@ -352,7 +410,7 @@ export function StudentDashboard() {
                                     "_blank",
                                   )
                                 }
-                                data-ocid="continue-learning-btn"
+                                data-ocid="course.continue_button"
                               >
                                 <BookOpen className="w-3 h-3" />
                                 Continue
@@ -360,7 +418,6 @@ export function StudentDashboard() {
                             </div>
                           </div>
 
-                          {/* Feedback section */}
                           {isCompleted && (
                             <motion.div
                               initial={{ opacity: 0, y: 4 }}
@@ -371,10 +428,13 @@ export function StudentDashboard() {
                               {fb ? (
                                 <div
                                   className="flex items-center gap-2 text-sm"
-                                  data-ocid="student-feedback-indicator"
+                                  data-ocid="student-feedback.success_state"
                                 >
                                   {renderStars(fb.rating)}
-                                  <span className="text-xs text-emerald-400 font-medium">
+                                  <span
+                                    className="text-xs font-medium"
+                                    style={{ color: "oklch(0.65 0.18 150)" }}
+                                  >
                                     Thank you for your feedback!
                                   </span>
                                 </div>
@@ -383,9 +443,13 @@ export function StudentDashboard() {
                                   type="button"
                                   size="sm"
                                   variant="outline"
-                                  className="text-xs border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-500/60 gap-1 h-7"
+                                  className="text-xs gap-1 h-7"
+                                  style={{
+                                    borderColor: "oklch(0.7 0.22 70 / 0.4)",
+                                    color: "oklch(0.7 0.22 70)",
+                                  }}
                                   onClick={() => setFeedbackOpen(enrollment.id)}
-                                  data-ocid="student-leave-feedback-btn"
+                                  data-ocid="course.feedback_button"
                                 >
                                   <Star className="w-3 h-3" />
                                   Leave Feedback ★
@@ -402,7 +466,7 @@ export function StudentDashboard() {
             </AnimatePresence>
           </TabsContent>
 
-          {/* ── Certificates Tab ── */}
+          {/* Certificates Tab */}
           <TabsContent value="certificates">
             <AnimatePresence mode="wait">
               <motion.div
@@ -421,7 +485,7 @@ export function StudentDashboard() {
             </AnimatePresence>
           </TabsContent>
 
-          {/* ── Notifications Tab ── */}
+          {/* Notifications Tab */}
           <TabsContent value="notifications">
             <AnimatePresence mode="wait">
               <motion.div
@@ -433,11 +497,17 @@ export function StudentDashboard() {
               >
                 {notifications.length === 0 ? (
                   <div
-                    className="flex flex-col items-center py-16 text-muted-foreground"
-                    data-ocid="student-notifications-empty-state"
+                    className="flex flex-col items-center py-20 text-muted-foreground rounded-2xl"
+                    style={{
+                      background: "oklch(var(--card) / 0.3)",
+                      border: "1px dashed oklch(var(--border) / 0.5)",
+                    }}
+                    data-ocid="student-notifications.empty_state"
                   >
                     <Bell className="w-14 h-14 mb-4 opacity-30" />
-                    <p className="text-lg font-medium">All caught up!</p>
+                    <p className="text-lg font-display font-semibold text-foreground">
+                      All caught up!
+                    </p>
                     <p className="text-sm opacity-60">
                       No notifications at this time.
                     </p>
@@ -450,12 +520,16 @@ export function StudentDashboard() {
                         initial={{ opacity: 0, x: -12 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.06 }}
-                        className={`rounded-xl border p-4 ${
-                          n.isRead
-                            ? "border-border/50 bg-card"
-                            : "border-primary/30 bg-primary/5"
-                        }`}
-                        data-ocid={`student-notification-item.${i + 1}`}
+                        className="rounded-xl p-4"
+                        style={{
+                          background: n.isRead
+                            ? "oklch(var(--card) / 0.4)"
+                            : "oklch(0.68 0.2 290 / 0.06)",
+                          border: n.isRead
+                            ? "1px solid oklch(var(--border) / 0.4)"
+                            : "1px solid oklch(0.68 0.2 290 / 0.3)",
+                        }}
+                        data-ocid={`student-notification.item.${i + 1}`}
                       >
                         <p className="text-sm font-semibold text-foreground">
                           {n.title}
@@ -476,7 +550,6 @@ export function StudentDashboard() {
         </Tabs>
       </div>
 
-      {/* Feedback modal */}
       <AnimatePresence>
         {feedbackOpen &&
           (() => {

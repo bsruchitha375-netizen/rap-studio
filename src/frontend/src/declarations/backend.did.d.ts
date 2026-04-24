@@ -10,6 +10,24 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export interface AdminPaymentEntry {
+  'enrollmentId' : [] | [EnrollmentId],
+  'bookingId' : [] | [BookingId],
+  'clientName' : string,
+  'order' : PaymentOrder,
+  'clientPhone' : string,
+  'serviceId' : [] | [string],
+}
+export interface BookingDetails {
+  'serviceName' : string,
+  'bookingId' : string,
+  'date' : string,
+  'time' : string,
+  'clientEmail' : string,
+  'totalAmount' : bigint,
+  'clientPhone' : string,
+  'location' : string,
+}
 export type BookingId = bigint;
 export interface BookingInput {
   'duration' : string,
@@ -116,6 +134,7 @@ export interface EmailLog {
   'subject' : string,
   'body' : string,
   'createdAt' : Timestamp,
+  'sent' : boolean,
   'relatedId' : [] | [string],
 }
 export type EnrollmentId = bigint;
@@ -185,28 +204,33 @@ export interface NotificationRecord {
   'read' : boolean,
   'message' : string,
 }
-export type NotificationType = { 'CourseEnrolled' : null } |
+export type NotificationType = { 'BookingCompleted' : null } |
+  { 'CourseCompleted' : null } |
+  { 'CourseEnrolled' : null } |
   { 'WorkDelivered' : null } |
   { 'GeneralInfo' : null } |
+  { 'PaymentReceipt' : null } |
   { 'BookingConfirmed' : null } |
-  { 'PaymentRequired' : null };
+  { 'BookingReminder' : null };
 export type PaymentAdminAction = { 'confirm' : null } |
   { 'adjustAmount' : bigint } |
   { 'refund' : null };
 export type PaymentId = bigint;
 export interface PaymentOrder {
   'id' : PaymentId,
-  'razorpayPaymentId' : [] | [string],
   'signatureVerified' : boolean,
   'status' : PaymentStatus,
   'userId' : UserId,
   'createdAt' : Timestamp,
   'referenceId' : string,
   'orderId' : string,
-  'razorpayOrderId' : string,
   'currency' : string,
   'paymentType' : PaymentType,
+  'stripePaymentIntentId' : [] | [string],
+  'checkoutUrl' : [] | [string],
+  'stripeSessionId' : [] | [string],
   'amount' : bigint,
+  'adminNotes' : [] | [string],
   'verifiedAt' : [] | [Timestamp],
   'paidAt' : [] | [Timestamp],
 }
@@ -226,6 +250,15 @@ export interface PaymentOrderExtended {
   'adminNotes' : [] | [string],
   'paidAt' : [] | [Timestamp],
 }
+export interface PaymentReceiptDetails {
+  'clientEmail' : string,
+  'referenceId' : string,
+  'currency' : string,
+  'clientPhone' : string,
+  'paymentId' : string,
+  'amount' : bigint,
+  'paidAt' : string,
+}
 export type PaymentStatus = { 'Failed' : null } |
   { 'Refunded' : null } |
   { 'Paid' : null } |
@@ -237,18 +270,13 @@ export type PaymentStatus__1 = { 'PartiallyPaid' : null } |
 export type PaymentType = { 'BookingBalance' : null } |
   { 'CourseEnrollment' : null } |
   { 'BookingUpfront' : null };
-export interface PaymentVerification {
-  'razorpayPaymentId' : string,
-  'razorpaySignature' : string,
-  'razorpayOrderId' : string,
-}
 export interface PaymentVerificationStatus {
-  'razorpayPaymentId' : [] | [string],
   'signatureVerified' : boolean,
   'status' : PaymentStatus,
   'orderId' : string,
-  'razorpayOrderId' : string,
   'paymentId' : PaymentId,
+  'stripePaymentIntentId' : [] | [string],
+  'stripeSessionId' : [] | [string],
   'verifiedAt' : [] | [Timestamp],
 }
 export interface SelectedServiceItem {
@@ -272,6 +300,10 @@ export interface ServiceRevenue {
 }
 export type SlotStatus = { 'Available' : null } |
   { 'Taken' : null };
+export interface StripeConfirmation {
+  'stripePaymentIntentId' : string,
+  'stripeSessionId' : string,
+}
 export interface SubService { 'id' : string, 'name' : string }
 export type TimeSlot = { 'Night' : null } |
   { 'Afternoon' : null } |
@@ -310,6 +342,14 @@ export type UserRole__1 = { 'admin' : null } |
 export type UserStatus = { 'Active' : null } |
   { 'Suspended' : null } |
   { 'Pending' : null };
+export interface WhatsAppLog {
+  'id' : bigint,
+  'createdAt' : Timestamp,
+  'sent' : boolean,
+  'message' : string,
+  'phone' : string,
+  'relatedId' : [] | [string],
+}
 export interface _ImmutableObjectStorageCreateCertificateResult {
   'method' : string,
   'blob_hash' : string,
@@ -351,12 +391,17 @@ export interface _SERVICE {
     [string, FeedbackTargetType, bigint, string],
     Feedback
   >,
+  'adminAdjustAmount' : ActorMethod<[PaymentId, bigint, string], boolean>,
+  'adminConfirmPayment' : ActorMethod<[PaymentId, string], boolean>,
+  'adminGetAllPayments' : ActorMethod<[], Array<PaymentOrder>>,
+  'adminRefundPayment' : ActorMethod<[PaymentId, string], boolean>,
   'adminUpdatePayment' : ActorMethod<
     [PaymentId, PaymentAdminAction, [] | [string]],
     boolean
   >,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole__1], undefined>,
   'confirmBooking' : ActorMethod<[BookingId], boolean>,
+  'confirmPayment' : ActorMethod<[StripeConfirmation], boolean>,
   'createBookingRequest' : ActorMethod<[BookingInput], BookingRequest>,
   'createMultiServiceBooking' : ActorMethod<
     [MultiServiceBookingInput],
@@ -375,13 +420,13 @@ export interface _SERVICE {
   'deleteSubServiceImage' : ActorMethod<[string, string], undefined>,
   'enrollCourse' : ActorMethod<[CourseId], CourseEnrollment>,
   'generateCertificate' : ActorMethod<[EnrollmentId], Certificate>,
+  'getAdminPaymentDashboard' : ActorMethod<[], Array<AdminPaymentEntry>>,
   'getAdminPayments' : ActorMethod<[], Array<PaymentOrderExtended>>,
   'getAllBookings' : ActorMethod<[], Array<BookingRequest>>,
   'getAllCmsContent' : ActorMethod<[], Array<CmsContent>>,
   'getAllCourses' : ActorMethod<[], Array<Course>>,
   'getAllEnrollments' : ActorMethod<[], Array<CourseEnrollment>>,
   'getAllFeedback' : ActorMethod<[], Array<Feedback>>,
-  'getAllPayments' : ActorMethod<[], Array<PaymentOrder>>,
   'getAllSubServiceImages' : ActorMethod<[], Array<[string, string]>>,
   'getAllUsers' : ActorMethod<[], Array<UserProfile>>,
   'getAnalytics' : ActorMethod<[], BookingStats>,
@@ -398,25 +443,15 @@ export interface _SERVICE {
   'getMyFeedback' : ActorMethod<[], Array<Feedback>>,
   'getMyMultiServiceBookings' : ActorMethod<[], Array<MultiServiceBooking>>,
   'getMyNotifications' : ActorMethod<[], Array<NotificationRecord>>,
-  'getMyPayments' : ActorMethod<[], Array<PaymentOrder>>,
   'getMyProfile' : ActorMethod<[], [] | [UserProfile]>,
   'getPaymentDetails' : ActorMethod<[PaymentId], [] | [PaymentOrderExtended]>,
-  'getPaymentVerificationStatus' : ActorMethod<
-    [bigint],
-    [] | [PaymentVerificationStatus]
-  >,
+  'getPaymentStatus' : ActorMethod<[bigint], [] | [PaymentVerificationStatus]>,
   'getPublicCalendar' : ActorMethod<[], Array<BookingSlot>>,
   'getServiceCategories' : ActorMethod<[], Array<ServiceCategory>>,
   'getSubServiceImage' : ActorMethod<[string, string], [] | [string]>,
+  'getWhatsAppLogs' : ActorMethod<[], Array<WhatsAppLog>>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
-  'logBookingConfirmedEmail' : ActorMethod<
-    [string, string, string, string],
-    EmailLog
-  >,
-  'logEnrollmentConfirmedEmail' : ActorMethod<
-    [string, string, string],
-    EmailLog
-  >,
+  'listMyPayments' : ActorMethod<[], Array<PaymentOrder>>,
   'manageUser' : ActorMethod<[UserId, string], boolean>,
   'markEnrollmentPaid' : ActorMethod<[EnrollmentId], boolean>,
   'markNotificationRead' : ActorMethod<[NotificationId], boolean>,
@@ -424,17 +459,26 @@ export interface _SERVICE {
   'register' : ActorMethod<[string, string, UserRole], UserProfile>,
   'respondToFeedback' : ActorMethod<[bigint, string], boolean>,
   'saveCallerUserProfile' : ActorMethod<[string, string, UserRole], undefined>,
-  'sendWhatsAppNotification' : ActorMethod<[string, string], boolean>,
+  'sendBookingConfirmation' : ActorMethod<[UserId, BookingDetails], boolean>,
+  'sendCompletionMessage' : ActorMethod<
+    [UserId, BookingDetails, string],
+    boolean
+  >,
+  'sendPaymentReceipt' : ActorMethod<[UserId, PaymentReceiptDetails], boolean>,
+  'sendProgressReminder' : ActorMethod<[UserId, BookingDetails], boolean>,
   'setCmsContent' : ActorMethod<[string, string, CmsContentType], undefined>,
   'setFeatured' : ActorMethod<[MediaId, boolean], boolean>,
   'setSubServiceImage' : ActorMethod<[string, string, string], undefined>,
   'transform' : ActorMethod<[TransformationInput], TransformationOutput>,
+  'transformWhatsApp' : ActorMethod<
+    [TransformationInput],
+    TransformationOutput
+  >,
   'triggerPaymentRequest' : ActorMethod<[BookingId, string], string>,
   'updateCourseProgress' : ActorMethod<[CourseId, boolean], boolean>,
   'updateProfile' : ActorMethod<[string, string], boolean>,
   'uploadMedia' : ActorMethod<[MediaInput], MediaItem>,
   'verifyCertificate' : ActorMethod<[string], boolean>,
-  'verifyPayment' : ActorMethod<[PaymentVerification], boolean>,
 }
 export declare const idlService: IDL.ServiceClass;
 export declare const idlInitArgs: IDL.Type[];

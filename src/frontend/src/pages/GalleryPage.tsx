@@ -1,8 +1,8 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Aperture, Camera, Plus, Star } from "lucide-react";
-import { motion } from "motion/react";
-import { useState } from "react";
+import { motion, useInView } from "motion/react";
+import { useRef, useState } from "react";
 import { GalleryGrid } from "../components/gallery/GalleryGrid";
 import { UploadForm } from "../components/gallery/UploadForm";
 import { Layout } from "../components/layout/Layout";
@@ -25,7 +25,7 @@ const GALLERY_ITEMS: MediaItem[] = [
     id: "g1",
     title: "Golden Hour Wedding",
     category: "Weddings",
-    url: "https://images.unsplash.com/photo-1519741347686-c1e0aadf4611?w=800",
+    url: "https://images.unsplash.com/photo-1519741347686-c1e0aadf4611?w=900",
     thumbnailUrl:
       "https://images.unsplash.com/photo-1519741347686-c1e0aadf4611?w=800",
     type: "image",
@@ -35,7 +35,7 @@ const GALLERY_ITEMS: MediaItem[] = [
     id: "g2",
     title: "Wedding Ceremony Aisle",
     category: "Weddings",
-    url: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800",
+    url: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=900",
     thumbnailUrl:
       "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?w=800",
     type: "image",
@@ -45,7 +45,7 @@ const GALLERY_ITEMS: MediaItem[] = [
     id: "g3",
     title: "Professional Camera Setup",
     category: "Photography",
-    url: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800",
+    url: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=900",
     thumbnailUrl:
       "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=800",
     type: "image",
@@ -55,7 +55,7 @@ const GALLERY_ITEMS: MediaItem[] = [
     id: "g4",
     title: "Portrait Studio Session",
     category: "Photography",
-    url: "https://images.unsplash.com/photo-1554048612-b6a482bc67e5?w=800",
+    url: "https://images.unsplash.com/photo-1554048612-b6a482bc67e5?w=900",
     thumbnailUrl:
       "https://images.unsplash.com/photo-1554048612-b6a482bc67e5?w=800",
     type: "image",
@@ -65,7 +65,7 @@ const GALLERY_ITEMS: MediaItem[] = [
     id: "g5",
     title: "Cinematic Film Camera",
     category: "Videography",
-    url: "https://images.unsplash.com/photo-1601520493833-ab2a1c8c6e22?w=800",
+    url: "https://images.unsplash.com/photo-1601520493833-ab2a1c8c6e22?w=900",
     thumbnailUrl:
       "https://images.unsplash.com/photo-1601520493833-ab2a1c8c6e22?w=800",
     type: "video",
@@ -75,7 +75,7 @@ const GALLERY_ITEMS: MediaItem[] = [
     id: "g6",
     title: "Professional Film Set",
     category: "Videography",
-    url: "https://images.unsplash.com/photo-1535016120720-40c646be5580?w=800",
+    url: "https://images.unsplash.com/photo-1535016120720-40c646be5580?w=900",
     thumbnailUrl:
       "https://images.unsplash.com/photo-1535016120720-40c646be5580?w=800",
     type: "video",
@@ -85,7 +85,7 @@ const GALLERY_ITEMS: MediaItem[] = [
     id: "g7",
     title: "Electric Event Night",
     category: "Events",
-    url: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800",
+    url: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=900",
     thumbnailUrl:
       "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800",
     type: "image",
@@ -95,7 +95,7 @@ const GALLERY_ITEMS: MediaItem[] = [
     id: "g8",
     title: "Live Concert Coverage",
     category: "Events",
-    url: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800",
+    url: "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=900",
     thumbnailUrl:
       "https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=800",
     type: "image",
@@ -105,7 +105,7 @@ const GALLERY_ITEMS: MediaItem[] = [
     id: "g9",
     title: "Corporate Keynote",
     category: "Corporate",
-    url: "https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=800",
+    url: "https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=900",
     thumbnailUrl:
       "https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=800",
     type: "image",
@@ -115,7 +115,7 @@ const GALLERY_ITEMS: MediaItem[] = [
     id: "g10",
     title: "Business Executive Portrait",
     category: "Corporate",
-    url: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800",
+    url: "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=900",
     thumbnailUrl:
       "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800",
     type: "image",
@@ -125,7 +125,7 @@ const GALLERY_ITEMS: MediaItem[] = [
     id: "g11",
     title: "Expressive Female Portrait",
     category: "Portraits",
-    url: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=800",
+    url: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=900",
     thumbnailUrl:
       "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=800",
     type: "image",
@@ -135,7 +135,7 @@ const GALLERY_ITEMS: MediaItem[] = [
     id: "g12",
     title: "Dramatic Male Portrait",
     category: "Portraits",
-    url: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=800",
+    url: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=900",
     thumbnailUrl:
       "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=800",
     type: "image",
@@ -145,7 +145,7 @@ const GALLERY_ITEMS: MediaItem[] = [
     id: "g13",
     title: "Behind the Scenes — Studio",
     category: "Photography",
-    url: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800",
+    url: "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=900",
     thumbnailUrl:
       "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800",
     type: "image",
@@ -155,7 +155,7 @@ const GALLERY_ITEMS: MediaItem[] = [
     id: "g14",
     title: "Film Production BTS",
     category: "Videography",
-    url: "https://images.unsplash.com/photo-1607462109225-6b64ae2dd3cb?w=800",
+    url: "https://images.unsplash.com/photo-1607462109225-6b64ae2dd3cb?w=900",
     thumbnailUrl:
       "https://images.unsplash.com/photo-1607462109225-6b64ae2dd3cb?w=800",
     type: "video",
@@ -165,7 +165,7 @@ const GALLERY_ITEMS: MediaItem[] = [
     id: "g15",
     title: "Short Film Clapperboard",
     category: "Short Films",
-    url: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=800",
+    url: "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=900",
     thumbnailUrl:
       "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=800",
     type: "video",
@@ -175,7 +175,7 @@ const GALLERY_ITEMS: MediaItem[] = [
     id: "g16",
     title: "Movie Set Atmosphere",
     category: "Short Films",
-    url: "https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=800",
+    url: "https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=900",
     thumbnailUrl:
       "https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=800",
     type: "video",
@@ -185,7 +185,7 @@ const GALLERY_ITEMS: MediaItem[] = [
     id: "g17",
     title: "Monsoon Bridal Shoot",
     category: "Weddings",
-    url: "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=800",
+    url: "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=900",
     thumbnailUrl:
       "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?w=800",
     type: "image",
@@ -195,16 +195,75 @@ const GALLERY_ITEMS: MediaItem[] = [
     id: "g18",
     title: "Fashion Editorial",
     category: "Photography",
-    url: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800",
+    url: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=900",
     thumbnailUrl:
       "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=800",
     type: "image",
     createdAt: BigInt(Date.now() * 1_000_000),
   },
+  {
+    id: "g19",
+    title: "Studio Light Trail",
+    category: "Photography",
+    url: "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=900",
+    thumbnailUrl:
+      "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=800",
+    type: "image",
+    createdAt: BigInt(Date.now() * 1_000_000),
+  },
+  {
+    id: "g20",
+    title: "Cinematic Night Scene",
+    category: "Videography",
+    url: "https://images.unsplash.com/photo-1478358161113-b0e11994a36b?w=900",
+    thumbnailUrl:
+      "https://images.unsplash.com/photo-1478358161113-b0e11994a36b?w=800",
+    type: "video",
+    createdAt: BigInt(Date.now() * 1_000_000),
+  },
+  {
+    id: "g21",
+    title: "Bridal Ceremony Detail",
+    category: "Weddings",
+    url: "https://images.unsplash.com/photo-1583244532610-2cf4ba9e3f73?w=900",
+    thumbnailUrl:
+      "https://images.unsplash.com/photo-1583244532610-2cf4ba9e3f73?w=800",
+    type: "image",
+    createdAt: BigInt(Date.now() * 1_000_000),
+  },
+  {
+    id: "g22",
+    title: "Corporate Team Portrait",
+    category: "Corporate",
+    url: "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=900",
+    thumbnailUrl:
+      "https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=800",
+    type: "image",
+    createdAt: BigInt(Date.now() * 1_000_000),
+  },
+  {
+    id: "g23",
+    title: "Intimate Portrait Session",
+    category: "Portraits",
+    url: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=900",
+    thumbnailUrl:
+      "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=800",
+    type: "image",
+    createdAt: BigInt(Date.now() * 1_000_000),
+  },
+  {
+    id: "g24",
+    title: "Award Night Coverage",
+    category: "Events",
+    url: "https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?w=900",
+    thumbnailUrl:
+      "https://images.unsplash.com/photo-1519671482749-fd09be7ccebf?w=800",
+    type: "image",
+    createdAt: BigInt(Date.now() * 1_000_000),
+  },
 ];
 
-const FEATURED_IDS = ["g1", "g5", "g15"];
-
+const FEATURED_IDS = ["g1", "g5", "g15", "g11"];
 const ITEMS_PER_PAGE = 12;
 
 export function GalleryPage() {
@@ -212,6 +271,8 @@ export function GalleryPage() {
   const [activeFilter, setActiveFilter] = useState("all");
   const [showUpload, setShowUpload] = useState(false);
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_PAGE);
+  const mainRef = useRef<HTMLDivElement>(null);
+  const isInView = useInView(mainRef, { once: true });
 
   const filteredItems =
     activeFilter === "all"
@@ -226,18 +287,15 @@ export function GalleryPage() {
       {/* Cinematic Hero Banner */}
       <section
         className="relative overflow-hidden bg-card border-b border-border/30"
-        style={{ minHeight: "340px" }}
+        style={{ minHeight: "380px" }}
       >
-        {/* Background layers */}
         <div
           className="absolute inset-0 pointer-events-none"
           aria-hidden="true"
         >
-          {/* Deep gradient */}
           <div className="absolute inset-0 bg-gradient-to-br from-background via-card to-background" />
-          {/* Animated gold orb */}
           <motion.div
-            className="absolute top-10 left-1/3 w-[500px] h-[500px] rounded-full opacity-[0.07]"
+            className="absolute top-10 left-1/3 w-[500px] h-[500px] rounded-full opacity-[0.08]"
             style={{ background: "oklch(0.7 0.22 70)" }}
             animate={{ scale: [1, 1.15, 1], x: [-20, 20, -20] }}
             transition={{
@@ -246,7 +304,6 @@ export function GalleryPage() {
               ease: "easeInOut",
             }}
           />
-          {/* Purple orb */}
           <motion.div
             className="absolute bottom-0 right-1/4 w-96 h-96 rounded-full opacity-[0.05]"
             style={{ background: "oklch(0.68 0.2 290)" }}
@@ -257,17 +314,9 @@ export function GalleryPage() {
               ease: "easeInOut",
             }}
           />
-          {/* Film grain overlay */}
-          <div
-            className="absolute inset-0 opacity-[0.03]"
-            style={{
-              backgroundImage:
-                "url(\"data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E\")",
-            }}
-          />
         </div>
 
-        <div className="container mx-auto px-4 py-20 relative z-10 text-center">
+        <div className="container mx-auto px-4 py-24 relative z-10 text-center">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
@@ -288,19 +337,20 @@ export function GalleryPage() {
             </motion.div>
 
             <motion.h1
-              className="font-display text-5xl md:text-7xl font-bold tracking-tight"
+              className="section-heading text-foreground"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.7, delay: 0.2 }}
             >
               Our{" "}
-              <span className="text-primary text-glow-gold relative">
+              <span className="text-primary text-glow-gold relative inline-block">
                 Portfolio
                 <motion.span
-                  className="absolute -bottom-1 left-0 right-0 h-0.5 bg-primary rounded-full"
+                  className="absolute -bottom-1 left-0 right-0 h-0.5 rounded-full"
+                  style={{ background: "var(--gradient-gold)" }}
                   initial={{ scaleX: 0 }}
                   animate={{ scaleX: 1 }}
-                  transition={{ duration: 0.8, delay: 0.7 }}
+                  transition={{ duration: 0.9, delay: 0.7 }}
                 />
               </span>
             </motion.h1>
@@ -315,23 +365,22 @@ export function GalleryPage() {
               story is a memory — crafted with cinematic precision.
             </motion.p>
 
-            {/* Stats row */}
             <motion.div
-              className="flex items-center justify-center gap-8 pt-4"
+              className="flex items-center justify-center gap-10 pt-2"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.6 }}
             >
               {[
                 { value: "500+", label: "Shoots" },
-                { value: "18", label: "Galleries" },
+                { value: "24", label: "Galleries" },
                 { value: "8", label: "Categories" },
               ].map(({ value, label }) => (
                 <div key={label} className="text-center">
                   <div className="font-display text-2xl font-bold text-primary">
                     {value}
                   </div>
-                  <div className="text-xs text-muted-foreground tracking-wide uppercase">
+                  <div className="text-xs text-muted-foreground tracking-widest uppercase">
                     {label}
                   </div>
                 </div>
@@ -342,7 +391,7 @@ export function GalleryPage() {
       </section>
 
       {/* Featured Section */}
-      <section className="py-12 bg-muted/20">
+      <section className="py-14 bg-muted/20 border-b border-border/20">
         <div className="container mx-auto px-4">
           <motion.div
             className="flex items-center gap-3 mb-8"
@@ -351,11 +400,12 @@ export function GalleryPage() {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
+            <div className="w-1 h-7 rounded-full bg-primary" />
             <Star className="w-5 h-5 text-primary fill-primary" />
             <h2 className="font-display text-2xl font-bold text-foreground">
               Featured Work
             </h2>
-            <Badge className="gradient-gold text-background border-0 text-xs">
+            <Badge className="gradient-gold text-background border-0 text-xs shadow-glow-gold">
               Editor's Pick
             </Badge>
           </motion.div>
@@ -368,12 +418,17 @@ export function GalleryPage() {
       </section>
 
       {/* Main Gallery */}
-      <section className="py-14">
+      <section className="py-14 bg-background" ref={mainRef}>
         <div className="container mx-auto px-4">
-          {/* Filter tabs + upload */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8">
+          {/* Filter tabs */}
+          <motion.div
+            className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8"
+            initial={{ opacity: 0, y: 16 }}
+            animate={isInView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.5 }}
+          >
             <div
-              className="flex flex-wrap gap-2"
+              className="relative flex flex-wrap gap-2"
               role="tablist"
               aria-label="Gallery category filters"
             >
@@ -387,14 +442,31 @@ export function GalleryPage() {
                     setActiveFilter(tab.value);
                     setVisibleCount(ITEMS_PER_PAGE);
                   }}
-                  className={`relative px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+                  className={`relative px-5 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
                     activeFilter === tab.value
-                      ? "gradient-gold text-background shadow-subtle"
-                      : "bg-card/50 border border-border/30 text-muted-foreground hover:text-foreground hover:border-primary/40 hover:bg-card"
+                      ? "text-background shadow-glow-gold"
+                      : "glass-effect-subtle text-muted-foreground hover:text-foreground hover:border-primary/40"
                   }`}
-                  data-ocid={`gallery-filter-${tab.value}`}
+                  style={
+                    activeFilter === tab.value
+                      ? { background: "var(--gradient-gold)" }
+                      : undefined
+                  }
+                  data-ocid="gallery.filter.tab"
                 >
                   {tab.label}
+                  {activeFilter === tab.value && (
+                    <motion.span
+                      layoutId="gallery-filter-indicator"
+                      className="absolute inset-0 rounded-full"
+                      style={{ background: "var(--gradient-gold)", zIndex: -1 }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 400,
+                        damping: 35,
+                      }}
+                    />
+                  )}
                 </button>
               ))}
             </div>
@@ -402,17 +474,17 @@ export function GalleryPage() {
             {isStaff && (
               <Button
                 type="button"
-                className="gradient-gold text-background border-0 hover:opacity-90 gap-2 shrink-0"
+                className="gradient-gold text-background border-0 hover:opacity-90 gap-2 shrink-0 shadow-glow-gold"
                 onClick={() => setShowUpload(true)}
-                data-ocid="gallery-upload-btn"
+                data-ocid="gallery.upload_button"
               >
                 <Plus className="w-4 h-4" />
                 Upload Media
               </Button>
             )}
-          </div>
+          </motion.div>
 
-          {/* Count + active filter badge */}
+          {/* Count */}
           <div className="mb-6 flex items-center gap-3">
             <span className="text-muted-foreground text-sm">
               Showing{" "}
@@ -433,17 +505,15 @@ export function GalleryPage() {
             )}
           </div>
 
-          {/* Grid */}
           <GalleryGrid
             items={visibleItems}
             featuredIds={FEATURED_IDS}
             isLoading={false}
           />
 
-          {/* Load More */}
           {hasMore && (
             <motion.div
-              className="flex justify-center mt-12"
+              className="flex justify-center mt-14"
               initial={{ opacity: 0 }}
               whileInView={{ opacity: 1 }}
               viewport={{ once: true }}
@@ -451,9 +521,9 @@ export function GalleryPage() {
               <Button
                 type="button"
                 variant="outline"
-                className="border-primary/40 text-primary hover:bg-primary/10 hover:border-primary px-10 py-6 text-base font-semibold gap-2 transition-all duration-200 hover:scale-105"
+                className="border-primary/40 text-primary hover:bg-primary/10 hover:border-primary px-12 py-6 text-base font-semibold gap-2 transition-all duration-200 hover:scale-105 shadow-glow-gold"
                 onClick={() => setVisibleCount((prev) => prev + ITEMS_PER_PAGE)}
-                data-ocid="gallery-load-more"
+                data-ocid="gallery.load_more_button"
               >
                 <Camera className="w-4 h-4" />
                 Load More Photos
@@ -463,7 +533,6 @@ export function GalleryPage() {
         </div>
       </section>
 
-      {/* Upload Modal */}
       <UploadForm
         open={showUpload}
         onClose={() => setShowUpload(false)}

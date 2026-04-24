@@ -26,6 +26,20 @@ const CATEGORY_GRADIENTS: Record<Course["category"], string> = {
     "linear-gradient(135deg, oklch(0.22 0.04 155), oklch(0.18 0.025 145))",
 };
 
+// Fallback images per category in case course.image fails to load
+const CATEGORY_FALLBACKS: Record<Course["category"], string> = {
+  photography:
+    "https://images.unsplash.com/photo-1554048612-b6a482bc67e5?w=800&q=80",
+  videography:
+    "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=800&q=80",
+  editing:
+    "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=800&q=80",
+  business:
+    "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=800&q=80",
+  specialized:
+    "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=800&q=80",
+};
+
 interface CourseCardProps {
   course: Course;
   isActive: boolean;
@@ -36,6 +50,19 @@ function CourseCard({ course, isActive, onClick }: CourseCardProps) {
   const navigate = useNavigate();
   const [imgLoaded, setImgLoaded] = useState(false);
   const [imgError, setImgError] = useState(false);
+
+  // Resolve the best image src — use category fallback if course.image is empty or failed
+  const imgSrc =
+    !imgError && course.image
+      ? course.image
+      : CATEGORY_FALLBACKS[course.category];
+
+  const handleError = () => {
+    if (!imgError) {
+      setImgError(true);
+      setImgLoaded(false);
+    }
+  };
 
   return (
     <motion.div
@@ -58,29 +85,27 @@ function CourseCard({ course, isActive, onClick }: CourseCardProps) {
         className="h-36 flex items-center justify-center relative overflow-hidden"
         style={{ background: CATEGORY_GRADIENTS[course.category] }}
       >
-        {/* Fallback icon */}
-        {(!imgLoaded || imgError) && (
+        {/* Fallback icon — shown while loading */}
+        {!imgLoaded && (
           <BookOpen size={36} style={{ color: "oklch(0.7 0.22 70 / 0.5)" }} />
         )}
 
-        {/* Real course image */}
-        {course.image && !imgError && (
-          <img
-            src={course.image}
-            alt={course.title}
-            loading="lazy"
-            onLoad={() => setImgLoaded(true)}
-            onError={() => setImgError(true)}
-            className="absolute inset-0 w-full h-full object-cover"
-            style={{
-              opacity: imgLoaded ? 1 : 0,
-              transition: "opacity 0.4s ease",
-            }}
-          />
-        )}
+        {/* Course image — always render, even the fallback URL */}
+        <img
+          src={imgSrc}
+          alt={course.title}
+          loading="lazy"
+          onLoad={() => setImgLoaded(true)}
+          onError={handleError}
+          className="absolute inset-0 w-full h-full object-cover"
+          style={{
+            opacity: imgLoaded ? 1 : 0,
+            transition: "opacity 0.4s ease",
+          }}
+        />
 
         {/* Gradient overlay on top of image */}
-        {imgLoaded && !imgError && (
+        {imgLoaded && (
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
         )}
 
@@ -120,23 +145,16 @@ function CourseCard({ course, isActive, onClick }: CourseCardProps) {
           {course.description}
         </p>
 
-        <div className="flex items-center justify-between mt-1">
-          <div
-            className="flex items-center gap-1"
-            style={{ color: "oklch(0.7 0.22 70)" }}
-          >
-            <Star size={12} fill="currentColor" />
-            <span className="text-xs font-semibold">{course.rating}</span>
-            <span className="text-xs text-muted-foreground ml-1">
-              <Users size={10} className="inline mr-0.5" />
-              {course.totalStudents}
-            </span>
-          </div>
-          <span
-            className="text-sm font-black"
-            style={{ color: "oklch(0.7 0.22 70)" }}
-          >
-            ₹{course.price}
+        {/* Rating & students — no price shown */}
+        <div
+          className="flex items-center gap-1 mt-1"
+          style={{ color: "oklch(0.7 0.22 70)" }}
+        >
+          <Star size={12} fill="currentColor" />
+          <span className="text-xs font-semibold">{course.rating}</span>
+          <span className="text-xs text-muted-foreground ml-1 flex items-center gap-0.5">
+            <Users size={10} />
+            {course.totalStudents}
           </span>
         </div>
 
@@ -160,10 +178,11 @@ function CourseCard({ course, isActive, onClick }: CourseCardProps) {
 }
 
 export function CourseCarouselPreview() {
-  const ref = useRef<HTMLDivElement>(null);
-  const isInView = useInView(ref, { once: true, margin: "-80px" });
+  const sectionRef = useRef<HTMLDivElement>(null);
+  const isInView = useInView(sectionRef, { once: true, margin: "-80px" });
   const navigate = useNavigate();
   const [activeIndex, setActiveIndex] = useState(0);
+  const [isPaused, setIsPaused] = useState(false);
 
   const prev = useCallback(
     () => setActiveIndex((i) => (i - 1 + FEATURED.length) % FEATURED.length),
@@ -174,13 +193,15 @@ export function CourseCarouselPreview() {
     [],
   );
 
+  // Auto-advance — pauses on hover
   useEffect(() => {
-    const timer = setInterval(next, 3000);
+    if (isPaused) return;
+    const timer = setInterval(next, 3200);
     return () => clearInterval(timer);
-  }, [next]);
+  }, [next, isPaused]);
 
   return (
-    <section className="py-24 bg-background overflow-hidden" ref={ref}>
+    <section className="py-24 bg-background overflow-hidden" ref={sectionRef}>
       <div className="container mx-auto px-4">
         <motion.div
           className="text-center mb-12"
@@ -207,15 +228,20 @@ export function CourseCarouselPreview() {
           </p>
         </motion.div>
 
-        {/* Carousel wrapper */}
+        {/* Carousel wrapper — hover pauses auto-scroll */}
         <motion.div
           className="relative"
           initial={{ opacity: 0 }}
           animate={isInView ? { opacity: 1 } : {}}
           transition={{ duration: 0.8, delay: 0.2 }}
+          onMouseEnter={() => setIsPaused(true)}
+          onMouseLeave={() => setIsPaused(false)}
         >
-          {/* Cards container */}
-          <div className="flex items-center justify-center gap-4 overflow-visible py-6">
+          {/* Cards container — overflow clip so only active area shows */}
+          <div
+            className="flex items-center justify-center gap-4 overflow-visible py-6"
+            style={{ minHeight: 360 }}
+          >
             {FEATURED.map((course, index) => (
               <CourseCard
                 key={course.id}

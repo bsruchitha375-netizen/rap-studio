@@ -1,23 +1,27 @@
 {
-  "overview": "RAP Integrated Studio Management — a luxury cinematic platform for photography, videography, and short film studio services with full admin control, multi-service booking, Razorpay payments, and a complete content management system.",
+  "overview": "RAP Integrated Studio Management — a luxury, cinematic platform for a premium photography, videography, and short film studio. Features multi-role authentication, real-time multi-service booking with Stripe payments, a 50-course learning platform, gallery, AI chatbot, and a full admin CMS with instant site updates.",
   "features": [
-    "Admin CMS with live text/color/image editing",
-    "Multi-service booking with dynamic total calculation",
-    "Razorpay payment gateway with real HMAC verification",
-    "Optimized login with session caching",
-    "WhatsApp direct chat integration",
-    "Full admin control over services, courses, gallery, and payments",
-    "Role-based access for Client, Student, Staff, Receptionist, and Admin"
+    "Premium cinematic dark theme with gold accents and glassmorphism UI",
+    "Multi-role login: Admin, Client, Staff, Student, Receptionist",
+    "Stripe payment gateway with dynamic hour-based pricing",
+    "Multi-service booking with real-time total calculation",
+    "50-course learning platform with progress tracking and certificates",
+    "Admin CMS dashboard with real-time booking confirmations and analytics",
+    "Masonry gallery with lightbox and category filters",
+    "AI chatbot widget and full-page FAQ",
+    "QR-code certificate verification",
+    "Email and WhatsApp notifications for all bookings and payments"
   ],
   "category": "business",
   "tags": [
     "photography",
     "studio",
     "booking",
-    "payments",
-    "admin",
+    "courses",
+    "stripe",
     "cms",
-    "razorpay"
+    "luxury",
+    "cinematic"
   ],
-  "last_updated": "2026-04-15T01:17:00.420Z"
+  "last_updated": "2026-04-24T08:15:39.483Z"
 }

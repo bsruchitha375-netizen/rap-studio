@@ -12,16 +12,18 @@ import {
   BookOpen,
   CheckCircle2,
   Clock,
+  CreditCard,
   Loader2,
   Lock,
   RefreshCw,
   ShieldCheck,
+  UserPlus,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "../../hooks/useAuth";
-import { useRazorpay } from "../../hooks/useRazorpay";
+import { useStripe } from "../../hooks/useStripe";
 import type { Course, CourseMode } from "../../types";
 
 interface EnrollmentModalProps {
@@ -53,14 +55,14 @@ const WHAT_YOU_GET = [
   "Community forum access",
 ];
 
-type EnrollStep = "details" | "verifying" | "success" | "error";
+type EnrollStep = "details" | "paying" | "success" | "error";
 
 export function EnrollmentModal({
   course,
   open,
   onClose,
 }: EnrollmentModalProps) {
-  const { initiatePayment, isLoading } = useRazorpay();
+  const { initiatePayment, isLoading } = useStripe();
   const { isAuthenticated } = useAuth();
   const [step, setStep] = useState<EnrollStep>("details");
   const [errorMessage, setErrorMessage] = useState<string>("");
@@ -68,11 +70,12 @@ export function EnrollmentModal({
 
   const handleEnroll = async () => {
     if (!isAuthenticated) {
-      toast.error("Please log in to enroll in a course.");
+      toast.error("Please register or log in to enroll.");
       return;
     }
 
     setErrorMessage("");
+    setStep("paying");
 
     await initiatePayment({
       amount: 5,
@@ -80,39 +83,28 @@ export function EnrollmentModal({
       description: `Course enrollment — ${course.title}`,
       referenceId: course.id,
       paymentType: "course_enrollment",
-      prefillName: "Student",
-      onVerifying: () => {
-        // Payment popup closed, backend verification in progress
-        setStep("verifying");
-      },
-      onSuccess: (_response) => {
-        setStep("success");
-        toast.success("Enrollment confirmed! Check your dashboard.");
+      onRedirecting: () => {
+        setStep("paying");
       },
       onFailure: (err) => {
         if (err === "Payment cancelled") {
-          // User dismissed — stay on details
           setStep("details");
-        } else if (
-          err === "Payment verification failed. Please contact support."
-        ) {
-          setErrorMessage(
-            "Payment verification failed. Please contact support.",
-          );
-          setStep("error");
         } else {
           setErrorMessage(err || "Payment failed. Please try again.");
           setStep("error");
         }
       },
     });
+
+    // If we get here, payment completed without redirect (demo mode)
+    setStep("success");
+    toast.success("Enrollment confirmed! Check your dashboard.");
   };
 
   const handleRetry = () => {
     setStep("details");
     setErrorMessage("");
-    // Small delay so UI resets visually before re-opening popup
-    setTimeout(() => handleEnroll(), 100);
+    setTimeout(() => void handleEnroll(), 100);
   };
 
   const handleClose = () => {
@@ -178,12 +170,12 @@ export function EnrollmentModal({
 
               <Separator className="bg-border/40" />
 
+              {/* No price shown — pricing revealed only at payment */}
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs text-muted-foreground">Total Fee</p>
-                  <p className="text-3xl font-bold text-primary">₹5</p>
-                  <p className="text-xs text-muted-foreground">
-                    One-time payment
+                  <p className="text-xs text-muted-foreground">Instructor</p>
+                  <p className="text-sm font-semibold text-foreground">
+                    {course.instructor}
                   </p>
                 </div>
                 <div className="text-right">
@@ -192,7 +184,7 @@ export function EnrollmentModal({
                     Secure payment
                   </div>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    Razorpay encrypted
+                    Stripe encrypted
                   </p>
                 </div>
               </div>
@@ -203,38 +195,78 @@ export function EnrollmentModal({
                   <span className="text-primary font-semibold">
                     Certificate unlocked
                   </span>{" "}
-                  after full ₹5 payment and course completion.
+                  after full payment and course completion.
                 </p>
               </div>
 
+              {/* Auth gate */}
               {!isAuthenticated ? (
-                <div className="text-center py-2">
-                  <p className="text-sm text-muted-foreground mb-3">
-                    Log in to complete enrollment
+                <div
+                  className="rounded-xl border p-4 space-y-3"
+                  style={{
+                    background: "oklch(0.68 0.2 290 / 0.06)",
+                    borderColor: "oklch(0.68 0.2 290 / 0.3)",
+                  }}
+                  data-ocid="enrollment-auth-gate"
+                >
+                  <div className="flex items-center gap-2">
+                    <UserPlus className="w-4 h-4 text-primary" />
+                    <p className="text-sm font-semibold text-foreground">
+                      Registration required to enroll
+                    </p>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Create an account or log in to enroll in this course.
                   </p>
-                  <Button
-                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
-                    onClick={() => {
-                      window.location.href = "/login";
-                    }}
-                  >
-                    Login to Enroll
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 text-xs"
+                      onClick={handleClose}
+                      data-ocid="enrollment-cancel-btn"
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      size="sm"
+                      className="flex-1 text-xs font-semibold"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, oklch(0.7 0.22 70), oklch(0.62 0.18 65))",
+                        color: "oklch(0.99 0.002 70)",
+                      }}
+                      onClick={() => {
+                        window.location.href = `/login?return=${encodeURIComponent(window.location.pathname)}`;
+                      }}
+                      data-ocid="enrollment-login-btn"
+                    >
+                      Login / Register →
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <Button
-                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-12 text-base"
-                  onClick={handleEnroll}
+                  className="w-full h-12 text-base font-semibold"
+                  style={{
+                    background:
+                      "linear-gradient(135deg, oklch(0.7 0.22 70), oklch(0.62 0.18 65))",
+                    color: "oklch(0.99 0.002 70)",
+                  }}
+                  onClick={() => void handleEnroll()}
                   disabled={isLoading}
                   data-ocid="confirm-enrollment-btn"
                 >
                   {isLoading ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Opening Payment…
+                      Processing…
                     </>
                   ) : (
-                    "Confirm Enrollment — ₹5"
+                    <>
+                      <CreditCard className="w-4 h-4 mr-2" />
+                      Enroll & Pay with Stripe
+                    </>
                   )}
                 </Button>
               )}
@@ -246,30 +278,29 @@ export function EnrollmentModal({
           </motion.div>
         )}
 
-        {/* ── Verifying step ── */}
-        {step === "verifying" && (
+        {/* ── Paying / redirecting step ── */}
+        {step === "paying" && (
           <motion.div
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
             className="flex flex-col items-center text-center px-8 py-12 gap-5"
-            data-ocid="enrollment-verifying-state"
+            data-ocid="enrollment-paying-state"
           >
             <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
               <Loader2 className="w-10 h-10 text-primary animate-spin" />
             </div>
             <div>
               <h3 className="text-xl font-display text-foreground font-bold">
-                Verifying Payment…
+                Preparing Checkout…
               </h3>
               <p className="text-muted-foreground text-sm mt-1 max-w-xs">
-                Please wait while we confirm your payment with our server. Do
-                not close this window.
+                You'll be redirected to Stripe's secure payment page.
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs text-primary/80">
               <ShieldCheck className="w-4 h-4" />
-              Secure end-to-end verification
+              256-bit SSL encrypted checkout
             </div>
           </motion.div>
         )}

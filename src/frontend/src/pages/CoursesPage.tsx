@@ -40,8 +40,8 @@ const BENEFITS = [
   },
   {
     icon: CheckCircle2,
-    title: "₹5 All Access",
-    desc: "Every single course for just ₹5. No hidden fees, no subscriptions.",
+    title: "Accessible for Everyone",
+    desc: "Every course designed for beginners to professionals — no hidden fees, no subscriptions.",
   },
 ];
 
@@ -56,23 +56,36 @@ export function CoursesPage() {
   return (
     <Layout>
       {/* Hero */}
-      <section className="relative min-h-[50vh] flex items-center justify-center overflow-hidden bg-gradient-to-b from-card via-background to-background">
-        {/* Radial glow */}
+      <section className="relative min-h-[52vh] flex items-center justify-center overflow-hidden bg-gradient-to-b from-card via-background to-background">
         <div
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] opacity-30 pointer-events-none"
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[350px] opacity-25 pointer-events-none"
           style={{
             background:
-              "radial-gradient(ellipse at center, oklch(0.7 0.22 70 / 0.4), transparent 70%)",
+              "radial-gradient(ellipse at center, oklch(0.7 0.22 70 / 0.45), transparent 70%)",
+          }}
+        />
+        <motion.div
+          className="absolute bottom-0 right-0 w-64 h-64 opacity-10 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(circle, oklch(0.68 0.2 290), transparent 70%)",
+            filter: "blur(60px)",
+          }}
+          animate={{ scale: [1, 1.2, 1] }}
+          transition={{
+            duration: 8,
+            repeat: Number.POSITIVE_INFINITY,
+            ease: "easeInOut",
           }}
         />
 
-        <div className="relative z-10 text-center px-4 py-20">
+        <div className="relative z-10 text-center px-4 py-20 max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <Badge className="bg-primary/15 text-primary border border-primary/30 mb-6 px-4 py-1.5 text-sm font-medium">
+            <Badge className="bg-primary/15 text-primary border border-primary/30 mb-6 px-4 py-1.5 text-sm font-semibold">
               50 Professional Courses
             </Badge>
           </motion.div>
@@ -81,29 +94,41 @@ export function CoursesPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.1 }}
-            className="text-5xl md:text-7xl font-display font-bold text-foreground mb-4 leading-tight"
-            style={{ fontFamily: "var(--font-display)" }}
+            className="section-heading text-foreground mb-4 leading-tight"
           >
-            Master the Art of
-            <br />
-            <span className="text-primary">Photography & Film</span>
+            Master the Art of{" "}
+            <span className="relative inline-block">
+              <span
+                className="bg-clip-text text-transparent"
+                style={{ backgroundImage: "var(--gradient-gold)" }}
+              >
+                Photography & Film
+              </span>
+              <motion.span
+                className="absolute -bottom-1 left-0 right-0 h-0.5 rounded-full"
+                style={{ background: "var(--gradient-gold)" }}
+                initial={{ scaleX: 0 }}
+                animate={{ scaleX: 1 }}
+                transition={{ duration: 0.9, delay: 0.6 }}
+              />
+            </span>
           </motion.h1>
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.25 }}
-            className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8"
+            className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8 leading-relaxed"
           >
             50 studio-crafted courses covering photography, videography,
-            editing, business, and specialized skills — each just ₹5.
+            editing, business, and specialized skills — for every level.
           </motion.p>
 
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="flex items-center justify-center gap-6 text-sm text-muted-foreground"
+            className="flex items-center justify-center gap-8 text-sm text-muted-foreground"
           >
             <span className="flex items-center gap-1.5">
               <GraduationCap className="w-4 h-4 text-primary" />
@@ -115,7 +140,7 @@ export function CoursesPage() {
             </span>
             <span className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-primary" />
-              All for ₹5
+              All Levels Welcome
             </span>
           </motion.div>
         </div>
@@ -124,7 +149,10 @@ export function CoursesPage() {
       {/* Category filter tabs */}
       <section className="sticky top-16 z-30 bg-background/95 backdrop-blur-sm border-b border-border/30">
         <div className="container mx-auto px-4">
-          <div className="flex gap-1 overflow-x-auto py-3 scrollbar-none">
+          <div
+            className="flex gap-1 overflow-x-auto py-3"
+            style={{ scrollbarWidth: "none" }}
+          >
             {TABS.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
@@ -133,14 +161,17 @@ export function CoursesPage() {
                   type="button"
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium
-                    transition-all duration-200 whitespace-nowrap flex-shrink-0
-                    ${
-                      isActive
-                        ? "bg-primary text-primary-foreground shadow-md"
-                        : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                    }`}
-                  data-ocid={`tab-${tab.id}`}
+                  className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
+                    isActive
+                      ? "text-background"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
+                  }`}
+                  style={
+                    isActive
+                      ? { background: "var(--gradient-gold)" }
+                      : undefined
+                  }
+                  data-ocid="courses.filter.tab"
                 >
                   <Icon className="w-4 h-4" />
                   {tab.label}
@@ -154,7 +185,7 @@ export function CoursesPage() {
       {/* Circular Carousel */}
       <section
         className="py-16 bg-background overflow-hidden"
-        data-ocid="courses-carousel"
+        data-ocid="courses.carousel"
       >
         <div className="container mx-auto px-4">
           <motion.div
@@ -189,10 +220,11 @@ export function CoursesPage() {
             transition={{ duration: 0.5 }}
             className="text-center mb-10"
           >
-            <h2 className="text-3xl font-display font-bold text-foreground">
-              Why Learn with RAP Studio?
+            <p className="section-label mb-3">Why Learn with Us</p>
+            <h2 className="section-subheading text-foreground">
+              Why Learn with <span className="text-primary">RAP Studio?</span>
             </h2>
-            <p className="text-muted-foreground mt-2">
+            <p className="text-muted-foreground mt-2 max-w-md mx-auto">
               Studio-quality education at an accessible price point
             </p>
           </motion.div>
@@ -207,15 +239,17 @@ export function CoursesPage() {
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.1, duration: 0.4 }}
-                  className="rounded-2xl p-6 bg-card border border-border/30 text-center"
+                  className="rounded-2xl p-6 glass-effect border border-border/30 text-center hover:border-primary/30 transition-smooth hover:-translate-y-1"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center mx-auto mb-4">
+                  <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center mx-auto mb-4 shadow-glow-gold">
                     <Icon className="w-6 h-6 text-primary" />
                   </div>
-                  <h3 className="font-semibold text-foreground mb-2">
+                  <h3 className="font-display font-semibold text-foreground mb-2">
                     {b.title}
                   </h3>
-                  <p className="text-sm text-muted-foreground">{b.desc}</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    {b.desc}
+                  </p>
                 </motion.div>
               );
             })}

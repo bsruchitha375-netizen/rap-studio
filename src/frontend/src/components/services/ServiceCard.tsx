@@ -79,14 +79,23 @@ export function ServiceCard({ service, onClick }: ServiceCardProps) {
 
   return (
     <motion.div
-      whileHover={{ scale: 1.04 }}
+      whileHover={{ scale: 1.04, y: -6 }}
       whileTap={{ scale: 0.97 }}
       onClick={onClick}
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
-      className="cursor-pointer relative rounded-2xl overflow-hidden group border border-border/50 shadow-lg"
-      style={{ height: 220 }}
-      data-ocid="service-card"
+      className="cursor-pointer relative rounded-2xl overflow-hidden group"
+      style={{
+        height: 230,
+        border: isHovered
+          ? "1.5px solid oklch(0.7 0.22 70 / 0.7)"
+          : "1px solid oklch(var(--border) / 0.5)",
+        boxShadow: isHovered
+          ? "0 0 24px oklch(0.7 0.22 70 / 0.2), 0 12px 40px rgba(0,0,0,0.35)"
+          : "0 6px 20px rgba(0,0,0,0.2)",
+        transition: "border-color 0.3s, box-shadow 0.3s",
+      }}
+      data-ocid="service.card"
     >
       {/* Shimmer loading state */}
       {!imgLoaded && (
@@ -100,53 +109,54 @@ export function ServiceCard({ service, onClick }: ServiceCardProps) {
         loading="lazy"
         onLoad={() => setImgLoaded(true)}
         className="absolute inset-0 w-full h-full object-cover"
-        animate={{ scale: isHovered ? 1.08 : 1 }}
+        animate={{ scale: isHovered ? 1.1 : 1 }}
         transition={{ duration: 0.5, ease: "easeOut" }}
       />
 
-      {/* Dark gradient overlay — brighter on hover */}
+      {/* Dark gradient overlay */}
       <motion.div
         className="absolute inset-0"
         animate={{
           background: isHovered
-            ? "linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.5) 50%, rgba(0,0,0,0.2) 100%)"
+            ? "linear-gradient(to top, rgba(0,0,0,0.94) 0%, rgba(0,0,0,0.55) 55%, rgba(0,0,0,0.2) 100%)"
             : "linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.4) 50%, rgba(0,0,0,0.15) 100%)",
         }}
         transition={{ duration: 0.3 }}
       />
 
       {/* Emoji icon — top right */}
-      <div className="absolute top-3 right-3 z-20 w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm flex items-center justify-center text-xl border border-white/10">
+      <div className="absolute top-3 right-3 z-20 w-10 h-10 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center text-xl border border-white/10 shadow-md">
         {service.emoji}
       </div>
 
-      {/* Gold shimmer border on hover */}
-      <motion.div
-        className="absolute inset-0 rounded-2xl pointer-events-none"
-        animate={{
-          boxShadow: isHovered
-            ? "inset 0 0 0 1.5px oklch(0.7 0.22 70 / 0.7), 0 8px 32px oklch(0.7 0.22 70 / 0.25)"
-            : "inset 0 0 0 0px transparent",
-        }}
-        transition={{ duration: 0.3 }}
-      />
+      {/* Sub-service count badge — top left */}
+      <div className="absolute top-3 left-3 z-20">
+        <span
+          className="px-2.5 py-1 rounded-full text-xs font-semibold"
+          style={{
+            background: "oklch(0.7 0.22 70 / 0.15)",
+            border: "1px solid oklch(0.7 0.22 70 / 0.4)",
+            color: "oklch(0.85 0.18 70)",
+            backdropFilter: "blur(8px)",
+          }}
+        >
+          {service.subServices.length} options
+        </span>
+      </div>
 
       {/* Text at bottom */}
       <div className="absolute bottom-0 left-0 right-0 z-20 p-4">
-        <h3 className="font-display font-bold text-white text-base leading-tight truncate drop-shadow-lg">
+        <h3
+          className="font-display font-bold text-white text-base leading-tight truncate drop-shadow-lg"
+          style={{ fontFamily: "var(--font-display)" }}
+        >
           {service.name}
         </h3>
         <p className="text-white/70 text-xs mt-0.5 line-clamp-1 drop-shadow">
           {service.description}
         </p>
-        <p
-          className="text-xs font-semibold mt-1 drop-shadow"
-          style={{ color: "oklch(0.8 0.18 70)" }}
-        >
-          {service.subServices.length} options · from ₹5
-        </p>
 
-        {/* Book Now button slides up on hover */}
+        {/* View Details button slides up on hover */}
         <AnimatePresence>
           {isHovered && (
             <motion.button
@@ -155,11 +165,14 @@ export function ServiceCard({ service, onClick }: ServiceCardProps) {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 12 }}
               transition={{ duration: 0.22 }}
-              className="mt-2 w-full py-1.5 rounded-lg text-xs font-bold tracking-wide text-black"
-              style={{ background: "oklch(0.7 0.22 70)" }}
-              data-ocid="service-book-now"
+              className="mt-2 w-full py-2 rounded-lg text-xs font-bold tracking-wide transition-smooth"
+              style={{
+                background: "var(--gradient-gold)",
+                color: "oklch(0.12 0.02 70)",
+              }}
+              data-ocid="service.view_details_button"
             >
-              Book Now →
+              View Details →
             </motion.button>
           )}
         </AnimatePresence>

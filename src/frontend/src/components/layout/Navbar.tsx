@@ -31,6 +31,8 @@ export function Navbar() {
   const role = useRole();
   const { data: notifications } = useMyNotifications();
   const unreadCount = notifications?.filter((n) => !n.isRead).length ?? 0;
+  const router = useRouter();
+  const currentPath = router.state.location.pathname;
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
@@ -60,7 +62,7 @@ export function Navbar() {
           <Link
             to="/"
             className="flex items-center gap-3 group"
-            data-ocid="nav-logo"
+            data-ocid="nav.logo"
           >
             <div className="relative">
               <div className="w-10 h-10 rounded-full gradient-gold flex items-center justify-center shadow-luxury group-hover:scale-105 transition-smooth">
@@ -85,17 +87,48 @@ export function Navbar() {
             className="hidden md:flex items-center gap-1"
             aria-label="Main navigation"
           >
-            {NAV_LINKS.map((link) => (
-              <Link
-                key={link.href}
-                to={link.href}
-                className="px-4 py-2 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-card/40 rounded-lg transition-smooth"
-                activeProps={{ className: "text-primary" }}
-                data-ocid={`nav-link-${link.label.toLowerCase()}`}
-              >
-                {link.label}
-              </Link>
-            ))}
+            {NAV_LINKS.map((link) => {
+              const isActive = currentPath === link.href;
+              return (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  className="relative px-4 py-2 text-sm font-medium transition-smooth group"
+                  style={{ color: isActive ? "oklch(0.7 0.22 70)" : undefined }}
+                  data-ocid={`nav.${link.label.toLowerCase().replace(" ", "-")}.link`}
+                >
+                  <span
+                    className={
+                      isActive
+                        ? "text-primary"
+                        : "text-muted-foreground group-hover:text-foreground"
+                    }
+                  >
+                    {link.label}
+                  </span>
+                  {/* Gold underline on active */}
+                  {isActive && (
+                    <motion.span
+                      layoutId="nav-active-indicator"
+                      className="absolute -bottom-0.5 left-2 right-2 h-0.5 rounded-full"
+                      style={{ background: "var(--gradient-gold)" }}
+                      transition={{
+                        type: "spring",
+                        stiffness: 380,
+                        damping: 30,
+                      }}
+                    />
+                  )}
+                  {/* Hover underline */}
+                  {!isActive && (
+                    <span
+                      className="absolute -bottom-0.5 left-2 right-2 h-0.5 rounded-full opacity-0 group-hover:opacity-60 transition-smooth"
+                      style={{ background: "var(--gradient-gold)" }}
+                    />
+                  )}
+                </Link>
+              );
+            })}
           </nav>
 
           {/* Right Actions */}
@@ -107,7 +140,7 @@ export function Navbar() {
                 size="icon"
                 className="relative"
                 aria-label="Notifications"
-                data-ocid="nav-notifications"
+                data-ocid="nav.notifications"
               >
                 <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (
@@ -125,9 +158,9 @@ export function Navbar() {
                   variant="ghost"
                   onClick={() => setProfileOpen(!profileOpen)}
                   className="flex items-center gap-2"
-                  data-ocid="nav-profile"
+                  data-ocid="nav.profile"
                 >
-                  <div className="w-8 h-8 rounded-full gradient-gold flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full gradient-gold flex items-center justify-center shadow-glow-gold">
                     <User className="w-4 h-4 text-background" />
                   </div>
                   <span className="hidden md:inline text-sm capitalize">
@@ -148,7 +181,7 @@ export function Navbar() {
                         to={dashboardHref}
                         className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-card/60 transition-smooth"
                         onClick={() => setProfileOpen(false)}
-                        data-ocid="nav-dashboard"
+                        data-ocid="nav.dashboard.link"
                       >
                         <User className="w-4 h-4 text-muted-foreground" />
                         Dashboard
@@ -160,7 +193,7 @@ export function Navbar() {
                           logout();
                           setProfileOpen(false);
                         }}
-                        data-ocid="nav-logout"
+                        data-ocid="nav.logout.button"
                       >
                         <LogOut className="w-4 h-4" />
                         Sign Out
@@ -170,7 +203,7 @@ export function Navbar() {
                 </AnimatePresence>
               </div>
             ) : (
-              <Link to="/login" data-ocid="nav-login">
+              <Link to="/login" data-ocid="nav.login.link">
                 <Button className="btn-primary-luxury hidden sm:flex">
                   Sign In
                 </Button>
@@ -185,7 +218,7 @@ export function Navbar() {
               onClick={() => setIsOpen(!isOpen)}
               aria-label="Toggle menu"
               aria-expanded={isOpen}
-              data-ocid="nav-hamburger"
+              data-ocid="nav.hamburger.button"
             >
               {isOpen ? (
                 <X className="w-5 h-5" />
@@ -208,16 +241,26 @@ export function Navbar() {
             className="md:hidden glass-effect border-t border-border/20 overflow-hidden"
           >
             <nav className="container mx-auto px-4 py-4 flex flex-col gap-1">
-              {NAV_LINKS.map((link) => (
-                <Link
-                  key={link.href}
-                  to={link.href}
-                  className="px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-card/40 rounded-lg transition-smooth"
-                  onClick={() => setIsOpen(false)}
-                >
-                  {link.label}
-                </Link>
-              ))}
+              {NAV_LINKS.map((link) => {
+                const isActive = currentPath === link.href;
+                return (
+                  <Link
+                    key={link.href}
+                    to={link.href}
+                    className={`px-4 py-3 text-sm font-medium rounded-lg transition-smooth flex items-center gap-2 ${
+                      isActive
+                        ? "text-primary bg-primary/10"
+                        : "text-muted-foreground hover:text-foreground hover:bg-card/40"
+                    }`}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {isActive && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                    )}
+                    {link.label}
+                  </Link>
+                );
+              })}
               {!isAuthenticated && (
                 <Link to="/login" onClick={() => setIsOpen(false)}>
                   <Button className="w-full mt-2 btn-primary-luxury">

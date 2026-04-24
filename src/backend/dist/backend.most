@@ -1,4 +1,4 @@
-// Version: 1.0.0
+// Version: 3.0.0
 type BookingId__572944220 = Nat;
 type BookingRequest__171831595 =
   {
@@ -64,6 +64,7 @@ type EmailLog__162491839 =
     createdAt : Timestamp__301639476;
     id : Nat;
     relatedId : ?Text;
+    sent : Bool;
     subject : Text;
     to : Text
   };
@@ -118,6 +119,7 @@ type MultiServiceBooking__848862285 =
   };
 type Nat__490723111 = Nat__920180692;
 type Nat__920180692 = Nat;
+type Nat___967597909 = Nat;
 type Node__46230540<K, V> =
   {#internal : Internal__8484328<K, V>; #leaf : Leaf__809889148<K, V>};
 type NotificationId__307495059 = Nat;
@@ -132,13 +134,41 @@ type NotificationRecord__666145773 =
   };
 type NotificationType__908192046 =
   {
+    #BookingCompleted;
     #BookingConfirmed;
+    #BookingReminder;
+    #CourseCompleted;
     #CourseEnrolled;
     #GeneralInfo;
-    #PaymentRequired;
+    #PaymentReceipt;
     #WorkDelivered
   };
+type OldListPaymentOrder__436967582 =
+  {
+    var blockIndex : Nat___967597909;
+    var blocks : [var [var ?OldPaymentOrder__721545558]];
+    var elementIndex : Nat___967597909
+  };
+type OldPaymentOrder__721545558 =
+  {
+    amount : Nat;
+    checkoutUrl : ?Text;
+    createdAt : Timestamp__817121181;
+    currency : Text;
+    id : PaymentId__903863808;
+    orderId : Text;
+    paidAt : ?Timestamp__817121181;
+    paymentType : PaymentType__599808701;
+    referenceId : Text;
+    signatureVerified : Bool;
+    status : PaymentStatus__648093172;
+    stripePaymentIntentId : ?Text;
+    stripeSessionId : ?Text;
+    userId : UserId__2049225;
+    verifiedAt : ?Timestamp__817121181
+  };
 type PaymentId__1028686908 = Nat;
+type PaymentId__903863808 = Nat;
 type PaymentOrderExtended__243936633 =
   {
     adminNotes : ?Text;
@@ -158,24 +188,29 @@ type PaymentOrderExtended__243936633 =
   };
 type PaymentOrder__73532144 =
   {
+    adminNotes : ?Text;
     amount : Nat;
+    checkoutUrl : ?Text;
     createdAt : Timestamp__301639476;
     currency : Text;
     id : PaymentId__1028686908;
     orderId : Text;
     paidAt : ?Timestamp__301639476;
     paymentType : PaymentType__716647387;
-    razorpayOrderId : Text;
-    razorpayPaymentId : ?Text;
     referenceId : Text;
     signatureVerified : Bool;
     status : PaymentStatus__296016569;
+    stripePaymentIntentId : ?Text;
+    stripeSessionId : ?Text;
     userId : UserId__158757552;
     verifiedAt : ?Timestamp__301639476
   };
 type PaymentStatus__296016569 = {#Created; #Failed; #Paid; #Refunded};
+type PaymentStatus__648093172 = {#Created; #Failed; #Paid; #Refunded};
 type PaymentStatus__692151104 =
   {#FullyPaid; #Overdue; #PartiallyPaid; #Pending};
+type PaymentType__599808701 =
+  {#BookingBalance; #BookingUpfront; #CourseEnrollment};
 type PaymentType__716647387 =
   {#BookingBalance; #BookingUpfront; #CourseEnrollment};
 type SelectedServiceItem__172742105 =
@@ -183,7 +218,9 @@ type SelectedServiceItem__172742105 =
 type TimeSlot__993672216 =
   {#Afternoon; #Evening; #FullDay; #HalfDay; #Morning; #Night};
 type Timestamp__301639476 = Int;
+type Timestamp__817121181 = Int;
 type UserId__158757552 = Principal;
+type UserId__2049225 = Principal;
 type UserProfile__277265826 =
   {
     created : Timestamp__301639476;
@@ -197,7 +234,16 @@ type UserProfile__277265826 =
 type UserRole__1054455867 = {#admin; #guest; #user};
 type UserRole__41952412 = {#Admin; #Client; #Receptionist; #Staff; #Student};
 type UserStatus__357598751 = {#Active; #Pending; #Suspended};
-actor {
+type WhatsAppLog__50491587 =
+  {
+    createdAt : Timestamp__301639476;
+    id : Nat;
+    message : Text;
+    phone : Text;
+    relatedId : ?Text;
+    sent : Bool
+  };
+actor ({
   stable accessControlState :
     {
       var adminAssigned : Bool;
@@ -259,6 +305,96 @@ actor {
   stable nextMediaId : {var value : Nat};
   stable nextNotifId : {var value : Nat};
   stable nextPaymentId : {var value : Nat};
+  stable nextWhatsAppLogId : {var value : Nat};
+  stable notifications :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?NotificationRecord__666145773]];
+      var elementIndex : Nat__490723111
+    };
+  stable paymentExtended :
+    {
+      var root :
+        Node__46230540<PaymentId__1028686908, PaymentOrderExtended__243936633>;
+      var size : Nat__490723111
+    };
+  in paymentOrders : OldListPaymentOrder__436967582;
+  stable profiles :
+    {
+      var root : Node__46230540<UserId__158757552, UserProfile__277265826>;
+      var size : Nat__490723111
+    };
+  stable subServiceImages :
+    {var root : Node__46230540<Text, Text>; var size : Nat__490723111};
+  stable whatsappLogs :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?WhatsAppLog__50491587]];
+      var elementIndex : Nat__490723111
+    }
+}, {
+  stable accessControlState :
+    {
+      var adminAssigned : Bool;
+      userRoles : Map__605269027<Principal, UserRole__1054455867>
+    };
+  stable bookings :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?BookingRequest__171831595]];
+      var elementIndex : Nat__490723111
+    };
+  stable certificates :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Certificate__592097419]];
+      var elementIndex : Nat__490723111
+    };
+  stable cmsStore :
+    {
+      var root : Node__46230540<Text, CmsContent__152746357>;
+      var size : Nat__490723111
+    };
+  stable emailLogs :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?EmailLog__162491839]];
+      var elementIndex : Nat__490723111
+    };
+  stable enrollments :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?CourseEnrollment__722931068]];
+      var elementIndex : Nat__490723111
+    };
+  stable feedbacks :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?Feedback__34322984]];
+      var elementIndex : Nat__490723111
+    };
+  stable mediaItems :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?MediaItem__124138707]];
+      var elementIndex : Nat__490723111
+    };
+  stable multiBookingCounter : {var value : Nat};
+  stable multiBookings :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?MultiServiceBooking__848862285]];
+      var elementIndex : Nat__490723111
+    };
+  stable nextBookingId : {var value : Nat};
+  stable nextCertId : {var value : Nat};
+  stable nextEmailLogId : {var value : Nat};
+  stable nextEnrollmentId : {var value : Nat};
+  stable nextFeedbackId : {var value : Nat};
+  stable nextMediaId : {var value : Nat};
+  stable nextNotifId : {var value : Nat};
+  stable nextPaymentId : {var value : Nat};
+  stable nextWhatsAppLogId : {var value : Nat};
   stable notifications :
     {
       var blockIndex : Nat__490723111;
@@ -283,5 +419,11 @@ actor {
       var size : Nat__490723111
     };
   stable subServiceImages :
-    {var root : Node__46230540<Text, Text>; var size : Nat__490723111}
-};
+    {var root : Node__46230540<Text, Text>; var size : Nat__490723111};
+  stable whatsappLogs :
+    {
+      var blockIndex : Nat__490723111;
+      var blocks : [var [var ?WhatsAppLog__50491587]];
+      var elementIndex : Nat__490723111
+    }
+}) ;

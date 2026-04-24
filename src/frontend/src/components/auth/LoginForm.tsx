@@ -1,8 +1,6 @@
 import { UserRole as BackendUserRole, createActor } from "@/backend";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { useUserProfile } from "@/hooks/useAuth";
+import { saveUserSession, useUserProfile } from "@/hooks/useAuth";
 import type { UserRole } from "@/types";
 import { useActor } from "@caffeineai/core-infrastructure";
 import { motion } from "motion/react";
@@ -29,11 +27,34 @@ const ROLE_LABELS: Record<UserRole, string> = {
   student: "Student",
 };
 
+const ROLE_DESCRIPTIONS: Record<UserRole, string> = {
+  admin: "Full studio control",
+  staff: "Upload & manage work",
+  receptionist: "Manage bookings",
+  client: "Book studio sessions",
+  student: "Access courses",
+};
+
+const inputStyle: React.CSSProperties = {
+  color: "#000",
+  backgroundColor: "#fff",
+  border: "1px solid rgba(0,0,0,0.18)",
+  borderRadius: "0.55rem",
+  padding: "0.65rem 0.875rem 0.65rem 2.6rem",
+  width: "100%",
+  fontSize: "0.875rem",
+  outline: "none",
+  WebkitTextFillColor: "#000",
+  transition: "border 0.2s, box-shadow 0.2s",
+};
+
 export function LoginForm({ prefilledRole, onComplete }: LoginFormProps) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
+  const [nameFocused, setNameFocused] = useState(false);
+  const [phoneFocused, setPhoneFocused] = useState(false);
   const { actor } = useActor(createActor);
   const { setProfile } = useUserProfile();
 
@@ -43,7 +64,7 @@ export function LoginForm({ prefilledRole, onComplete }: LoginFormProps) {
       newErrors.name = "Please enter your full name";
     const phoneDigits = phone.replace(/\D/g, "");
     if (phoneDigits.length < 10)
-      newErrors.phone = "Enter a valid 10-digit Indian mobile number";
+      newErrors.phone = "Enter a valid 10-digit mobile number";
     return newErrors;
   };
 
@@ -62,9 +83,6 @@ export function LoginForm({ prefilledRole, onComplete }: LoginFormProps) {
       ? phone
       : `+91${phone.replace(/\D/g, "").slice(-10)}`;
 
-    // ── Optimistic update: persist locally and navigate immediately ──────────
-    // The user lands on their dashboard right away; backend registration fires
-    // in the background. On failure we surface an error but the UX is instant.
     const optimisticProfile = {
       id: crypto.randomUUID(),
       name: trimmedName,
@@ -74,22 +92,29 @@ export function LoginForm({ prefilledRole, onComplete }: LoginFormProps) {
       isActive: true,
     };
     setProfile(optimisticProfile);
-
-    // Navigate immediately — don't wait for the backend round-trip
+    saveUserSession(trimmedName, formattedPhone, prefilledRole, true);
     onComplete(trimmedName, formattedPhone, prefilledRole);
 
-    // Fire backend registration in background (best-effort)
     if (actor) {
       actor
         .register(trimmedName, formattedPhone, ROLE_TO_BACKEND[prefilledRole])
-        .catch(() => {
-          // Silently absorb — the optimistic profile is already stored.
-          // On next authenticated session the backend can be synced.
-        });
+        .catch(() => {});
     }
-
     setIsSubmitting(false);
   };
+
+  const nameFocusStyle = nameFocused
+    ? {
+        border: "1.5px solid oklch(0.7 0.22 70)",
+        boxShadow: "0 0 0 3px oklch(0.7 0.22 70 / 0.18)",
+      }
+    : {};
+  const phoneFocusStyle = phoneFocused
+    ? {
+        border: "1.5px solid oklch(0.7 0.22 70)",
+        boxShadow: "0 0 0 3px oklch(0.7 0.22 70 / 0.18)",
+      }
+    : {};
 
   return (
     <motion.div
@@ -98,49 +123,118 @@ export function LoginForm({ prefilledRole, onComplete }: LoginFormProps) {
       exit={{ opacity: 0, x: -40 }}
       transition={{ duration: 0.4, ease: [0.4, 0, 0.2, 1] }}
     >
+      {/* Header */}
       <div className="mb-6">
-        <h3 className="text-xl font-display font-semibold text-foreground mb-1">
-          Complete Your Profile
-        </h3>
-        <p className="text-sm text-muted-foreground">
-          Just one more step — set up your{" "}
-          <span className="text-primary font-medium">
+        <div className="flex items-center gap-3 mb-4">
+          <div
+            className="w-12 h-12 rounded-full flex items-center justify-center font-display font-bold text-base shrink-0"
+            style={{
+              background: "var(--gradient-gold)",
+              color: "oklch(0.12 0.02 280)",
+              boxShadow: "0 0 20px oklch(0.7 0.22 70 / 0.4)",
+            }}
+          >
+            RAP
+          </div>
+          <div>
+            <h3 className="text-xl font-display font-semibold text-foreground leading-tight">
+              Complete Your Profile
+            </h3>
+            <p className="text-sm text-muted-foreground">
+              Just one more step to enter as a{" "}
+              <span className="text-primary font-medium">
+                {ROLE_LABELS[prefilledRole]}
+              </span>
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Role badge */}
+      <div
+        className="flex items-center gap-3 px-4 py-3 rounded-xl border mb-6"
+        style={{
+          background: "oklch(0.22 0.025 280 / 0.5)",
+          borderColor: "oklch(0.7 0.22 70 / 0.3)",
+        }}
+      >
+        <div
+          className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+          style={{
+            background: "oklch(0.7 0.22 70 / 0.15)",
+            color: "oklch(0.7 0.22 70)",
+          }}
+        >
+          ✦
+        </div>
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-foreground">
             {ROLE_LABELS[prefilledRole]}
-          </span>{" "}
-          account
-        </p>
+          </div>
+          <div className="text-xs text-muted-foreground">
+            {ROLE_DESCRIPTIONS[prefilledRole]}
+          </div>
+        </div>
+        <span className="ml-auto text-xs text-muted-foreground/60 italic shrink-0">
+          Pre-selected
+        </span>
       </div>
 
       <form
-        onSubmit={handleSubmit}
+        onSubmit={(e) => void handleSubmit(e)}
         className="space-y-5"
         data-ocid="profile-form"
       >
+        {/* Name field */}
         <div className="space-y-1.5">
-          <Label
+          <label
             htmlFor="full-name"
-            className="text-sm font-medium text-foreground"
+            className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider"
           >
             Full Name
-          </Label>
-          <Input
-            id="full-name"
-            type="text"
-            placeholder="e.g. Ruchitha B S"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className={[
-              "bg-card/50 border-border transition-all duration-300 placeholder:text-muted-foreground/50",
-              "focus:border-primary focus:shadow-[0_0_12px_oklch(0.7_0.22_70_/_0.2)]",
-              errors.name ? "border-destructive" : "",
-            ].join(" ")}
-            data-ocid="input-name"
-            autoComplete="name"
-            autoFocus
-          />
+          </label>
+          <div className="relative">
+            <span
+              className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10"
+              style={{ color: "oklch(0.5 0.05 280)" }}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.5}
+                className="w-4 h-4"
+                aria-hidden="true"
+              >
+                <title>User</title>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
+                />
+              </svg>
+            </span>
+            <input
+              id="full-name"
+              type="text"
+              placeholder="e.g. Ruchitha B S"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              onFocus={() => setNameFocused(true)}
+              onBlur={() => setNameFocused(false)}
+              style={{
+                ...inputStyle,
+                ...(errors.name
+                  ? { border: "1.5px solid #ef4444" }
+                  : nameFocusStyle),
+              }}
+              data-ocid="input-name"
+              autoComplete="name"
+            />
+          </div>
           {errors.name && (
             <p
-              className="text-xs text-destructive mt-1"
+              className="text-xs text-destructive"
               data-ocid="input-name.field_error"
             >
               {errors.name}
@@ -148,18 +242,42 @@ export function LoginForm({ prefilledRole, onComplete }: LoginFormProps) {
           )}
         </div>
 
+        {/* Phone field */}
         <div className="space-y-1.5">
-          <Label
+          <label
             htmlFor="phone-number"
-            className="text-sm font-medium text-foreground"
+            className="block text-xs font-semibold text-foreground/80 uppercase tracking-wider"
           >
             Phone Number
-          </Label>
+          </label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground font-medium select-none">
+            <span
+              className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10"
+              style={{ color: "oklch(0.5 0.05 280)" }}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.5}
+                className="w-4 h-4"
+                aria-hidden="true"
+              >
+                <title>Phone</title>
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M10.5 1.5H8.25A2.25 2.25 0 0 0 6 3.75v16.5a2.25 2.25 0 0 0 2.25 2.25h7.5A2.25 2.25 0 0 0 18 20.25V3.75a2.25 2.25 0 0 0-2.25-2.25H13.5m-3 0V3h3V1.5m-3 0h3m-3 15h3"
+                />
+              </svg>
+            </span>
+            <span
+              className="absolute left-9 top-1/2 -translate-y-1/2 text-sm font-medium select-none z-10"
+              style={{ color: "#555" }}
+            >
               +91
             </span>
-            <Input
+            <input
               id="phone-number"
               type="tel"
               placeholder="9876543210"
@@ -167,18 +285,22 @@ export function LoginForm({ prefilledRole, onComplete }: LoginFormProps) {
               onChange={(e) =>
                 setPhone(e.target.value.replace(/[^\d]/g, "").slice(0, 10))
               }
-              className={[
-                "pl-12 bg-card/50 border-border transition-all duration-300 placeholder:text-muted-foreground/50",
-                "focus:border-primary focus:shadow-[0_0_12px_oklch(0.7_0.22_70_/_0.2)]",
-                errors.phone ? "border-destructive" : "",
-              ].join(" ")}
+              onFocus={() => setPhoneFocused(true)}
+              onBlur={() => setPhoneFocused(false)}
+              style={{
+                ...inputStyle,
+                paddingLeft: "3.75rem",
+                ...(errors.phone
+                  ? { border: "1.5px solid #ef4444" }
+                  : phoneFocusStyle),
+              }}
               data-ocid="input-phone"
               autoComplete="tel"
             />
           </div>
           {errors.phone && (
             <p
-              className="text-xs text-destructive mt-1"
+              className="text-xs text-destructive"
               data-ocid="input-phone.field_error"
             >
               {errors.phone}
@@ -186,23 +308,15 @@ export function LoginForm({ prefilledRole, onComplete }: LoginFormProps) {
           )}
         </div>
 
-        <div className="space-y-1.5">
-          <Label className="text-sm font-medium text-foreground">Role</Label>
-          <div className="flex items-center gap-2 px-3 py-2.5 rounded-lg border border-border bg-card/30">
-            <span className="text-sm text-muted-foreground">
-              {ROLE_LABELS[prefilledRole]}
-            </span>
-            <span className="ml-auto text-xs text-muted-foreground/60 italic">
-              Pre-selected
-            </span>
-          </div>
-        </div>
-
         <Button
           type="submit"
           disabled={isSubmitting}
-          className="w-full mt-2"
-          style={{ background: "var(--gradient-gold)" }}
+          className="w-full h-12 text-sm font-semibold mt-2"
+          style={{
+            background: "var(--gradient-gold)",
+            color: "oklch(0.12 0.02 280)",
+            boxShadow: "0 4px 20px oklch(0.7 0.22 70 / 0.3)",
+          }}
           data-ocid="btn-submit-profile"
         >
           {isSubmitting ? (
@@ -211,8 +325,7 @@ export function LoginForm({ prefilledRole, onComplete }: LoginFormProps) {
                 className="animate-spin w-4 h-4"
                 viewBox="0 0 24 24"
                 fill="none"
-                role="img"
-                aria-label="Loading"
+                aria-hidden="true"
               >
                 <title>Loading</title>
                 <circle
@@ -232,7 +345,7 @@ export function LoginForm({ prefilledRole, onComplete }: LoginFormProps) {
               Entering Studio…
             </span>
           ) : (
-            "Enter RAP Studio"
+            "Enter RAP Studio →"
           )}
         </Button>
       </form>

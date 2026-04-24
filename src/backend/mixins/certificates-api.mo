@@ -32,7 +32,7 @@ mixin (
       Runtime.trap("Not your enrollment");
     };
     // Check payment is fully paid
-    let paid = PaymentLib.isFullyPaidForReference(
+    let paid = PaymentLib.isVerifiedAndPaidForReference(
       paymentOrders,
       enrollmentId.toText(),
       #CourseEnrollment,

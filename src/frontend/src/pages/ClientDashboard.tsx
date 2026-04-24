@@ -7,7 +7,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { BookingCard } from "../components/dashboard/BookingCard";
 import { FeedbackForm } from "../components/dashboard/FeedbackForm";
-import { PaymentCard } from "../components/dashboard/PaymentCard";
+
 import { Layout } from "../components/layout/Layout";
 import { useAuth, useUserProfile } from "../hooks/useAuth";
 import {
@@ -33,15 +33,15 @@ function formatRelativeTime(ts: bigint): string {
 function renderStars(rating: number) {
   return (
     <span
-      className="text-yellow-400 text-sm tracking-tight"
+      className="text-sm tracking-tight"
       aria-label={`${rating} out of 5 stars`}
     >
       {[1, 2, 3, 4, 5].map((s) => (
         <span
           key={s}
-          className={
-            s <= rating ? "text-yellow-400" : "text-muted-foreground/30"
-          }
+          style={{
+            color: s <= rating ? "oklch(0.8 0.2 70)" : "oklch(0.3 0.02 280)",
+          }}
         >
           ★
         </span>
@@ -57,6 +57,32 @@ async function addFeedback(
   return { ok: true };
 }
 
+const STATUS_GLASS: Record<
+  string,
+  { bg: string; text: string; border: string }
+> = {
+  confirmed: {
+    bg: "oklch(0.7 0.22 70 / 0.15)",
+    text: "oklch(0.85 0.2 70)",
+    border: "oklch(0.7 0.22 70 / 0.4)",
+  },
+  pending: {
+    bg: "oklch(0.75 0.18 85 / 0.15)",
+    text: "oklch(0.85 0.15 85)",
+    border: "oklch(0.75 0.18 85 / 0.4)",
+  },
+  completed: {
+    bg: "oklch(0.65 0.18 150 / 0.15)",
+    text: "oklch(0.75 0.18 150)",
+    border: "oklch(0.65 0.18 150 / 0.4)",
+  },
+  cancelled: {
+    bg: "oklch(0.58 0.22 25 / 0.15)",
+    text: "oklch(0.72 0.2 25)",
+    border: "oklch(0.58 0.22 25 / 0.4)",
+  },
+};
+
 const PAYMENT_STATUS_COLORS: Record<string, string> = {
   paid: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
   pending: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
@@ -68,10 +94,7 @@ const PAYMENT_STATUS_COLORS: Record<string, string> = {
 function PaymentHistoryCard({
   payment,
   index,
-}: {
-  payment: PaymentOrder;
-  index: number;
-}) {
+}: { payment: PaymentOrder; index: number }) {
   const date = payment.paidAt
     ? new Date(Number(payment.paidAt) / 1_000_000).toLocaleDateString("en-IN", {
         day: "numeric",
@@ -94,8 +117,13 @@ function PaymentHistoryCard({
       initial={{ opacity: 0, y: 12 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.07 }}
-      className="rounded-xl border border-border/50 bg-card p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-primary/20 transition-smooth"
-      data-ocid={`payment-card.item.${index + 1}`}
+      className="rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-primary/30 transition-smooth"
+      style={{
+        background: "oklch(var(--card) / 0.45)",
+        backdropFilter: "blur(12px)",
+        border: "1px solid oklch(var(--border) / 0.4)",
+      }}
+      data-ocid={`payment.item.${index + 1}`}
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1 flex-wrap">
@@ -137,7 +165,6 @@ export function ClientDashboard() {
   const { data: payments = [], isLoading: paymentsLoading } = useMyPayments();
   const { data: notifications = [] } = useMyNotifications();
   const [activeTab, setActiveTab] = useState("bookings");
-
   const [submittedFeedback, setSubmittedFeedback] = useState<
     Record<string, FeedbackRecord>
   >({});
@@ -175,33 +202,46 @@ export function ClientDashboard() {
 
   return (
     <Layout>
-      <div className="container mx-auto px-4 py-10 max-w-4xl">
-        {/* Header */}
-        <motion.div
-          initial={{ opacity: 0, y: -16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="mb-8"
-        >
-          <p className="section-label mb-1">Client Portal</p>
-          <h1 className="text-3xl font-display font-bold text-foreground">
-            Welcome back, {name} ✨
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Manage your bookings and track your sessions with RAP Studio.
-          </p>
-        </motion.div>
+      {/* Dashboard banner */}
+      <div
+        className="border-b border-border/20"
+        style={{
+          background:
+            "linear-gradient(135deg, oklch(0.14 0.02 280), oklch(0.18 0.025 285))",
+        }}
+      >
+        <div className="container mx-auto px-4 py-10 max-w-4xl">
+          <motion.div
+            initial={{ opacity: 0, y: -16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+          >
+            <p className="section-label mb-1">Client Portal</p>
+            <h1 className="text-3xl font-display font-bold text-foreground">
+              Welcome back,{" "}
+              <span style={{ color: "oklch(0.82 0.2 70)" }}>{name}</span> ✨
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Manage your bookings and track your sessions with RAP Studio.
+            </p>
+          </motion.div>
+        </div>
+      </div>
 
+      <div className="container mx-auto px-4 py-10 max-w-4xl">
         <Tabs
           value={activeTab}
           onValueChange={setActiveTab}
-          data-ocid="client-dashboard-tabs"
+          data-ocid="client-dashboard.tab"
         >
-          <TabsList className="bg-card border border-border/50 mb-6">
+          <TabsList
+            className="border border-border/50 mb-6"
+            style={{ background: "oklch(var(--card) / 0.5)" }}
+          >
             <TabsTrigger
               value="bookings"
               className="gap-2"
-              data-ocid="tab-bookings"
+              data-ocid="client-dashboard.bookings.tab"
             >
               <Camera className="w-4 h-4" />
               My Bookings
@@ -214,7 +254,7 @@ export function ClientDashboard() {
             <TabsTrigger
               value="payments"
               className="gap-2"
-              data-ocid="tab-payments"
+              data-ocid="client-dashboard.payments.tab"
             >
               <CreditCard className="w-4 h-4" />
               Payments
@@ -227,7 +267,7 @@ export function ClientDashboard() {
             <TabsTrigger
               value="notifications"
               className="gap-2"
-              data-ocid="tab-notifications"
+              data-ocid="client-dashboard.notifications.tab"
             >
               <Bell className="w-4 h-4" />
               Alerts
@@ -239,7 +279,7 @@ export function ClientDashboard() {
             </TabsTrigger>
           </TabsList>
 
-          {/* ── Bookings Tab ── */}
+          {/* Bookings Tab */}
           <TabsContent value="bookings">
             <AnimatePresence mode="wait">
               <motion.div
@@ -259,18 +299,35 @@ export function ClientDashboard() {
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="flex flex-col items-center py-16 text-muted-foreground"
-                    data-ocid="bookings-empty-state"
+                    className="flex flex-col items-center py-20 text-muted-foreground rounded-2xl"
+                    style={{
+                      background: "oklch(var(--card) / 0.3)",
+                      border: "1px dashed oklch(var(--border) / 0.5)",
+                    }}
+                    data-ocid="bookings.empty_state"
                   >
-                    <Calendar className="w-14 h-14 mb-4 opacity-30" />
-                    <p className="text-lg font-medium mb-2">No bookings yet</p>
+                    <div
+                      className="w-20 h-20 rounded-full mb-5 flex items-center justify-center"
+                      style={{
+                        background: "oklch(0.7 0.22 70 / 0.1)",
+                        border: "1px solid oklch(0.7 0.22 70 / 0.3)",
+                      }}
+                    >
+                      <Calendar
+                        className="w-8 h-8"
+                        style={{ color: "oklch(0.7 0.22 70)" }}
+                      />
+                    </div>
+                    <p className="text-lg font-display font-semibold text-foreground mb-2">
+                      No bookings yet
+                    </p>
                     <p className="text-sm opacity-60 mb-6">
                       Book your first photography session today!
                     </p>
                     <a
                       href="/booking"
                       className="btn-primary-luxury text-sm px-6 py-2"
-                      data-ocid="bookings-empty-cta"
+                      data-ocid="bookings.empty_state.primary_button"
                     >
                       Book Now
                     </a>
@@ -280,16 +337,38 @@ export function ClientDashboard() {
                     {bookings.map((booking, i) => {
                       const fb = submittedFeedback[booking.id];
                       const isCompleted = booking.status === "completed";
+                      const statusStyle =
+                        STATUS_GLASS[booking.status] ?? STATUS_GLASS.pending;
                       return (
                         <div
                           key={booking.id}
-                          data-ocid={`booking-card.item.${i + 1}`}
+                          data-ocid={`booking.item.${i + 1}`}
                         >
-                          <BookingCard
-                            booking={booking}
-                            showPayButton={true}
-                            index={i}
-                          />
+                          <motion.div
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: i * 0.06 }}
+                            className="rounded-xl overflow-hidden"
+                            style={{
+                              background: "oklch(var(--card) / 0.45)",
+                              backdropFilter: "blur(12px)",
+                              border: "1px solid oklch(var(--border) / 0.4)",
+                            }}
+                          >
+                            {/* Status indicator stripe */}
+                            <div
+                              className="h-1"
+                              style={{
+                                background: `linear-gradient(90deg, ${statusStyle.text}, transparent)`,
+                                opacity: 0.6,
+                              }}
+                            />
+                            <BookingCard
+                              booking={booking}
+                              showPayButton={true}
+                              index={i}
+                            />
+                          </motion.div>
                           {isCompleted && (
                             <motion.div
                               initial={{ opacity: 0, y: 6 }}
@@ -299,11 +378,14 @@ export function ClientDashboard() {
                             >
                               {fb ? (
                                 <div
-                                  className="flex items-center gap-2 text-sm text-muted-foreground bg-card border border-border/40 rounded-lg px-3 py-1.5"
-                                  data-ocid="feedback-submitted-indicator"
+                                  className="flex items-center gap-2 text-sm glass-effect border border-border/40 rounded-lg px-3 py-1.5"
+                                  data-ocid="feedback.success_state"
                                 >
                                   {renderStars(fb.rating)}
-                                  <span className="text-xs text-emerald-400 font-medium">
+                                  <span
+                                    className="text-xs font-medium"
+                                    style={{ color: "oklch(0.65 0.18 150)" }}
+                                  >
                                     Thank you for your feedback!
                                   </span>
                                 </div>
@@ -312,9 +394,13 @@ export function ClientDashboard() {
                                   type="button"
                                   size="sm"
                                   variant="outline"
-                                  className="text-xs border-yellow-500/40 text-yellow-400 hover:bg-yellow-500/10 hover:border-yellow-500/60 gap-1 h-7"
+                                  className="text-xs gap-1 h-7"
+                                  style={{
+                                    borderColor: "oklch(0.7 0.22 70 / 0.4)",
+                                    color: "oklch(0.7 0.22 70)",
+                                  }}
                                   onClick={() => setFeedbackOpen(booking.id)}
-                                  data-ocid="leave-feedback-btn"
+                                  data-ocid="booking.feedback_button"
                                 >
                                   <Star className="w-3 h-3" />
                                   Leave Feedback ★
@@ -331,7 +417,7 @@ export function ClientDashboard() {
             </AnimatePresence>
           </TabsContent>
 
-          {/* ── Payments Tab ── */}
+          {/* Payments Tab */}
           <TabsContent value="payments">
             <AnimatePresence mode="wait">
               <motion.div
@@ -349,25 +435,41 @@ export function ClientDashboard() {
                   </div>
                 ) : payments.length === 0 ? (
                   <div
-                    className="flex flex-col items-center py-16 text-muted-foreground"
-                    data-ocid="payments-empty-state"
+                    className="flex flex-col items-center py-20 text-muted-foreground rounded-2xl"
+                    style={{
+                      background: "oklch(var(--card) / 0.3)",
+                      border: "1px dashed oklch(var(--border) / 0.5)",
+                    }}
+                    data-ocid="payments.empty_state"
                   >
-                    <CreditCard className="w-14 h-14 mb-4 opacity-30" />
-                    <p className="text-lg font-medium mb-1">No payments yet</p>
+                    <div
+                      className="w-20 h-20 rounded-full mb-5 flex items-center justify-center"
+                      style={{
+                        background: "oklch(0.7 0.22 70 / 0.1)",
+                        border: "1px solid oklch(0.7 0.22 70 / 0.3)",
+                      }}
+                    >
+                      <CreditCard
+                        className="w-8 h-8"
+                        style={{ color: "oklch(0.7 0.22 70)" }}
+                      />
+                    </div>
+                    <p className="text-lg font-display font-semibold text-foreground mb-1">
+                      No payments yet
+                    </p>
                     <p className="text-sm opacity-60 mb-6">
-                      Your payment history will appear here once you make a
-                      booking.
+                      Your payment history will appear here.
                     </p>
                     <a
                       href="/booking"
                       className="btn-primary-luxury text-sm px-6 py-2"
-                      data-ocid="payments-empty-cta"
+                      data-ocid="payments.empty_state.primary_button"
                     >
                       Book a Session
                     </a>
                   </div>
                 ) : (
-                  <div className="space-y-3" data-ocid="payments-list">
+                  <div className="space-y-3" data-ocid="payments.list">
                     {payments.map((payment: PaymentOrder, i: number) => (
                       <PaymentHistoryCard
                         key={payment.id}
@@ -381,7 +483,7 @@ export function ClientDashboard() {
             </AnimatePresence>
           </TabsContent>
 
-          {/* ── Notifications Tab ── */}
+          {/* Notifications Tab */}
           <TabsContent value="notifications">
             <AnimatePresence mode="wait">
               <motion.div
@@ -393,11 +495,17 @@ export function ClientDashboard() {
               >
                 {notifications.length === 0 ? (
                   <div
-                    className="flex flex-col items-center py-16 text-muted-foreground"
-                    data-ocid="notifications-empty-state"
+                    className="flex flex-col items-center py-20 text-muted-foreground rounded-2xl"
+                    style={{
+                      background: "oklch(var(--card) / 0.3)",
+                      border: "1px dashed oklch(var(--border) / 0.5)",
+                    }}
+                    data-ocid="notifications.empty_state"
                   >
                     <Bell className="w-14 h-14 mb-4 opacity-30" />
-                    <p className="text-lg font-medium">All caught up!</p>
+                    <p className="text-lg font-display font-semibold text-foreground">
+                      All caught up!
+                    </p>
                     <p className="text-sm opacity-60">
                       No notifications at this time.
                     </p>
@@ -410,16 +518,23 @@ export function ClientDashboard() {
                         initial={{ opacity: 0, x: -12 }}
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: i * 0.06 }}
-                        className={`rounded-xl border p-4 transition-smooth ${
-                          n.isRead
-                            ? "border-border/50 bg-card"
-                            : "border-primary/30 bg-primary/5"
-                        }`}
-                        data-ocid={`notification-item.${i + 1}`}
+                        className="rounded-xl p-4 transition-smooth"
+                        style={{
+                          background: n.isRead
+                            ? "oklch(var(--card) / 0.4)"
+                            : "oklch(0.7 0.22 70 / 0.06)",
+                          border: n.isRead
+                            ? "1px solid oklch(var(--border) / 0.4)"
+                            : "1px solid oklch(0.7 0.22 70 / 0.3)",
+                        }}
+                        data-ocid={`notification.item.${i + 1}`}
                       >
                         <div className="flex items-start gap-3">
                           {!n.isRead && (
-                            <span className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0" />
+                            <span
+                              className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
+                              style={{ background: "oklch(0.7 0.22 70)" }}
+                            />
                           )}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-foreground">
@@ -452,7 +567,6 @@ export function ClientDashboard() {
         </Tabs>
       </div>
 
-      {/* Feedback modal */}
       <AnimatePresence>
         {feedbackOpen && (
           <FeedbackForm

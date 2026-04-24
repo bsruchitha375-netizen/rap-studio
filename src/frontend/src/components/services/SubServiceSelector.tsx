@@ -67,16 +67,6 @@ export function MultiSubServiceSelector({
                 {sub.description} · {sub.duration}
               </p>
             </div>
-            <span
-              className="text-xs font-bold shrink-0"
-              style={{
-                color: isSelected
-                  ? "oklch(0.88 0.18 70)"
-                  : "oklch(0.6 0.015 280)",
-              }}
-            >
-              ₹{sub.price}
-            </span>
           </motion.button>
         );
       })}
@@ -154,7 +144,7 @@ export function SubServiceSelector({
               <p className="text-xs text-muted-foreground mt-1">
                 {sub.description}
               </p>
-              <p className="text-xs mt-2 font-semibold text-primary">
+              <p className="text-xs mt-2 font-medium text-muted-foreground">
                 ⏱ {sub.duration}
               </p>
             </motion.button>

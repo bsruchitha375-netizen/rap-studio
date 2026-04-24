@@ -1,4 +1,14 @@
-// ─── User & Auth ────────────────────────────────────────────────────────────
+// ─── Stripe types ────────────────────────────────────────────────────────────
+
+export interface StripeCheckoutState {
+  sessionId: string;
+  referenceId: string;
+  paymentType: "booking_initial" | "booking_final" | "course_enrollment";
+  amount: number;
+  name: string;
+}
+
+// ─── User & Auth ─────────────────────────────────────────────────────────────
 
 export type UserRole =
   | "admin"
@@ -17,7 +27,7 @@ export interface UserProfile {
   isActive: boolean;
 }
 
-// ─── Services ───────────────────────────────────────────────────────────────
+// ─── Services ────────────────────────────────────────────────────────────────
 
 export interface SubService {
   id: string;
@@ -37,7 +47,7 @@ export interface ServiceCategory {
   featured: boolean;
 }
 
-// ─── Booking ────────────────────────────────────────────────────────────────
+// ─── Booking ─────────────────────────────────────────────────────────────────
 
 export type BookingStatus =
   | "pending"
@@ -101,7 +111,7 @@ export interface BookingRequest {
   updatedAt: bigint;
 }
 
-// ─── Courses ────────────────────────────────────────────────────────────────
+// ─── Courses ─────────────────────────────────────────────────────────────────
 
 export type CourseMode = "online" | "offline" | "hybrid";
 export type CourseCategory =
@@ -145,7 +155,7 @@ export interface CourseEnrollment {
   completedAt?: bigint;
 }
 
-// ─── Payments ───────────────────────────────────────────────────────────────
+// ─── Payments ────────────────────────────────────────────────────────────────
 
 export type PaymentStatus =
   | "pending"
@@ -160,23 +170,25 @@ export type PaymentType =
 
 export interface PaymentOrder {
   id: string;
-  razorpayOrderId: string;
+  /** @deprecated use stripeSessionId */
+  razorpayOrderId?: string;
+  stripeSessionId?: string;
+  stripePaymentIntentId?: string;
   referenceId: string;
   paymentType: PaymentType;
   amount: number;
   status: PaymentStatus;
+  checkoutUrl?: string;
   createdAt: bigint;
   paidAt?: bigint;
 }
 
-export interface PaymentVerification {
-  razorpayOrderId: string;
-  razorpayPaymentId: string;
-  razorpaySignature: string;
-  referenceId: string;
+export interface StripeConfirmation {
+  stripeSessionId: string;
+  stripePaymentIntentId: string;
 }
 
-// ─── Certificates ───────────────────────────────────────────────────────────
+// ─── Certificates ────────────────────────────────────────────────────────────
 
 export interface Certificate {
   code: string;
@@ -186,7 +198,7 @@ export interface Certificate {
   isValid: boolean;
 }
 
-// ─── Feedback ───────────────────────────────────────────────────────────────
+// ─── Feedback ────────────────────────────────────────────────────────────────
 
 export interface FeedbackRecord {
   id: string;
@@ -198,7 +210,7 @@ export interface FeedbackRecord {
   createdAt: bigint;
 }
 
-// ─── Media ──────────────────────────────────────────────────────────────────
+// ─── Media ───────────────────────────────────────────────────────────────────
 
 export interface MediaItem {
   id: string;
@@ -210,7 +222,7 @@ export interface MediaItem {
   createdAt: bigint;
 }
 
-// ─── Notifications ──────────────────────────────────────────────────────────
+// ─── Notifications ───────────────────────────────────────────────────────────
 
 export interface NotificationRecord {
   id: string;
@@ -222,7 +234,7 @@ export interface NotificationRecord {
   createdAt: bigint;
 }
 
-// ─── Analytics ──────────────────────────────────────────────────────────────
+// ─── Analytics ───────────────────────────────────────────────────────────────
 
 export interface BookingStats {
   totalBookings: number;
@@ -240,54 +252,4 @@ export interface RecentActivity {
   type: string;
   description: string;
   timestamp: bigint;
-}
-
-// ─── Razorpay ───────────────────────────────────────────────────────────────
-
-export interface RazorpayOptions {
-  key: string;
-  amount: number;
-  currency: string;
-  name: string;
-  description: string;
-  image?: string;
-  order_id?: string; // optional — omit when no server-generated order
-  prefill?: {
-    name?: string;
-    email?: string;
-    contact?: string;
-  };
-  notes?: Record<string, string>;
-  theme?: {
-    color?: string;
-    backdrop_color?: string;
-  };
-  handler: (response: RazorpayResponse) => void;
-  modal?: {
-    backdropclose?: boolean;
-    escape?: boolean;
-    handleback?: boolean;
-    animation?: boolean;
-    ondismiss?: () => void;
-  };
-}
-
-export interface RazorpayResponse {
-  razorpay_order_id?: string;
-  razorpay_payment_id: string;
-  razorpay_signature?: string;
-}
-
-export interface RazorpayInstance {
-  open: () => void;
-  on: (
-    event: string,
-    handler: (response: { error: { description: string } }) => void,
-  ) => void;
-}
-
-declare global {
-  interface Window {
-    Razorpay: new (options: RazorpayOptions) => RazorpayInstance;
-  }
 }

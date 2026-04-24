@@ -105,6 +105,28 @@ export function readStoredProfile(): UserProfile | null {
   }
 }
 
+export function saveUserSession(
+  name: string,
+  phone: string,
+  role: UserRole,
+  remember: boolean,
+): void {
+  const profile: UserProfile = {
+    id: `user_${Date.now()}`,
+    name,
+    phone,
+    role,
+    isActive: true,
+    createdAt: BigInt(Date.now()),
+  };
+  if (remember) {
+    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+    localStorage.setItem(ROLE_STORAGE_KEY, role);
+  } else {
+    sessionStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
+  }
+}
+
 // ── Main auth hook ─────────────────────────────────────────────────────────
 export function useAuth() {
   const { identity, loginStatus, login, clear, isInitializing } =

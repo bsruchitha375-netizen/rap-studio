@@ -36,6 +36,35 @@ export const Feedback = IDL.Record({
   'targetId' : IDL.Text,
 });
 export const PaymentId = IDL.Nat;
+export const PaymentStatus = IDL.Variant({
+  'Failed' : IDL.Null,
+  'Refunded' : IDL.Null,
+  'Paid' : IDL.Null,
+  'Created' : IDL.Null,
+});
+export const PaymentType = IDL.Variant({
+  'BookingBalance' : IDL.Null,
+  'CourseEnrollment' : IDL.Null,
+  'BookingUpfront' : IDL.Null,
+});
+export const PaymentOrder = IDL.Record({
+  'id' : PaymentId,
+  'signatureVerified' : IDL.Bool,
+  'status' : PaymentStatus,
+  'userId' : UserId,
+  'createdAt' : Timestamp,
+  'referenceId' : IDL.Text,
+  'orderId' : IDL.Text,
+  'currency' : IDL.Text,
+  'paymentType' : PaymentType,
+  'stripePaymentIntentId' : IDL.Opt(IDL.Text),
+  'checkoutUrl' : IDL.Opt(IDL.Text),
+  'stripeSessionId' : IDL.Opt(IDL.Text),
+  'amount' : IDL.Nat,
+  'adminNotes' : IDL.Opt(IDL.Text),
+  'verifiedAt' : IDL.Opt(Timestamp),
+  'paidAt' : IDL.Opt(Timestamp),
+});
 export const PaymentAdminAction = IDL.Variant({
   'confirm' : IDL.Null,
   'adjustAmount' : IDL.Nat,
@@ -47,6 +76,10 @@ export const UserRole__1 = IDL.Variant({
   'guest' : IDL.Null,
 });
 export const BookingId = IDL.Nat;
+export const StripeConfirmation = IDL.Record({
+  'stripePaymentIntentId' : IDL.Text,
+  'stripeSessionId' : IDL.Text,
+});
 export const LocationType = IDL.Variant({
   'Studio' : IDL.Null,
   'Custom' : IDL.Text,
@@ -105,39 +138,15 @@ export const MultiServiceBookingInput = IDL.Record({
   'location' : IDL.Text,
   'timeSlot' : IDL.Text,
 });
-export const PaymentType = IDL.Variant({
-  'BookingBalance' : IDL.Null,
-  'CourseEnrollment' : IDL.Null,
-  'BookingUpfront' : IDL.Null,
-});
-export const PaymentStatus = IDL.Variant({
-  'Failed' : IDL.Null,
-  'Refunded' : IDL.Null,
-  'Paid' : IDL.Null,
-  'Created' : IDL.Null,
-});
-export const PaymentOrder = IDL.Record({
-  'id' : PaymentId,
-  'razorpayPaymentId' : IDL.Opt(IDL.Text),
-  'signatureVerified' : IDL.Bool,
-  'status' : PaymentStatus,
-  'userId' : UserId,
-  'createdAt' : Timestamp,
-  'referenceId' : IDL.Text,
-  'orderId' : IDL.Text,
-  'razorpayOrderId' : IDL.Text,
-  'currency' : IDL.Text,
-  'paymentType' : PaymentType,
-  'amount' : IDL.Nat,
-  'verifiedAt' : IDL.Opt(Timestamp),
-  'paidAt' : IDL.Opt(Timestamp),
-});
 export const NotificationType = IDL.Variant({
+  'BookingCompleted' : IDL.Null,
+  'CourseCompleted' : IDL.Null,
   'CourseEnrolled' : IDL.Null,
   'WorkDelivered' : IDL.Null,
   'GeneralInfo' : IDL.Null,
+  'PaymentReceipt' : IDL.Null,
   'BookingConfirmed' : IDL.Null,
-  'PaymentRequired' : IDL.Null,
+  'BookingReminder' : IDL.Null,
 });
 export const NotificationId = IDL.Nat;
 export const NotificationRecord = IDL.Record({
@@ -177,6 +186,14 @@ export const Certificate = IDL.Record({
   'issuedAt' : Timestamp,
   'courseName' : IDL.Text,
   'courseId' : CourseId,
+});
+export const AdminPaymentEntry = IDL.Record({
+  'enrollmentId' : IDL.Opt(EnrollmentId),
+  'bookingId' : IDL.Opt(BookingId),
+  'clientName' : IDL.Text,
+  'order' : PaymentOrder,
+  'clientPhone' : IDL.Text,
+  'serviceId' : IDL.Opt(IDL.Text),
 });
 export const PaymentOrderExtended = IDL.Record({
   'id' : PaymentId,
@@ -277,6 +294,7 @@ export const EmailLog = IDL.Record({
   'subject' : IDL.Text,
   'body' : IDL.Text,
   'createdAt' : Timestamp,
+  'sent' : IDL.Bool,
   'relatedId' : IDL.Opt(IDL.Text),
 });
 export const ExternalBlob = IDL.Vec(IDL.Nat8);
@@ -305,12 +323,12 @@ export const MultiServiceBooking = IDL.Record({
   'timeSlot' : IDL.Text,
 });
 export const PaymentVerificationStatus = IDL.Record({
-  'razorpayPaymentId' : IDL.Opt(IDL.Text),
   'signatureVerified' : IDL.Bool,
   'status' : PaymentStatus,
   'orderId' : IDL.Text,
-  'razorpayOrderId' : IDL.Text,
   'paymentId' : PaymentId,
+  'stripePaymentIntentId' : IDL.Opt(IDL.Text),
+  'stripeSessionId' : IDL.Opt(IDL.Text),
   'verifiedAt' : IDL.Opt(Timestamp),
 });
 export const SlotStatus = IDL.Variant({
@@ -329,6 +347,33 @@ export const ServiceCategory = IDL.Record({
   'icon' : IDL.Text,
   'name' : IDL.Text,
   'description' : IDL.Text,
+});
+export const WhatsAppLog = IDL.Record({
+  'id' : IDL.Nat,
+  'createdAt' : Timestamp,
+  'sent' : IDL.Bool,
+  'message' : IDL.Text,
+  'phone' : IDL.Text,
+  'relatedId' : IDL.Opt(IDL.Text),
+});
+export const BookingDetails = IDL.Record({
+  'serviceName' : IDL.Text,
+  'bookingId' : IDL.Text,
+  'date' : IDL.Text,
+  'time' : IDL.Text,
+  'clientEmail' : IDL.Text,
+  'totalAmount' : IDL.Nat,
+  'clientPhone' : IDL.Text,
+  'location' : IDL.Text,
+});
+export const PaymentReceiptDetails = IDL.Record({
+  'clientEmail' : IDL.Text,
+  'referenceId' : IDL.Text,
+  'currency' : IDL.Text,
+  'clientPhone' : IDL.Text,
+  'paymentId' : IDL.Text,
+  'amount' : IDL.Nat,
+  'paidAt' : IDL.Text,
 });
 export const http_header = IDL.Record({
   'value' : IDL.Text,
@@ -353,11 +398,6 @@ export const MediaInput = IDL.Record({
   'serviceCategory' : IDL.Text,
   'blob' : ExternalBlob,
   'fileType' : FileType,
-});
-export const PaymentVerification = IDL.Record({
-  'razorpayPaymentId' : IDL.Text,
-  'razorpaySignature' : IDL.Text,
-  'razorpayOrderId' : IDL.Text,
 });
 
 export const idlService = IDL.Service({
@@ -393,6 +433,14 @@ export const idlService = IDL.Service({
       [Feedback],
       [],
     ),
+  'adminAdjustAmount' : IDL.Func(
+      [PaymentId, IDL.Nat, IDL.Text],
+      [IDL.Bool],
+      [],
+    ),
+  'adminConfirmPayment' : IDL.Func([PaymentId, IDL.Text], [IDL.Bool], []),
+  'adminGetAllPayments' : IDL.Func([], [IDL.Vec(PaymentOrder)], ['query']),
+  'adminRefundPayment' : IDL.Func([PaymentId, IDL.Text], [IDL.Bool], []),
   'adminUpdatePayment' : IDL.Func(
       [PaymentId, PaymentAdminAction, IDL.Opt(IDL.Text)],
       [IDL.Bool],
@@ -400,6 +448,7 @@ export const idlService = IDL.Service({
     ),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole__1], [], []),
   'confirmBooking' : IDL.Func([BookingId], [IDL.Bool], []),
+  'confirmPayment' : IDL.Func([StripeConfirmation], [IDL.Bool], []),
   'createBookingRequest' : IDL.Func([BookingInput], [BookingRequest], []),
   'createMultiServiceBooking' : IDL.Func(
       [MultiServiceBookingInput],
@@ -421,13 +470,17 @@ export const idlService = IDL.Service({
   'deleteSubServiceImage' : IDL.Func([IDL.Text, IDL.Text], [], []),
   'enrollCourse' : IDL.Func([CourseId], [CourseEnrollment], []),
   'generateCertificate' : IDL.Func([EnrollmentId], [Certificate], []),
+  'getAdminPaymentDashboard' : IDL.Func(
+      [],
+      [IDL.Vec(AdminPaymentEntry)],
+      ['query'],
+    ),
   'getAdminPayments' : IDL.Func([], [IDL.Vec(PaymentOrderExtended)], []),
   'getAllBookings' : IDL.Func([], [IDL.Vec(BookingRequest)], ['query']),
   'getAllCmsContent' : IDL.Func([], [IDL.Vec(CmsContent)], ['query']),
   'getAllCourses' : IDL.Func([], [IDL.Vec(Course)], ['query']),
   'getAllEnrollments' : IDL.Func([], [IDL.Vec(CourseEnrollment)], ['query']),
   'getAllFeedback' : IDL.Func([], [IDL.Vec(Feedback)], ['query']),
-  'getAllPayments' : IDL.Func([], [IDL.Vec(PaymentOrder)], ['query']),
   'getAllSubServiceImages' : IDL.Func(
       [],
       [IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text))],
@@ -456,14 +509,13 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'getMyNotifications' : IDL.Func([], [IDL.Vec(NotificationRecord)], ['query']),
-  'getMyPayments' : IDL.Func([], [IDL.Vec(PaymentOrder)], ['query']),
   'getMyProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
   'getPaymentDetails' : IDL.Func(
       [PaymentId],
       [IDL.Opt(PaymentOrderExtended)],
       ['query'],
     ),
-  'getPaymentVerificationStatus' : IDL.Func(
+  'getPaymentStatus' : IDL.Func(
       [IDL.Nat],
       [IDL.Opt(PaymentVerificationStatus)],
       ['query'],
@@ -475,17 +527,9 @@ export const idlService = IDL.Service({
       [IDL.Opt(IDL.Text)],
       ['query'],
     ),
+  'getWhatsAppLogs' : IDL.Func([], [IDL.Vec(WhatsAppLog)], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-  'logBookingConfirmedEmail' : IDL.Func(
-      [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
-      [EmailLog],
-      [],
-    ),
-  'logEnrollmentConfirmedEmail' : IDL.Func(
-      [IDL.Text, IDL.Text, IDL.Text],
-      [EmailLog],
-      [],
-    ),
+  'listMyPayments' : IDL.Func([], [IDL.Vec(PaymentOrder)], ['query']),
   'manageUser' : IDL.Func([UserId, IDL.Text], [IDL.Bool], []),
   'markEnrollmentPaid' : IDL.Func([EnrollmentId], [IDL.Bool], []),
   'markNotificationRead' : IDL.Func([NotificationId], [IDL.Bool], []),
@@ -493,11 +537,31 @@ export const idlService = IDL.Service({
   'register' : IDL.Func([IDL.Text, IDL.Text, UserRole], [UserProfile], []),
   'respondToFeedback' : IDL.Func([IDL.Nat, IDL.Text], [IDL.Bool], []),
   'saveCallerUserProfile' : IDL.Func([IDL.Text, IDL.Text, UserRole], [], []),
-  'sendWhatsAppNotification' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
+  'sendBookingConfirmation' : IDL.Func(
+      [UserId, BookingDetails],
+      [IDL.Bool],
+      [],
+    ),
+  'sendCompletionMessage' : IDL.Func(
+      [UserId, BookingDetails, IDL.Text],
+      [IDL.Bool],
+      [],
+    ),
+  'sendPaymentReceipt' : IDL.Func(
+      [UserId, PaymentReceiptDetails],
+      [IDL.Bool],
+      [],
+    ),
+  'sendProgressReminder' : IDL.Func([UserId, BookingDetails], [IDL.Bool], []),
   'setCmsContent' : IDL.Func([IDL.Text, IDL.Text, CmsContentType], [], []),
   'setFeatured' : IDL.Func([MediaId, IDL.Bool], [IDL.Bool], []),
   'setSubServiceImage' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [], []),
   'transform' : IDL.Func(
+      [TransformationInput],
+      [TransformationOutput],
+      ['query'],
+    ),
+  'transformWhatsApp' : IDL.Func(
       [TransformationInput],
       [TransformationOutput],
       ['query'],
@@ -507,7 +571,6 @@ export const idlService = IDL.Service({
   'updateProfile' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
   'uploadMedia' : IDL.Func([MediaInput], [MediaItem], []),
   'verifyCertificate' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
-  'verifyPayment' : IDL.Func([PaymentVerification], [IDL.Bool], []),
 });
 
 export const idlInitArgs = [];
@@ -541,6 +604,35 @@ export const idlFactory = ({ IDL }) => {
     'targetId' : IDL.Text,
   });
   const PaymentId = IDL.Nat;
+  const PaymentStatus = IDL.Variant({
+    'Failed' : IDL.Null,
+    'Refunded' : IDL.Null,
+    'Paid' : IDL.Null,
+    'Created' : IDL.Null,
+  });
+  const PaymentType = IDL.Variant({
+    'BookingBalance' : IDL.Null,
+    'CourseEnrollment' : IDL.Null,
+    'BookingUpfront' : IDL.Null,
+  });
+  const PaymentOrder = IDL.Record({
+    'id' : PaymentId,
+    'signatureVerified' : IDL.Bool,
+    'status' : PaymentStatus,
+    'userId' : UserId,
+    'createdAt' : Timestamp,
+    'referenceId' : IDL.Text,
+    'orderId' : IDL.Text,
+    'currency' : IDL.Text,
+    'paymentType' : PaymentType,
+    'stripePaymentIntentId' : IDL.Opt(IDL.Text),
+    'checkoutUrl' : IDL.Opt(IDL.Text),
+    'stripeSessionId' : IDL.Opt(IDL.Text),
+    'amount' : IDL.Nat,
+    'adminNotes' : IDL.Opt(IDL.Text),
+    'verifiedAt' : IDL.Opt(Timestamp),
+    'paidAt' : IDL.Opt(Timestamp),
+  });
   const PaymentAdminAction = IDL.Variant({
     'confirm' : IDL.Null,
     'adjustAmount' : IDL.Nat,
@@ -552,6 +644,10 @@ export const idlFactory = ({ IDL }) => {
     'guest' : IDL.Null,
   });
   const BookingId = IDL.Nat;
+  const StripeConfirmation = IDL.Record({
+    'stripePaymentIntentId' : IDL.Text,
+    'stripeSessionId' : IDL.Text,
+  });
   const LocationType = IDL.Variant({
     'Studio' : IDL.Null,
     'Custom' : IDL.Text,
@@ -610,39 +706,15 @@ export const idlFactory = ({ IDL }) => {
     'location' : IDL.Text,
     'timeSlot' : IDL.Text,
   });
-  const PaymentType = IDL.Variant({
-    'BookingBalance' : IDL.Null,
-    'CourseEnrollment' : IDL.Null,
-    'BookingUpfront' : IDL.Null,
-  });
-  const PaymentStatus = IDL.Variant({
-    'Failed' : IDL.Null,
-    'Refunded' : IDL.Null,
-    'Paid' : IDL.Null,
-    'Created' : IDL.Null,
-  });
-  const PaymentOrder = IDL.Record({
-    'id' : PaymentId,
-    'razorpayPaymentId' : IDL.Opt(IDL.Text),
-    'signatureVerified' : IDL.Bool,
-    'status' : PaymentStatus,
-    'userId' : UserId,
-    'createdAt' : Timestamp,
-    'referenceId' : IDL.Text,
-    'orderId' : IDL.Text,
-    'razorpayOrderId' : IDL.Text,
-    'currency' : IDL.Text,
-    'paymentType' : PaymentType,
-    'amount' : IDL.Nat,
-    'verifiedAt' : IDL.Opt(Timestamp),
-    'paidAt' : IDL.Opt(Timestamp),
-  });
   const NotificationType = IDL.Variant({
+    'BookingCompleted' : IDL.Null,
+    'CourseCompleted' : IDL.Null,
     'CourseEnrolled' : IDL.Null,
     'WorkDelivered' : IDL.Null,
     'GeneralInfo' : IDL.Null,
+    'PaymentReceipt' : IDL.Null,
     'BookingConfirmed' : IDL.Null,
-    'PaymentRequired' : IDL.Null,
+    'BookingReminder' : IDL.Null,
   });
   const NotificationId = IDL.Nat;
   const NotificationRecord = IDL.Record({
@@ -682,6 +754,14 @@ export const idlFactory = ({ IDL }) => {
     'issuedAt' : Timestamp,
     'courseName' : IDL.Text,
     'courseId' : CourseId,
+  });
+  const AdminPaymentEntry = IDL.Record({
+    'enrollmentId' : IDL.Opt(EnrollmentId),
+    'bookingId' : IDL.Opt(BookingId),
+    'clientName' : IDL.Text,
+    'order' : PaymentOrder,
+    'clientPhone' : IDL.Text,
+    'serviceId' : IDL.Opt(IDL.Text),
   });
   const PaymentOrderExtended = IDL.Record({
     'id' : PaymentId,
@@ -782,6 +862,7 @@ export const idlFactory = ({ IDL }) => {
     'subject' : IDL.Text,
     'body' : IDL.Text,
     'createdAt' : Timestamp,
+    'sent' : IDL.Bool,
     'relatedId' : IDL.Opt(IDL.Text),
   });
   const ExternalBlob = IDL.Vec(IDL.Nat8);
@@ -810,12 +891,12 @@ export const idlFactory = ({ IDL }) => {
     'timeSlot' : IDL.Text,
   });
   const PaymentVerificationStatus = IDL.Record({
-    'razorpayPaymentId' : IDL.Opt(IDL.Text),
     'signatureVerified' : IDL.Bool,
     'status' : PaymentStatus,
     'orderId' : IDL.Text,
-    'razorpayOrderId' : IDL.Text,
     'paymentId' : PaymentId,
+    'stripePaymentIntentId' : IDL.Opt(IDL.Text),
+    'stripeSessionId' : IDL.Opt(IDL.Text),
     'verifiedAt' : IDL.Opt(Timestamp),
   });
   const SlotStatus = IDL.Variant({
@@ -834,6 +915,33 @@ export const idlFactory = ({ IDL }) => {
     'icon' : IDL.Text,
     'name' : IDL.Text,
     'description' : IDL.Text,
+  });
+  const WhatsAppLog = IDL.Record({
+    'id' : IDL.Nat,
+    'createdAt' : Timestamp,
+    'sent' : IDL.Bool,
+    'message' : IDL.Text,
+    'phone' : IDL.Text,
+    'relatedId' : IDL.Opt(IDL.Text),
+  });
+  const BookingDetails = IDL.Record({
+    'serviceName' : IDL.Text,
+    'bookingId' : IDL.Text,
+    'date' : IDL.Text,
+    'time' : IDL.Text,
+    'clientEmail' : IDL.Text,
+    'totalAmount' : IDL.Nat,
+    'clientPhone' : IDL.Text,
+    'location' : IDL.Text,
+  });
+  const PaymentReceiptDetails = IDL.Record({
+    'clientEmail' : IDL.Text,
+    'referenceId' : IDL.Text,
+    'currency' : IDL.Text,
+    'clientPhone' : IDL.Text,
+    'paymentId' : IDL.Text,
+    'amount' : IDL.Nat,
+    'paidAt' : IDL.Text,
   });
   const http_header = IDL.Record({ 'value' : IDL.Text, 'name' : IDL.Text });
   const http_request_result = IDL.Record({
@@ -855,11 +963,6 @@ export const idlFactory = ({ IDL }) => {
     'serviceCategory' : IDL.Text,
     'blob' : ExternalBlob,
     'fileType' : FileType,
-  });
-  const PaymentVerification = IDL.Record({
-    'razorpayPaymentId' : IDL.Text,
-    'razorpaySignature' : IDL.Text,
-    'razorpayOrderId' : IDL.Text,
   });
   
   return IDL.Service({
@@ -895,6 +998,14 @@ export const idlFactory = ({ IDL }) => {
         [Feedback],
         [],
       ),
+    'adminAdjustAmount' : IDL.Func(
+        [PaymentId, IDL.Nat, IDL.Text],
+        [IDL.Bool],
+        [],
+      ),
+    'adminConfirmPayment' : IDL.Func([PaymentId, IDL.Text], [IDL.Bool], []),
+    'adminGetAllPayments' : IDL.Func([], [IDL.Vec(PaymentOrder)], ['query']),
+    'adminRefundPayment' : IDL.Func([PaymentId, IDL.Text], [IDL.Bool], []),
     'adminUpdatePayment' : IDL.Func(
         [PaymentId, PaymentAdminAction, IDL.Opt(IDL.Text)],
         [IDL.Bool],
@@ -902,6 +1013,7 @@ export const idlFactory = ({ IDL }) => {
       ),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole__1], [], []),
     'confirmBooking' : IDL.Func([BookingId], [IDL.Bool], []),
+    'confirmPayment' : IDL.Func([StripeConfirmation], [IDL.Bool], []),
     'createBookingRequest' : IDL.Func([BookingInput], [BookingRequest], []),
     'createMultiServiceBooking' : IDL.Func(
         [MultiServiceBookingInput],
@@ -923,13 +1035,17 @@ export const idlFactory = ({ IDL }) => {
     'deleteSubServiceImage' : IDL.Func([IDL.Text, IDL.Text], [], []),
     'enrollCourse' : IDL.Func([CourseId], [CourseEnrollment], []),
     'generateCertificate' : IDL.Func([EnrollmentId], [Certificate], []),
+    'getAdminPaymentDashboard' : IDL.Func(
+        [],
+        [IDL.Vec(AdminPaymentEntry)],
+        ['query'],
+      ),
     'getAdminPayments' : IDL.Func([], [IDL.Vec(PaymentOrderExtended)], []),
     'getAllBookings' : IDL.Func([], [IDL.Vec(BookingRequest)], ['query']),
     'getAllCmsContent' : IDL.Func([], [IDL.Vec(CmsContent)], ['query']),
     'getAllCourses' : IDL.Func([], [IDL.Vec(Course)], ['query']),
     'getAllEnrollments' : IDL.Func([], [IDL.Vec(CourseEnrollment)], ['query']),
     'getAllFeedback' : IDL.Func([], [IDL.Vec(Feedback)], ['query']),
-    'getAllPayments' : IDL.Func([], [IDL.Vec(PaymentOrder)], ['query']),
     'getAllSubServiceImages' : IDL.Func(
         [],
         [IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text))],
@@ -966,14 +1082,13 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(NotificationRecord)],
         ['query'],
       ),
-    'getMyPayments' : IDL.Func([], [IDL.Vec(PaymentOrder)], ['query']),
     'getMyProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
     'getPaymentDetails' : IDL.Func(
         [PaymentId],
         [IDL.Opt(PaymentOrderExtended)],
         ['query'],
       ),
-    'getPaymentVerificationStatus' : IDL.Func(
+    'getPaymentStatus' : IDL.Func(
         [IDL.Nat],
         [IDL.Opt(PaymentVerificationStatus)],
         ['query'],
@@ -989,17 +1104,9 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(IDL.Text)],
         ['query'],
       ),
+    'getWhatsAppLogs' : IDL.Func([], [IDL.Vec(WhatsAppLog)], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
-    'logBookingConfirmedEmail' : IDL.Func(
-        [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
-        [EmailLog],
-        [],
-      ),
-    'logEnrollmentConfirmedEmail' : IDL.Func(
-        [IDL.Text, IDL.Text, IDL.Text],
-        [EmailLog],
-        [],
-      ),
+    'listMyPayments' : IDL.Func([], [IDL.Vec(PaymentOrder)], ['query']),
     'manageUser' : IDL.Func([UserId, IDL.Text], [IDL.Bool], []),
     'markEnrollmentPaid' : IDL.Func([EnrollmentId], [IDL.Bool], []),
     'markNotificationRead' : IDL.Func([NotificationId], [IDL.Bool], []),
@@ -1007,11 +1114,31 @@ export const idlFactory = ({ IDL }) => {
     'register' : IDL.Func([IDL.Text, IDL.Text, UserRole], [UserProfile], []),
     'respondToFeedback' : IDL.Func([IDL.Nat, IDL.Text], [IDL.Bool], []),
     'saveCallerUserProfile' : IDL.Func([IDL.Text, IDL.Text, UserRole], [], []),
-    'sendWhatsAppNotification' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
+    'sendBookingConfirmation' : IDL.Func(
+        [UserId, BookingDetails],
+        [IDL.Bool],
+        [],
+      ),
+    'sendCompletionMessage' : IDL.Func(
+        [UserId, BookingDetails, IDL.Text],
+        [IDL.Bool],
+        [],
+      ),
+    'sendPaymentReceipt' : IDL.Func(
+        [UserId, PaymentReceiptDetails],
+        [IDL.Bool],
+        [],
+      ),
+    'sendProgressReminder' : IDL.Func([UserId, BookingDetails], [IDL.Bool], []),
     'setCmsContent' : IDL.Func([IDL.Text, IDL.Text, CmsContentType], [], []),
     'setFeatured' : IDL.Func([MediaId, IDL.Bool], [IDL.Bool], []),
     'setSubServiceImage' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [], []),
     'transform' : IDL.Func(
+        [TransformationInput],
+        [TransformationOutput],
+        ['query'],
+      ),
+    'transformWhatsApp' : IDL.Func(
         [TransformationInput],
         [TransformationOutput],
         ['query'],
@@ -1021,7 +1148,6 @@ export const idlFactory = ({ IDL }) => {
     'updateProfile' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
     'uploadMedia' : IDL.Func([MediaInput], [MediaItem], []),
     'verifyCertificate' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
-    'verifyPayment' : IDL.Func([PaymentVerification], [IDL.Bool], []),
   });
 };
 

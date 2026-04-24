@@ -27,13 +27,13 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { AdminPaymentsPanel } from "../components/dashboard/AdminPaymentsPanel";
 import { AdminStats } from "../components/dashboard/AdminStats";
+import { BookingCard } from "../components/dashboard/BookingCard";
 import { CmsTab } from "../components/dashboard/CmsTab";
-import { RazorpayButton } from "../components/ui/RazorpayButton";
+import { NotificationBell } from "../components/dashboard/NotificationBell";
 import { clearAdminSession, useIsAdmin } from "../hooks/useAuth";
-import { useAdminStats, useMyBookings } from "../hooks/useBackend";
-import type { BookingRequest, BookingStats } from "../types";
+import type { BookingRequest } from "../types";
 
-// ─── Nav items ──────────────────────────────────────────────────────────────
+// ─── Nav ─────────────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "bookings", label: "Bookings", icon: Calendar },
@@ -50,48 +50,6 @@ const NAV_ITEMS = [
 ];
 
 // ─── Sample data ─────────────────────────────────────────────────────────────
-const SAMPLE_STATS: BookingStats = {
-  totalBookings: 142,
-  pendingBookings: 12,
-  confirmedBookings: 38,
-  completedBookings: 88,
-  totalRevenue: 710,
-  totalStudents: 267,
-  totalCourseEnrollments: 89,
-  recentActivity: [
-    {
-      id: "1",
-      type: "booking",
-      description: "New booking: Pre-Wedding Shoot",
-      timestamp: BigInt(Date.now() - 600000) * BigInt(1_000_000),
-    },
-    {
-      id: "2",
-      type: "payment",
-      description: "₹2 deposit received for booking BK041",
-      timestamp: BigInt(Date.now() - 1800000) * BigInt(1_000_000),
-    },
-    {
-      id: "3",
-      type: "course",
-      description: "New enrollment: Photography Fundamentals",
-      timestamp: BigInt(Date.now() - 3600000) * BigInt(1_000_000),
-    },
-    {
-      id: "4",
-      type: "booking",
-      description: "Wedding shoot confirmed — 22 Apr",
-      timestamp: BigInt(Date.now() - 7200000) * BigInt(1_000_000),
-    },
-    {
-      id: "5",
-      type: "payment",
-      description: "Certificate issued: RAP-PHO-2026-041",
-      timestamp: BigInt(Date.now() - 86400000) * BigInt(1_000_000),
-    },
-  ],
-};
-
 const SAMPLE_BOOKINGS: BookingRequest[] = [
   {
     id: "BK041",
@@ -103,11 +61,11 @@ const SAMPLE_BOOKINGS: BookingRequest[] = [
     timeSlot: "full_day",
     duration: "8 hours",
     location: { type: "studio", placeName: "RAP Studio" },
-    status: "confirmed",
+    status: "pending",
     initialPaymentAmount: 2,
     finalPaymentAmount: 3,
-    createdAt: BigInt(Date.now() - 86400000) * BigInt(1_000_000),
-    updatedAt: BigInt(Date.now() - 86400000) * BigInt(1_000_000),
+    createdAt: BigInt(Date.now() - 1800000) * BigInt(1_000_000),
+    updatedAt: BigInt(Date.now() - 1800000) * BigInt(1_000_000),
   },
   {
     id: "BK042",
@@ -135,11 +93,43 @@ const SAMPLE_BOOKINGS: BookingRequest[] = [
     timeSlot: "afternoon",
     duration: "4 hours",
     location: { type: "studio" },
+    status: "confirmed",
+    initialPaymentAmount: 2,
+    finalPaymentAmount: 3,
+    createdAt: BigInt(Date.now() - 86400000) * BigInt(1_000_000),
+    updatedAt: BigInt(Date.now() - 86400000) * BigInt(1_000_000),
+  },
+  {
+    id: "BK044",
+    clientId: "u4",
+    clientName: "Sanya Kapoor",
+    serviceCategoryId: "pre_wedding_shoot",
+    subServiceId: "outdoor_shoot",
+    date: "2026-05-02",
+    timeSlot: "evening",
+    duration: "3 hours",
+    location: { type: "outdoor", placeName: "Cubbon Park" },
     status: "awaiting_payment",
     initialPaymentAmount: 2,
     finalPaymentAmount: 3,
-    createdAt: BigInt(Date.now() - 3600000) * BigInt(1_000_000),
-    updatedAt: BigInt(Date.now() - 3600000) * BigInt(1_000_000),
+    createdAt: BigInt(Date.now() - 43200000) * BigInt(1_000_000),
+    updatedAt: BigInt(Date.now() - 43200000) * BigInt(1_000_000),
+  },
+  {
+    id: "BK040",
+    clientId: "u5",
+    clientName: "Deepa Iyer",
+    serviceCategoryId: "baby_shoot",
+    subServiceId: "newborn_session",
+    date: "2026-04-15",
+    timeSlot: "morning",
+    duration: "2 hours",
+    location: { type: "studio" },
+    status: "completed",
+    initialPaymentAmount: 2,
+    finalPaymentAmount: 3,
+    createdAt: BigInt(Date.now() - 864000000) * BigInt(1_000_000),
+    updatedAt: BigInt(Date.now() - 864000000) * BigInt(1_000_000),
   },
 ];
 
@@ -269,8 +259,7 @@ const SAMPLE_NOTIFICATIONS = [
     userId: "u1",
     user: "Priya Sharma",
     title: "Booking Confirmed",
-    message:
-      "Your wedding shoot booking BK041 has been confirmed for 28 Apr 2026.",
+    message: "Wedding shoot BK041 confirmed for 28 Apr 2026.",
     type: "booking",
     isRead: false,
     createdAt: Date.now() - 600000,
@@ -280,7 +269,7 @@ const SAMPLE_NOTIFICATIONS = [
     userId: "u2",
     user: "Arjun Kumar",
     title: "Payment Received",
-    message: "₹2 deposit received for booking BK042. Your slot is now secured.",
+    message: "₹2 deposit received for BK042. Slot secured.",
     type: "payment",
     isRead: true,
     createdAt: Date.now() - 3600000,
@@ -290,8 +279,7 @@ const SAMPLE_NOTIFICATIONS = [
     userId: "u3",
     user: "Meera Nair",
     title: "Course Enrollment",
-    message:
-      "Welcome to Photography Fundamentals! Your course starts 1 May 2026.",
+    message: "Welcome to Photography Fundamentals! Starts 1 May 2026.",
     type: "course",
     isRead: false,
     createdAt: Date.now() - 7200000,
@@ -301,7 +289,7 @@ const SAMPLE_NOTIFICATIONS = [
     userId: "u4",
     user: "Ravi Shankar",
     title: "Certificate Ready",
-    message: "Your certificate RAP-PHO-2026-041 is now available for download.",
+    message: "Certificate RAP-PHO-2026-041 available for download.",
     type: "system",
     isRead: true,
     createdAt: Date.now() - 86400000,
@@ -311,7 +299,7 @@ const SAMPLE_NOTIFICATIONS = [
     userId: "u1",
     user: "Priya Sharma",
     title: "Final Payment Due",
-    message: "Please complete your final payment of ₹3 for booking BK041.",
+    message: "Complete final payment of ₹3 for booking BK041.",
     type: "payment",
     isRead: false,
     createdAt: Date.now() - 172800000,
@@ -464,6 +452,7 @@ const SAMPLE_HISTORY = [
   },
 ];
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
 const ROLE_COLORS: Record<string, string> = {
   admin: "bg-primary/20 text-primary border-primary/30",
   staff: "bg-blue-500/20 text-blue-300 border-blue-500/30",
@@ -499,7 +488,28 @@ function formatRelativeTime(ts: number) {
   return `${Math.floor(diff / 86400000)}d ago`;
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Tab motion wrapper ───────────────────────────────────────────────────────
+function TabPane({
+  id,
+  activeTab,
+  children,
+}: { id: string; activeTab: string; children: React.ReactNode }) {
+  if (activeTab !== id) return null;
+  return (
+    <motion.div
+      key={id}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.28 }}
+      className="w-full"
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+// ─── Component ────────────────────────────────────────────────────────────────
 export function AdminDashboard() {
   const isAdminLoggedIn = useIsAdmin();
   const [activeTab, setActiveTab] = useState("overview");
@@ -507,16 +517,23 @@ export function AdminDashboard() {
   const [bookingFilter, setBookingFilter] = useState("all");
   const [userSearch, setUserSearch] = useState("");
   const [historyFilter, setHistoryFilter] = useState("all");
+  const [bookingStatuses, setBookingStatuses] = useState<
+    Record<string, string>
+  >({});
 
-  const { data: bookings = [] } = useMyBookings();
-  const { data: adminStats } = useAdminStats();
+  const lastLogin = new Date().toLocaleString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 
-  const stats = adminStats ?? SAMPLE_STATS;
-  const displayBookings = bookings.length > 0 ? bookings : SAMPLE_BOOKINGS;
+  const filteredBookings = SAMPLE_BOOKINGS.filter((b) => {
+    const s = bookingStatuses[b.id] ?? b.status;
+    return bookingFilter === "all" || s === bookingFilter;
+  });
 
-  const filteredBookings = displayBookings.filter(
-    (b) => bookingFilter === "all" || b.status === bookingFilter,
-  );
   const filteredUsers = SAMPLE_USERS.filter(
     (u) =>
       u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
@@ -526,20 +543,36 @@ export function AdminDashboard() {
     (h) => historyFilter === "all" || h.type === historyFilter,
   );
 
+  const pendingBookings = SAMPLE_BOOKINGS.filter(
+    (b) => (bookingStatuses[b.id] ?? b.status) === "pending",
+  );
+
   const currentLabel =
     NAV_ITEMS.find((n) => n.id === activeTab)?.label ?? "Admin";
 
-  // Admin is always unrestricted — no permission gate
+  function confirmBooking(id: string) {
+    setBookingStatuses((prev) => ({ ...prev, [id]: "confirmed" }));
+    toast.success(`Booking ${id} confirmed — client notified via WhatsApp`);
+  }
+  function rejectBooking(id: string) {
+    setBookingStatuses((prev) => ({ ...prev, [id]: "cancelled" }));
+    toast.error(`Booking ${id} rejected`);
+  }
+  function markDelivered(id: string) {
+    setBookingStatuses((prev) => ({ ...prev, [id]: "delivered" }));
+    toast.success(`Marked as delivered for booking ${id}`);
+  }
+
   if (!isAdminLoggedIn) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center p-8">
           <Camera className="w-16 h-16 mx-auto mb-4 text-primary/60" />
           <h2 className="text-2xl font-display font-bold text-foreground mb-2">
-            Admin Access
+            Admin Access Required
           </h2>
           <p className="text-muted-foreground mb-6">
-            Please log in with admin credentials.
+            Please log in with admin credentials to continue.
           </p>
           <a
             href="/admin/login"
@@ -566,8 +599,7 @@ export function AdminDashboard() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed lg:sticky top-0 h-screen w-64 flex-shrink-0 bg-card border-r border-border/50 flex flex-col z-50 transition-transform duration-300
-          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
+        className={`fixed lg:sticky top-0 h-screen w-64 flex-shrink-0 bg-card border-r border-border/50 flex flex-col z-50 transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
       >
         {/* Logo */}
         <div className="px-5 py-5 border-b border-border/50 flex items-center justify-between">
@@ -599,6 +631,8 @@ export function AdminDashboard() {
         <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
+            const isPendingAlert =
+              item.id === "bookings" && pendingBookings.length > 0;
             return (
               <button
                 key={item.id}
@@ -615,7 +649,12 @@ export function AdminDashboard() {
                 data-ocid={`admin-nav-${item.id}`}
               >
                 <Icon className="w-4 h-4 flex-shrink-0" />
-                {item.label}
+                <span className="flex-1">{item.label}</span>
+                {isPendingAlert && (
+                  <span className="w-5 h-5 rounded-full bg-yellow-500/20 text-yellow-300 text-[10px] font-bold flex items-center justify-center border border-yellow-500/30">
+                    {pendingBookings.length}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -624,14 +663,16 @@ export function AdminDashboard() {
         {/* Footer */}
         <div className="px-4 py-3 border-t border-border/50">
           <div className="flex items-center gap-2 mb-2">
-            <div className="w-6 h-6 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] font-bold text-primary">
+            <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-xs font-bold text-primary">
               A
             </div>
             <div>
-              <p className="text-[10px] font-semibold text-foreground">
+              <p className="text-[11px] font-semibold text-foreground">
                 Admin (Owner)
               </p>
-              <p className="text-[9px] text-muted-foreground">Full access</p>
+              <p className="text-[9px] text-muted-foreground">
+                Full access — all features
+              </p>
             </div>
           </div>
           <Button
@@ -650,10 +691,10 @@ export function AdminDashboard() {
         </div>
       </aside>
 
-      {/* Main area — expands to fill all remaining space */}
+      {/* Main area */}
       <div className="flex-1 min-w-0 flex flex-col w-full">
         {/* Top bar */}
-        <header className="sticky top-0 h-14 bg-card border-b border-border/50 flex items-center px-4 gap-4 z-30 w-full">
+        <header className="sticky top-0 h-14 bg-card border-b border-border/50 flex items-center px-4 gap-3 z-30 w-full shadow-subtle">
           <Button
             type="button"
             variant="ghost"
@@ -663,42 +704,72 @@ export function AdminDashboard() {
           >
             <Menu className="w-5 h-5" />
           </Button>
-          <h1 className="font-semibold text-foreground">{currentLabel}</h1>
-          <div className="ml-auto flex items-center gap-2">
+
+          <h1 className="font-display font-semibold text-foreground">
+            {currentLabel}
+          </h1>
+
+          <div className="ml-auto flex items-center gap-3">
+            {/* Admin info */}
+            <div className="hidden sm:flex flex-col items-end">
+              <span className="text-xs font-semibold text-foreground">
+                Admin (Owner)
+              </span>
+              <span className="text-[10px] text-muted-foreground/60">
+                Last login: {lastLogin}
+              </span>
+            </div>
+
+            {/* Notification Bell */}
+            <NotificationBell />
+
             <Badge className="text-xs bg-primary/20 text-primary border-primary/30">
               Admin
             </Badge>
           </div>
         </header>
 
-        {/* Content — full width, no max-w constraints */}
+        {/* Content */}
         <main className="flex-1 p-4 md:p-6 overflow-y-auto w-full">
           <AnimatePresence mode="wait">
-            {/* ── Overview ────────────────────────────────────────── */}
-            {activeTab === "overview" && (
-              <motion.div
-                key="overview"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-                className="w-full"
-              >
-                <AdminStats stats={stats} />
-              </motion.div>
-            )}
+            {/* ── Overview ────────────────────────────────────────────── */}
+            <TabPane id="overview" activeTab={activeTab}>
+              <AdminStats />
+            </TabPane>
 
-            {/* ── Bookings ────────────────────────────────────────── */}
-            {activeTab === "bookings" && (
-              <motion.div
-                key="bookings"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-4 w-full"
-              >
-                <div className="flex flex-wrap gap-2">
+            {/* ── Bookings ────────────────────────────────────────────── */}
+            <TabPane id="bookings" activeTab={activeTab}>
+              <div className="space-y-4 w-full">
+                {/* Pending alert banner */}
+                {pendingBookings.length > 0 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl border border-yellow-500/30 bg-yellow-500/8"
+                  >
+                    <div className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />
+                    <p className="text-sm font-semibold text-yellow-300">
+                      {pendingBookings.length} new booking
+                      {pendingBookings.length > 1 ? "s" : ""} awaiting your
+                      confirmation
+                    </p>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="ml-auto text-xs border-yellow-500/30 text-yellow-300 hover:bg-yellow-500/10"
+                      onClick={() => setBookingFilter("pending")}
+                    >
+                      View Pending
+                    </Button>
+                  </motion.div>
+                )}
+
+                {/* Filter tabs */}
+                <div
+                  className="flex flex-wrap gap-2"
+                  data-ocid="booking-filter-tabs"
+                >
                   {[
                     "all",
                     "pending",
@@ -716,145 +787,66 @@ export function AdminDashboard() {
                           ? "bg-primary text-primary-foreground border-primary"
                           : "border-border/50 text-muted-foreground hover:border-primary/40"
                       }`}
+                      data-ocid={`booking-filter.${s}`}
                     >
                       {s.replace(/_/g, " ")}
                     </button>
                   ))}
                 </div>
+
+                {/* Booking cards */}
                 <div className="space-y-3 w-full">
-                  {filteredBookings.map((booking) => (
+                  {filteredBookings.length === 0 ? (
                     <div
-                      key={booking.id}
-                      className="w-full rounded-xl border border-border/50 bg-card p-4"
-                      data-ocid="admin-booking-row"
+                      className="text-center py-12 text-muted-foreground text-sm rounded-xl border border-border/30 bg-card"
+                      data-ocid="bookings-empty_state"
                     >
-                      <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-foreground capitalize text-sm">
-                              {booking.serviceCategoryId.replace(/_/g, " ")}
-                            </span>
-                            <span className="text-xs text-muted-foreground font-mono">
-                              #{booking.id}
-                            </span>
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-0.5 capitalize">
-                            {booking.subServiceId.replace(/_/g, " ")} •{" "}
-                            {booking.date} • {booking.timeSlot}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            Client: {booking.clientName} • Location:{" "}
-                            {booking.location.type}
-                            {booking.location.placeName
-                              ? ` — ${booking.location.placeName}`
-                              : ""}
-                          </p>
-                        </div>
-                        <Badge className="text-xs border bg-muted/30 text-foreground border-border/30 flex-shrink-0 capitalize">
-                          {booking.status.replace(/_/g, " ")}
-                        </Badge>
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {booking.status === "pending" && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            className="bg-blue-600 hover:bg-blue-700 text-white text-xs"
-                            onClick={() =>
-                              toast.success(`Booking ${booking.id} confirmed`)
-                            }
-                            data-ocid="admin-confirm-btn"
-                          >
-                            <CheckCircle className="w-3 h-3 mr-1" />
-                            Confirm
-                          </Button>
-                        )}
-                        {booking.status === "pending" && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="destructive"
-                            className="text-xs"
-                            onClick={() =>
-                              toast.error(`Booking ${booking.id} rejected`)
-                            }
-                            data-ocid="admin-reject-btn"
-                          >
-                            <XCircle className="w-3 h-3 mr-1" />
-                            Reject
-                          </Button>
-                        )}
-                        {booking.status === "confirmed" && (
-                          <Button
-                            type="button"
-                            size="sm"
-                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
-                            onClick={() =>
-                              toast.success(
-                                `Marked delivered for ${booking.id}`,
-                              )
-                            }
-                            data-ocid="admin-delivered-btn"
-                          >
-                            Mark Delivered
-                          </Button>
-                        )}
-                        <RazorpayButton
-                          amount={booking.initialPaymentAmount}
-                          label="Trigger Payment"
-                          referenceId={booking.id}
-                          paymentType="booking_initial"
-                          description={`Admin triggered payment for booking ${booking.id}`}
-                          className="text-xs px-3 py-1.5 h-auto bg-orange-600 hover:bg-orange-700 text-white rounded-md"
-                          data-ocid="admin-trigger-payment-btn"
-                        />
-                      </div>
-                      <p className="text-[10px] text-muted-foreground/40 mt-2 font-mono">
-                        Upfront: ₹{booking.initialPaymentAmount} | Balance: ₹
-                        {booking.finalPaymentAmount}
-                      </p>
+                      No bookings match this filter.
                     </div>
-                  ))}
+                  ) : (
+                    filteredBookings.map((booking, i) => (
+                      <BookingCard
+                        key={booking.id}
+                        booking={{
+                          ...booking,
+                          status:
+                            (bookingStatuses[
+                              booking.id
+                            ] as typeof booking.status) ?? booking.status,
+                        }}
+                        showActions
+                        isAdminView
+                        onConfirm={confirmBooking}
+                        onReject={rejectBooking}
+                        onMarkDelivered={markDelivered}
+                        index={i}
+                      />
+                    ))
+                  )}
                 </div>
-              </motion.div>
-            )}
+              </div>
+            </TabPane>
 
-            {/* ── Payments ────────────────────────────────────────── */}
-            {activeTab === "payments" && (
-              <motion.div
-                key="payments"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-                className="w-full"
-              >
-                <AdminPaymentsPanel />
-              </motion.div>
-            )}
+            {/* ── Payments ────────────────────────────────────────────── */}
+            <TabPane id="payments" activeTab={activeTab}>
+              <AdminPaymentsPanel />
+            </TabPane>
 
-            {/* ── Courses ─────────────────────────────────────────── */}
-            {activeTab === "courses" && (
-              <motion.div
-                key="courses"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-3 w-full"
-              >
+            {/* ── Courses ─────────────────────────────────────────────── */}
+            <TabPane id="courses" activeTab={activeTab}>
+              <div className="space-y-3 w-full">
                 {SAMPLE_COURSES.map((course, i) => (
                   <motion.div
                     key={course.id}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.06 }}
-                    className="w-full rounded-xl border border-border/50 bg-card p-4"
-                    data-ocid="admin-course-row"
+                    className="w-full rounded-xl glass-effect p-4"
+                    data-ocid={`admin-course-row.${i + 1}`}
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div className="flex-1 min-w-0">
-                        <p className="font-semibold text-foreground text-sm truncate">
+                        <p className="font-semibold font-display text-foreground text-sm truncate">
                           {course.title}
                         </p>
                         <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
@@ -876,7 +868,7 @@ export function AdminDashboard() {
                         Issue Cert
                       </Button>
                     </div>
-                    <div className="mt-2 h-1.5 rounded-full bg-muted/40 overflow-hidden">
+                    <div className="mt-3 h-1.5 rounded-full bg-muted/40 overflow-hidden">
                       <div
                         className="h-full rounded-full bg-primary/60"
                         style={{
@@ -886,24 +878,17 @@ export function AdminDashboard() {
                     </div>
                   </motion.div>
                 ))}
-              </motion.div>
-            )}
+              </div>
+            </TabPane>
 
-            {/* ── Users ───────────────────────────────────────────── */}
-            {activeTab === "users" && (
-              <motion.div
-                key="users"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-4 w-full"
-              >
+            {/* ── Users ───────────────────────────────────────────────── */}
+            <TabPane id="users" activeTab={activeTab}>
+              <div className="space-y-4 w-full">
                 <Input
                   placeholder="Search by name or phone..."
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
-                  className="bg-muted/20 border-border/50 max-w-sm text-foreground"
+                  className="max-w-sm"
                   data-ocid="user-search-input"
                 />
                 <div className="space-y-2 w-full">
@@ -913,8 +898,8 @@ export function AdminDashboard() {
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       transition={{ delay: i * 0.05 }}
-                      className="w-full rounded-xl border border-border/50 bg-card p-4 flex items-center gap-4"
-                      data-ocid="admin-user-row"
+                      className="w-full rounded-xl glass-effect p-4 flex items-center gap-4"
+                      data-ocid={`admin-user-row.${i + 1}`}
                     >
                       <div className="w-8 h-8 rounded-full bg-muted/40 border border-border/50 flex items-center justify-center text-xs font-bold text-foreground flex-shrink-0">
                         {user.name.charAt(0)}
@@ -958,90 +943,74 @@ export function AdminDashboard() {
                     </motion.div>
                   ))}
                 </div>
-              </motion.div>
-            )}
+              </div>
+            </TabPane>
 
-            {/* ── Media ───────────────────────────────────────────── */}
-            {activeTab === "media" && (
-              <motion.div
-                key="media"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-                className="w-full"
-              >
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {SAMPLE_MEDIA.map((item, i) => (
-                    <motion.div
-                      key={item.id}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      transition={{ delay: i * 0.06 }}
-                      className="group rounded-xl overflow-hidden border border-border/50 bg-card aspect-square relative"
-                      data-ocid="admin-media-item"
-                    >
-                      <div className="w-full h-full bg-gradient-to-br from-primary/20 via-muted/30 to-accent/20 flex items-center justify-center">
-                        <Camera className="w-8 h-8 text-primary/40" />
+            {/* ── Media ───────────────────────────────────────────────── */}
+            <TabPane id="media" activeTab={activeTab}>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                {SAMPLE_MEDIA.map((item, i) => (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: i * 0.06 }}
+                    className="group rounded-xl overflow-hidden border border-border/50 bg-card aspect-square relative"
+                    data-ocid={`admin-media-item.${i + 1}`}
+                  >
+                    <div className="w-full h-full bg-gradient-to-br from-primary/20 via-muted/30 to-accent/20 flex items-center justify-center">
+                      <Camera className="w-8 h-8 text-primary/40" />
+                    </div>
+                    {item.featured && (
+                      <div className="absolute top-2 left-2">
+                        <Badge className="text-[9px] bg-primary/80 text-primary-foreground border-0">
+                          Featured
+                        </Badge>
                       </div>
-                      {item.featured && (
-                        <div className="absolute top-2 left-2">
-                          <Badge className="text-[9px] bg-primary/80 text-primary-foreground border-0">
-                            Featured
-                          </Badge>
-                        </div>
-                      )}
-                      <div className="absolute inset-0 bg-background/85 opacity-0 group-hover:opacity-100 transition-smooth flex flex-col items-center justify-center gap-2 p-3">
-                        <p className="text-xs font-semibold text-foreground text-center">
-                          {item.title}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground capitalize">
-                          {item.category.replace(/_/g, " ")}
-                        </p>
-                        <div className="flex gap-2">
-                          <Button
-                            type="button"
-                            size="sm"
-                            className={`text-[10px] h-6 px-2 ${item.featured ? "bg-muted" : "bg-primary"}`}
-                            onClick={() =>
-                              toast.success(
-                                item.featured
-                                  ? "Removed from featured"
-                                  : "Set as featured",
-                              )
-                            }
-                            data-ocid="toggle-featured-btn"
-                          >
-                            {item.featured ? "Unfeature" : "Feature"}
-                          </Button>
-                          <Button
-                            type="button"
-                            size="sm"
-                            variant="destructive"
-                            className="text-[10px] h-6 px-2"
-                            onClick={() => toast.success("Media deleted")}
-                            data-ocid="admin-media-delete-btn"
-                          >
-                            Delete
-                          </Button>
-                        </div>
+                    )}
+                    <div className="absolute inset-0 bg-background/85 opacity-0 group-hover:opacity-100 transition-smooth flex flex-col items-center justify-center gap-2 p-3">
+                      <p className="text-xs font-semibold text-foreground text-center">
+                        {item.title}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground capitalize">
+                        {item.category.replace(/_/g, " ")}
+                      </p>
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          className={`text-[10px] h-6 px-2 ${item.featured ? "bg-muted" : "bg-primary"}`}
+                          onClick={() =>
+                            toast.success(
+                              item.featured
+                                ? "Removed from featured"
+                                : "Set as featured",
+                            )
+                          }
+                          data-ocid="toggle-featured-btn"
+                        >
+                          {item.featured ? "Unfeature" : "Feature"}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          className="text-[10px] h-6 px-2"
+                          onClick={() => toast.success("Media deleted")}
+                          data-ocid="admin-media-delete-btn"
+                        >
+                          Delete
+                        </Button>
                       </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </motion.div>
-            )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </TabPane>
 
-            {/* ── Notifications ───────────────────────────────────── */}
-            {activeTab === "notifications" && (
-              <motion.div
-                key="notifications"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-3 w-full"
-              >
+            {/* ── Notifications ───────────────────────────────────────── */}
+            <TabPane id="notifications" activeTab={activeTab}>
+              <div className="space-y-3 w-full">
                 <div className="flex items-center justify-between mb-2">
                   <p className="text-xs text-muted-foreground">
                     {SAMPLE_NOTIFICATIONS.length} total notifications
@@ -1065,16 +1034,13 @@ export function AdminDashboard() {
                     initial={{ opacity: 0, x: -10 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    className={`w-full rounded-xl border bg-card p-4 ${notif.isRead ? "border-border/30 opacity-70" : "border-primary/20"}`}
-                    data-ocid="admin-notification-row"
+                    className={`w-full rounded-xl border glass-effect p-4 ${notif.isRead ? "border-border/30 opacity-70" : "border-primary/20"}`}
+                    data-ocid={`admin-notification-row.${i + 1}`}
                   >
                     <div className="flex items-start gap-3">
-                      {!notif.isRead && (
-                        <div className="w-2 h-2 rounded-full bg-primary mt-1.5 flex-shrink-0" />
-                      )}
-                      {notif.isRead && (
-                        <div className="w-2 h-2 rounded-full bg-muted/60 mt-1.5 flex-shrink-0" />
-                      )}
+                      <div
+                        className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${notif.isRead ? "bg-muted/60" : "bg-primary"}`}
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 flex-wrap mb-1">
                           <span className="font-semibold text-foreground text-sm">
@@ -1097,24 +1063,17 @@ export function AdminDashboard() {
                     </div>
                   </motion.div>
                 ))}
-              </motion.div>
-            )}
+              </div>
+            </TabPane>
 
-            {/* ── Email Simulation Log ─────────────────────────────── */}
-            {activeTab === "emails" && (
-              <motion.div
-                key="emails"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-4 w-full"
-              >
+            {/* ── Email Log ───────────────────────────────────────────── */}
+            <TabPane id="emails" activeTab={activeTab}>
+              <div className="space-y-4 w-full">
                 <div className="rounded-xl border border-yellow-500/20 bg-yellow-500/5 px-4 py-3 flex items-center gap-2">
                   <Mail className="w-4 h-4 text-yellow-400 flex-shrink-0" />
                   <p className="text-xs text-yellow-300">
-                    Email simulation log — real delivery is disabled. Emails are
-                    stored here for admin review only.
+                    Email simulation log — real delivery is disabled on this
+                    platform. Emails stored here for admin review.
                   </p>
                 </div>
                 <div className="space-y-3 w-full">
@@ -1124,8 +1083,8 @@ export function AdminDashboard() {
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: i * 0.06 }}
-                      className="w-full rounded-xl border border-border/50 bg-card p-4"
-                      data-ocid="admin-email-log-row"
+                      className="w-full rounded-xl glass-effect p-4"
+                      data-ocid={`admin-email-log-row.${i + 1}`}
                     >
                       <div className="flex items-start justify-between gap-3 mb-2">
                         <div className="flex-1 min-w-0">
@@ -1147,23 +1106,16 @@ export function AdminDashboard() {
                     </motion.div>
                   ))}
                 </div>
-              </motion.div>
-            )}
+              </div>
+            </TabPane>
 
-            {/* ── Feedback / Ratings ──────────────────────────────── */}
-            {activeTab === "feedback" && (
-              <motion.div
-                key="feedback"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-3 w-full"
-              >
+            {/* ── Feedback ────────────────────────────────────────────── */}
+            <TabPane id="feedback" activeTab={activeTab}>
+              <div className="space-y-3 w-full">
                 <div className="flex items-center gap-4 mb-2">
                   <div className="rounded-xl border border-border/50 bg-card px-4 py-3 flex items-center gap-2">
                     <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                    <span className="font-bold text-foreground text-sm">
+                    <span className="font-bold font-display text-foreground text-sm">
                       {(
                         SAMPLE_FEEDBACK.reduce((s, f) => s + f.rating, 0) /
                         SAMPLE_FEEDBACK.length
@@ -1174,7 +1126,7 @@ export function AdminDashboard() {
                     </span>
                   </div>
                   <div className="rounded-xl border border-border/50 bg-card px-4 py-3">
-                    <span className="font-bold text-foreground text-sm">
+                    <span className="font-bold font-display text-foreground text-sm">
                       {SAMPLE_FEEDBACK.length}
                     </span>
                     <span className="text-xs text-muted-foreground ml-1.5">
@@ -1188,8 +1140,8 @@ export function AdminDashboard() {
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.06 }}
-                    className="w-full rounded-xl border border-border/50 bg-card p-4"
-                    data-ocid="admin-feedback-row"
+                    className="w-full rounded-xl glass-effect p-4"
+                    data-ocid={`admin-feedback-row.${i + 1}`}
                   >
                     <div className="flex items-start justify-between gap-3 mb-2">
                       <div className="flex items-center gap-3">
@@ -1229,19 +1181,12 @@ export function AdminDashboard() {
                     </p>
                   </motion.div>
                 ))}
-              </motion.div>
-            )}
+              </div>
+            </TabPane>
 
-            {/* ── History ─────────────────────────────────────────── */}
-            {activeTab === "history" && (
-              <motion.div
-                key="history"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-                className="space-y-4 w-full"
-              >
+            {/* ── History ─────────────────────────────────────────────── */}
+            <TabPane id="history" activeTab={activeTab}>
+              <div className="space-y-4 w-full">
                 <div className="flex flex-wrap gap-2">
                   {["all", "booking", "enrollment"].map((f) => (
                     <button
@@ -1278,15 +1223,13 @@ export function AdminDashboard() {
                         animate={{ opacity: 1 }}
                         transition={{ delay: i * 0.04 }}
                         className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-x-4 items-center px-4 py-3"
-                        data-ocid="admin-history-row"
+                        data-ocid={`admin-history-row.${i + 1}`}
                       >
-                        <div>
-                          <Badge
-                            className={`text-[10px] border capitalize ${h.type === "booking" ? "bg-blue-500/20 text-blue-300 border-blue-500/30" : "bg-purple-500/20 text-purple-300 border-purple-500/30"}`}
-                          >
-                            {h.type}
-                          </Badge>
-                        </div>
+                        <Badge
+                          className={`text-[10px] border capitalize ${h.type === "booking" ? "bg-blue-500/20 text-blue-300 border-blue-500/30" : "bg-purple-500/20 text-purple-300 border-purple-500/30"}`}
+                        >
+                          {h.type}
+                        </Badge>
                         <div className="min-w-0">
                           <p className="text-sm font-medium text-foreground truncate">
                             {h.target}
@@ -1318,39 +1261,18 @@ export function AdminDashboard() {
                     ))}
                   </div>
                 </div>
-              </motion.div>
-            )}
+              </div>
+            </TabPane>
 
-            {/* ── CMS Editor ──────────────────────────────────────── */}
-            {activeTab === "cms" && (
-              <motion.div
-                key="cms"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-                className="w-full"
-              >
-                <CmsTab />
-              </motion.div>
-            )}
+            {/* ── CMS ─────────────────────────────────────────────────── */}
+            <TabPane id="cms" activeTab={activeTab}>
+              <CmsTab />
+            </TabPane>
 
-            {/* ── Settings ────────────────────────────────────────── */}
-            {activeTab === "settings" && (
-              <motion.div
-                key="settings"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                transition={{ duration: 0.3 }}
-                className="w-full max-w-2xl space-y-4"
-              >
+            {/* ── Settings ────────────────────────────────────────────── */}
+            <TabPane id="settings" activeTab={activeTab}>
+              <div className="w-full max-w-2xl space-y-4">
                 {[
-                  {
-                    label: "Razorpay Key ID",
-                    value: "rzp_test_SZm0CNQyCUq5Zt",
-                    hint: "Live key: replace with rzp_live_... in production",
-                  },
                   {
                     label: "Admin Contact Email",
                     value: "ruchithabs550@gmail.com",
@@ -1366,10 +1288,16 @@ export function AdminDashboard() {
                     value: "RAP Integrated Studio",
                     hint: "Used in certificates and invoices",
                   },
+                  {
+                    label: "WhatsApp Number",
+                    value: "wa.me/917338501228",
+                    hint: "Opens direct chat — number never shown as text",
+                  },
                 ].map((setting) => (
                   <div
                     key={setting.label}
-                    className="rounded-xl border border-border/50 bg-card p-4"
+                    className="rounded-xl glass-effect p-4"
+                    data-ocid="admin-settings-row"
                   >
                     <p className="text-xs text-muted-foreground mb-1">
                       {setting.label}
@@ -1384,8 +1312,44 @@ export function AdminDashboard() {
                     )}
                   </div>
                 ))}
-              </motion.div>
-            )}
+
+                <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4">
+                  <p className="text-xs font-semibold text-red-400 mb-1">
+                    Danger Zone
+                  </p>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    These actions are irreversible. Use with caution.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-xs border-red-500/30 text-red-400 hover:bg-red-500/10"
+                      onClick={() =>
+                        toast.error("Clear cache — feature coming soon")
+                      }
+                      data-ocid="admin-clear-cache-btn"
+                    >
+                      <XCircle className="w-3 h-3 mr-1" />
+                      Clear Cache
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="text-xs border-red-500/30 text-red-400 hover:bg-red-500/10"
+                      onClick={() =>
+                        toast.error("Reset feature — feature coming soon")
+                      }
+                      data-ocid="admin-reset-btn"
+                    >
+                      Reset Slot Data
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </TabPane>
           </AnimatePresence>
         </main>
       </div>

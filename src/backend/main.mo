@@ -3,7 +3,7 @@ import List "mo:core/List";
 import AccessControl "mo:caffeineai-authorization/access-control";
 import MixinAuthorization "mo:caffeineai-authorization/MixinAuthorization";
 import MixinObjectStorage "mo:caffeineai-object-storage/Mixin";
-
+import Migration "migration";
 
 import CmsPayTypes "types/cms-multiservice-payments";
 import CmsPayMixin "mixins/cms-multiservice-payments-api";
@@ -29,6 +29,8 @@ import FeedbackMixin "mixins/feedback-api";
 import AdminMixin "mixins/admin-api";
 
 
+
+(with migration = Migration.run)
 actor {
   // ── Authorization state ──────────────────────────────────────────────────
   let accessControlState = AccessControl.initState();
@@ -41,15 +43,24 @@ actor {
   let profiles = Map.empty<Common.UserId, UserTypes.UserProfile>();
   include UsersMixin(accessControlState, profiles);
 
+  // ── Notifications (email + WhatsApp + in-app) — declared early for payment hooks ──
+  let notifications = List.empty<NotifTypes.NotificationRecord>();
+  let nextNotifId : Common.Counter = { var value = 1 };
+  let emailLogs = List.empty<NotifTypes.EmailLog>();
+  let nextEmailLogId : Common.Counter = { var value = 1 };
+  let whatsappLogs = List.empty<NotifTypes.WhatsAppLog>();
+  let nextWhatsAppLogId : Common.Counter = { var value = 1 };
+  include NotificationsMixin(accessControlState, profiles, notifications, nextNotifId, emailLogs, nextEmailLogId, whatsappLogs, nextWhatsAppLogId);
+
   // ── Service bookings ──────────────────────────────────────────────────────
   let bookings = List.empty<ServiceTypes.BookingRequest>();
   let nextBookingId : Common.Counter = { var value = 1 };
   include ServicesMixin(accessControlState, profiles, bookings, nextBookingId);
 
-  // ── Payments ──────────────────────────────────────────────────────────────
+  // ── Payments (Stripe) ─────────────────────────────────────────────────────
   let paymentOrders = List.empty<PaymentTypes.PaymentOrder>();
   let nextPaymentId : Common.Counter = { var value = 1 };
-  include PaymentsMixin(accessControlState, profiles, paymentOrders, nextPaymentId);
+  include PaymentsMixin(accessControlState, profiles, paymentOrders, nextPaymentId, bookings, whatsappLogs, nextWhatsAppLogId, notifications, nextNotifId);
 
   // ── Course enrollments ────────────────────────────────────────────────────
   let enrollments = List.empty<CourseTypes.CourseEnrollment>();
@@ -65,13 +76,6 @@ actor {
   let mediaItems = List.empty<GalleryTypes.MediaItem>();
   let nextMediaId : Common.Counter = { var value = 1 };
   include GalleryMixin(accessControlState, profiles, mediaItems, nextMediaId);
-
-  // ── Notifications + simulated email log ───────────────────────────────────
-  let notifications = List.empty<NotifTypes.NotificationRecord>();
-  let nextNotifId : Common.Counter = { var value = 1 };
-  let emailLogs = List.empty<NotifTypes.EmailLog>();
-  let nextEmailLogId : Common.Counter = { var value = 1 };
-  include NotificationsMixin(accessControlState, profiles, notifications, nextNotifId, emailLogs, nextEmailLogId);
 
   // ── Feedback ──────────────────────────────────────────────────────────────
   let feedbacks = List.empty<FeedbackTypes.Feedback>();

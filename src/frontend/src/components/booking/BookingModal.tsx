@@ -18,7 +18,6 @@ export function BookingModal({
   service,
   selectedSubService,
 }: BookingModalProps) {
-  // Close on Escape
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
@@ -37,7 +36,6 @@ export function BookingModal({
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
           <motion.div
             className="fixed inset-0 z-50"
             style={{ background: "oklch(0 0 0 / 0.75)" }}
@@ -47,8 +45,6 @@ export function BookingModal({
             onClick={onClose}
             data-ocid="booking-modal-backdrop"
           />
-
-          {/* Modal panel */}
           <motion.div
             className="fixed inset-x-0 bottom-0 md:inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-6"
             initial={{ opacity: 0 }}
@@ -84,7 +80,6 @@ export function BookingModal({
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  {/* Quick link to full booking page */}
                   <a
                     href="/booking"
                     className="hidden sm:flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors font-medium"

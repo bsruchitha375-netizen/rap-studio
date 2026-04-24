@@ -28,7 +28,6 @@ export function ServiceDetailPage() {
   const { isAuthenticated } = useAuth();
 
   const service = getServiceById(serviceId);
-
   const [selectedSubService, setSelectedSubService] =
     useState<SubService | null>(null);
   const [bookingOpen, setBookingOpen] = useState(false);
@@ -121,7 +120,7 @@ export function ServiceDetailPage() {
           </div>
         </motion.div>
 
-        {/* Pricing */}
+        {/* How it works — replaces pricing section */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -131,60 +130,54 @@ export function ServiceDetailPage() {
           <div className="flex items-center gap-3 mb-4">
             <div className="w-1 h-6 rounded-full bg-primary" />
             <h2 className="font-display text-xl font-semibold text-foreground">
-              Pricing
+              How It Works
             </h2>
           </div>
           <div
-            className="rounded-2xl p-6 border"
+            className="rounded-2xl p-6 border space-y-4"
             style={{
               background:
                 "linear-gradient(135deg, oklch(0.7 0.22 70 / 0.08), oklch(0.68 0.2 290 / 0.05))",
               borderColor: "oklch(0.7 0.22 70 / 0.3)",
             }}
           >
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="text-center">
-                <p className="text-4xl font-bold font-display text-primary">
-                  ₹5
-                </p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Total Session
-                </p>
+            {[
+              {
+                num: "1",
+                text: "Select your services and preferred date/time",
+              },
+              {
+                num: "2",
+                text: "Pay a small deposit via Stripe to confirm your slot",
+              },
+              {
+                num: "3",
+                text: "Our team contacts you within 24 hours to finalize details",
+              },
+              {
+                num: "4",
+                text: "Receive your deliverables — remaining balance collected after delivery",
+              },
+            ].map((step) => (
+              <div key={step.num} className="flex items-center gap-3 text-sm">
+                <span
+                  className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                  style={{
+                    background: "oklch(0.7 0.22 70 / 0.2)",
+                    color: "oklch(0.85 0.18 70)",
+                  }}
+                >
+                  {step.num}
+                </span>
+                <span className="text-foreground">{step.text}</span>
               </div>
-              <div className="flex-1 space-y-2 min-w-[200px]">
-                <div className="flex items-center gap-2 text-sm">
-                  <span
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                    style={{
-                      background: "oklch(0.7 0.22 70 / 0.2)",
-                      color: "oklch(0.85 0.18 70)",
-                    }}
-                  >
-                    1
-                  </span>
-                  <span className="text-foreground">
-                    <strong>₹2</strong> — Confirmation payment (after team
-                    review)
-                  </span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <span
-                    className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
-                    style={{
-                      background: "oklch(0.7 0.22 70 / 0.2)",
-                      color: "oklch(0.85 0.18 70)",
-                    }}
-                  >
-                    2
-                  </span>
-                  <span className="text-foreground">
-                    <strong>₹3</strong> — Final payment after delivery
-                  </span>
-                </div>
-              </div>
-            </div>
-            <p className="text-xs text-muted-foreground mt-4">
-              💳 Secure Razorpay payment · No advance required to request
+            ))}
+            <p
+              className="text-xs text-muted-foreground pt-2 border-t"
+              style={{ borderColor: "oklch(0.7 0.22 70 / 0.15)" }}
+            >
+              💳 Secure Stripe payment · No advance required to submit your
+              request
             </p>
           </div>
         </motion.div>
@@ -216,9 +209,7 @@ export function ServiceDetailPage() {
 
           <a
             href={`https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(
-              `Hi! I'm interested in ${service.name}${
-                selectedSubService ? ` - ${selectedSubService.name}` : ""
-              }. Can you tell me more?`,
+              `Hi! I'm interested in ${service.name}${selectedSubService ? ` - ${selectedSubService.name}` : ""}. Can you tell me more?`,
             )}`}
             target="_blank"
             rel="noopener noreferrer"

@@ -18,10 +18,10 @@ const FILM_IMAGES = [
   "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=120&h=80&fit=crop",
   "https://images.unsplash.com/photo-1554048612-b6a482bc67e5?w=120&h=80&fit=crop",
   "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=120&h=80&fit=crop",
-  "https://images.unsplash.com/photo-1607462109225-6b64ae2dd3cb?w=120&h=80&fit=crop",
+  "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=120&h=80&fit=crop",
   "https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=120&h=80&fit=crop",
   "https://images.unsplash.com/photo-1583244532610-2cf4ba9e3f73?w=120&h=80&fit=crop",
-  "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=120&h=80&fit=crop",
+  "https://images.unsplash.com/photo-1519741347686-c1e0aadf4611?w=120&h=80&fit=crop",
   "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=120&h=80&fit=crop",
 ];
 
@@ -39,7 +39,7 @@ export function HeroSection() {
     <section
       ref={ref}
       className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden"
-      data-ocid="hero-section"
+      data-ocid="hero.section"
     >
       {/* Parallax background image */}
       <motion.div
@@ -61,7 +61,7 @@ export function HeroSection() {
         }}
       />
 
-      {/* Additional cinematic vignette */}
+      {/* Cinematic vignette */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
@@ -99,7 +99,7 @@ export function HeroSection() {
         }}
       />
 
-      {/* Light leak top-left */}
+      {/* Light leak */}
       <motion.div
         className="absolute -top-20 -left-20 w-96 h-96 pointer-events-none"
         animate={{ opacity: [0.05, 0.18, 0.05], scale: [1, 1.1, 1] }}
@@ -115,7 +115,7 @@ export function HeroSection() {
         }}
       />
 
-      {/* Floating particles */}
+      {/* Floating bokeh particles */}
       {PARTICLES.map((p) => (
         <motion.div
           key={p.id}
@@ -146,7 +146,7 @@ export function HeroSection() {
         />
       ))}
 
-      {/* Camera Shutter decoration */}
+      {/* Camera shutter decoration */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
         <motion.div
           className="relative"
@@ -281,7 +281,7 @@ export function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.7 }}
         >
-          <Link to="/booking" data-ocid="hero-book-cta">
+          <Link to="/booking" data-ocid="hero.book_cta.primary_button">
             <motion.button
               type="button"
               className="btn-primary-luxury flex items-center gap-2 text-base px-8 py-4 rounded-xl shadow-elevated"
@@ -292,7 +292,7 @@ export function HeroSection() {
               Book a Session
             </motion.button>
           </Link>
-          <Link to="/services">
+          <Link to="/services" data-ocid="hero.services_cta.secondary_button">
             <motion.button
               type="button"
               className="flex items-center gap-2 px-6 py-4 rounded-xl font-semibold text-base transition-smooth"
@@ -314,7 +314,7 @@ export function HeroSection() {
         </motion.div>
       </motion.div>
 
-      {/* Film strip bottom with real images */}
+      {/* Film strip */}
       <div className="absolute bottom-0 left-0 right-0 h-20 flex items-center overflow-hidden pointer-events-none">
         <motion.div
           className="flex gap-1 items-center"

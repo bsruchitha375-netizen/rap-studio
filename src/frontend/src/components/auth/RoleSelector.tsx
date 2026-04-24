@@ -7,6 +7,7 @@ interface RoleOption {
   description: string;
   icon: React.ReactNode;
   isAdmin?: boolean;
+  accentColor: string;
 }
 
 const ClientIcon = () => (
@@ -15,7 +16,7 @@ const ClientIcon = () => (
     fill="none"
     stroke="currentColor"
     strokeWidth={1.5}
-    className="w-7 h-7"
+    className="w-5 h-5"
     aria-hidden="true"
   >
     <title>Client</title>
@@ -38,7 +39,7 @@ const StudentIcon = () => (
     fill="none"
     stroke="currentColor"
     strokeWidth={1.5}
-    className="w-7 h-7"
+    className="w-5 h-5"
     aria-hidden="true"
   >
     <title>Student</title>
@@ -56,7 +57,7 @@ const ReceptionistIcon = () => (
     fill="none"
     stroke="currentColor"
     strokeWidth={1.5}
-    className="w-7 h-7"
+    className="w-5 h-5"
     aria-hidden="true"
   >
     <title>Receptionist</title>
@@ -74,7 +75,7 @@ const StaffIcon = () => (
     fill="none"
     stroke="currentColor"
     strokeWidth={1.5}
-    className="w-7 h-7"
+    className="w-5 h-5"
     aria-hidden="true"
   >
     <title>Staff</title>
@@ -92,7 +93,7 @@ const AdminIcon = () => (
     fill="none"
     stroke="currentColor"
     strokeWidth={1.5}
-    className="w-7 h-7"
+    className="w-5 h-5"
     aria-hidden="true"
   >
     <title>Admin Owner</title>
@@ -108,33 +109,38 @@ const ALL_ROLES: RoleOption[] = [
   {
     role: "client",
     label: "Client",
-    description: "Book shoots & view your sessions",
+    description: "Book shoots & sessions",
     icon: <ClientIcon />,
+    accentColor: "oklch(0.7 0.22 70)",
   },
   {
     role: "student",
     label: "Student",
-    description: "Access courses & earn certificates",
+    description: "Courses & certificates",
     icon: <StudentIcon />,
+    accentColor: "oklch(0.65 0.2 230)",
   },
   {
     role: "receptionist",
     label: "Receptionist",
-    description: "Manage bookings & schedule",
+    description: "Manage bookings",
     icon: <ReceptionistIcon />,
+    accentColor: "oklch(0.65 0.16 160)",
   },
   {
     role: "staff",
     label: "Staff",
-    description: "Upload deliverables & manage work",
+    description: "Upload & manage work",
     icon: <StaffIcon />,
+    accentColor: "oklch(0.65 0.18 190)",
   },
   {
     role: "admin",
     label: "Admin (Owner)",
-    description: "Studio owners & administrators",
+    description: "→ Redirects to secure portal",
     icon: <AdminIcon />,
     isAdmin: true,
+    accentColor: "oklch(0.78 0.2 85)",
   },
 ];
 
@@ -142,61 +148,67 @@ interface RoleSelectorProps {
   selectedRole: UserRole | null;
   onRoleSelect: (role: UserRole) => void;
   availableRoles?: UserRole[];
+  /** When true, clicking just selects (no redirect for admin). Used in registration panel. */
+  registrationMode?: boolean;
+  "data-ocid"?: string;
 }
 
 export function RoleSelector({
   selectedRole,
   onRoleSelect,
   availableRoles,
+  registrationMode = false,
 }: RoleSelectorProps) {
   const roles = availableRoles
     ? ALL_ROLES.filter((r) => availableRoles.includes(r.role))
     : ALL_ROLES;
 
   return (
-    <div className="grid grid-cols-2 gap-3">
+    <div className="grid grid-cols-2 gap-2">
       {roles.map((option, i) => {
         const isSelected = selectedRole === option.role;
-        const isAdmin = option.isAdmin;
+        const { accentColor, isAdmin } = option;
 
         return (
           <motion.button
             key={option.role}
-            initial={{ opacity: 0, y: 16 }}
+            initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.08, duration: 0.4 }}
-            whileHover={{ scale: 1.03 }}
+            transition={{ delay: i * 0.06, duration: 0.35 }}
+            whileHover={{ scale: 1.025, y: -1 }}
             whileTap={{ scale: 0.97 }}
             onClick={() => onRoleSelect(option.role)}
             data-ocid={`role-card-${option.role}`}
             type="button"
             aria-pressed={isSelected}
-            className={[
-              "relative flex flex-col items-start gap-2 p-4 rounded-xl text-left transition-all duration-300 border overflow-hidden",
-              isAdmin && isSelected
-                ? "border-yellow-500/70 shadow-[0_0_22px_oklch(0.8_0.18_85_/_0.5)] bg-card"
-                : isAdmin
-                  ? "border-yellow-500/40 bg-card/40 hover:border-yellow-500/70 hover:bg-card/60"
-                  : isSelected
-                    ? "border-primary shadow-[0_0_18px_oklch(0.7_0.22_70_/_0.35)] bg-card"
-                    : "border-border bg-card/40 hover:border-primary/50 hover:bg-card/60",
-            ].join(" ")}
+            className="relative flex flex-col items-start gap-1.5 p-3 rounded-xl text-left transition-all duration-300 border overflow-hidden"
+            style={{
+              background: isSelected
+                ? accentColor.replace(")", " / 0.12)")
+                : "oklch(0.18 0.02 280 / 0.5)",
+              borderColor: isSelected
+                ? accentColor.replace(")", " / 0.7)")
+                : "oklch(0.32 0.02 280 / 0.6)",
+              boxShadow: isSelected
+                ? `0 0 18px ${accentColor.replace(")", " / 0.25)")}`
+                : "none",
+            }}
           >
-            {/* Admin shimmer overlay */}
-            {isAdmin && (
+            {/* Admin shimmer */}
+            {isAdmin && !registrationMode && (
               <motion.span
                 className="absolute inset-0 pointer-events-none"
                 style={{
                   background:
-                    "linear-gradient(110deg, transparent 30%, oklch(0.85 0.18 85 / 0.12) 50%, transparent 70%)",
+                    "linear-gradient(110deg, transparent 25%, oklch(0.85 0.18 85 / 0.12) 50%, transparent 75%)",
                   backgroundSize: "200% 100%",
                 }}
                 animate={{ backgroundPosition: ["200% 0", "-200% 0"] }}
                 transition={{
-                  duration: 3,
+                  duration: 2.5,
                   repeat: Number.POSITIVE_INFINITY,
                   ease: "linear",
-                  repeatDelay: 1.5,
+                  repeatDelay: 2,
                 }}
                 aria-hidden="true"
               />
@@ -206,64 +218,48 @@ export function RoleSelector({
             {isSelected && (
               <motion.div
                 layoutId="role-highlight"
-                className="absolute inset-0 rounded-xl"
-                style={{
-                  background: isAdmin
-                    ? "oklch(0.8 0.18 85 / 0.10)"
-                    : "oklch(0.7 0.22 70 / 0.08)",
-                }}
+                className="absolute inset-0 rounded-xl pointer-events-none"
+                style={{ background: accentColor.replace(")", " / 0.05)") }}
               />
             )}
 
+            {/* Icon */}
             <span
-              className={[
-                "relative z-10 transition-colors duration-300",
-                isAdmin
-                  ? isSelected
-                    ? "text-yellow-400"
-                    : "text-yellow-500/80"
-                  : isSelected
-                    ? "text-primary"
-                    : "text-muted-foreground",
-              ].join(" ")}
+              className="relative z-10 transition-colors duration-300"
+              style={{
+                color: isSelected ? accentColor : "oklch(0.55 0.01 280)",
+              }}
             >
               {option.icon}
             </span>
 
-            <div className="relative z-10 min-w-0">
+            <div className="relative z-10 min-w-0 w-full">
               <div
-                className={[
-                  "font-semibold text-sm leading-tight transition-colors duration-300",
-                  isAdmin
-                    ? isSelected
-                      ? "text-yellow-400"
-                      : "text-yellow-500/90"
-                    : isSelected
-                      ? "text-primary"
-                      : "text-foreground",
-                ].join(" ")}
+                className="font-semibold text-xs leading-tight transition-colors duration-300"
+                style={{
+                  color: isSelected ? accentColor : "oklch(0.82 0.008 280)",
+                }}
               >
                 {option.label}
               </div>
-              <div className="text-xs text-muted-foreground mt-0.5 leading-snug">
+              <div className="text-[11px] text-muted-foreground mt-0.5 leading-snug">
                 {option.description}
               </div>
             </div>
 
-            {/* Selected checkmark */}
+            {/* Checkmark */}
             {isSelected && (
               <motion.div
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                className={[
-                  "absolute top-2.5 right-2.5 w-5 h-5 rounded-full flex items-center justify-center z-10",
-                  isAdmin ? "bg-yellow-500" : "bg-primary",
-                ].join(" ")}
+                initial={{ scale: 0, rotate: -90 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: "spring", stiffness: 400, damping: 20 }}
+                className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center z-10"
+                style={{ background: accentColor }}
               >
                 <svg
                   viewBox="0 0 24 24"
                   fill="currentColor"
-                  className="w-3 h-3 text-black"
+                  className="w-2.5 h-2.5 text-black"
                   aria-hidden="true"
                 >
                   <title>Selected</title>
@@ -276,11 +272,15 @@ export function RoleSelector({
               </motion.div>
             )}
 
-            {/* Admin crown badge */}
-            {isAdmin && !isSelected && (
+            {/* Admin OWNER badge */}
+            {isAdmin && !isSelected && !registrationMode && (
               <span
-                className="absolute top-2 right-2 text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-yellow-500/50 text-yellow-500/80"
-                style={{ background: "oklch(0.85 0.18 85 / 0.08)" }}
+                className="absolute top-1.5 right-1.5 text-[9px] font-bold px-1 py-0.5 rounded leading-none"
+                style={{
+                  background: "oklch(0.78 0.2 85 / 0.1)",
+                  border: "1px solid oklch(0.78 0.2 85 / 0.35)",
+                  color: "oklch(0.78 0.2 85 / 0.8)",
+                }}
               >
                 OWNER
               </span>

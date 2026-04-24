@@ -27,26 +27,53 @@ const SERVICE_HIGHLIGHTS = [
 ];
 
 const OWNERS = [
-  { name: "Ruchitha B S", role: "Co-Founder & Lead Photographer" },
-  { name: "Ashitha S", role: "Co-Founder & Videography Director" },
-  { name: "Prarthana R", role: "Co-Founder & Creative Director" },
+  {
+    name: "Ruchitha B S",
+    role: "Co-Founder & Lead Photographer",
+    initial: "R",
+  },
+  {
+    name: "Ashitha S",
+    role: "Co-Founder & Videography Director",
+    initial: "A",
+  },
+  { name: "Prarthana R", role: "Co-Founder & Creative Director", initial: "P" },
 ];
+
+const WHATSAPP_SVG = (
+  <svg viewBox="0 0 24 24" className="w-4 h-4 fill-current" aria-hidden="true">
+    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
+  </svg>
+);
 
 export function Footer() {
   return (
-    <footer className="bg-card border-t border-border/30" aria-label="Footer">
-      {/* Owners Section */}
-      <div className="bg-muted/30 border-b border-border/20">
-        <div className="container mx-auto px-4 py-12">
+    <footer
+      className="border-t border-border/30"
+      style={{ background: "oklch(0.11 0.015 280)" }}
+      aria-label="Footer"
+    >
+      {/* Founders Section */}
+      <div
+        className="border-b border-border/20"
+        style={{ background: "oklch(0.13 0.018 280)" }}
+      >
+        <div className="container mx-auto px-4 py-14">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-center mb-8"
+            className="text-center mb-10"
           >
             <p className="section-label mb-2">Meet the Founders</p>
             <h3 className="font-display text-2xl font-bold text-foreground">
-              The Vision Behind RAP Studio
+              The Vision Behind{" "}
+              <span
+                className="bg-clip-text text-transparent"
+                style={{ backgroundImage: "var(--gradient-gold)" }}
+              >
+                RAP Studio
+              </span>
             </h3>
           </motion.div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 max-w-3xl mx-auto">
@@ -57,17 +84,17 @@ export function Footer() {
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 transition={{ delay: i * 0.1 }}
-                className="flex flex-col items-center text-center"
+                className="flex flex-col items-center text-center group"
               >
-                <div className="w-20 h-20 rounded-full gradient-gold flex items-center justify-center mb-3 shadow-luxury relative overflow-hidden">
-                  <span className="font-display font-bold text-xl text-background">
-                    {owner.name.charAt(0)}
+                <div
+                  className="w-20 h-20 rounded-full flex items-center justify-center mb-3 shadow-luxury relative overflow-hidden group-hover:scale-105 transition-smooth"
+                  style={{ background: "var(--gradient-gold)" }}
+                >
+                  <span className="font-display font-bold text-2xl text-background">
+                    {owner.initial}
                   </span>
                   <div className="absolute inset-0 bg-gradient-to-br from-transparent to-black/20" />
                 </div>
-                <p className="text-xs text-muted-foreground mb-1 italic">
-                  Photo coming soon
-                </p>
                 <h4 className="font-display font-semibold text-foreground">
                   {owner.name}
                 </h4>
@@ -109,22 +136,27 @@ export function Footer() {
                 href="https://wa.me/917338501228"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 rounded-lg bg-[#25D366]/10 border border-[#25D366]/30 flex items-center justify-center text-[#25D366] hover:bg-[#25D366]/20 transition-smooth"
+                className="w-9 h-9 rounded-lg flex items-center justify-center transition-smooth hover:scale-110"
+                style={{
+                  background: "oklch(0.6 0.18 155 / 0.1)",
+                  border: "1px solid oklch(0.6 0.18 155 / 0.3)",
+                  color: "oklch(0.65 0.18 155)",
+                }}
+                aria-label="WhatsApp"
+                data-ocid="footer.whatsapp.link"
               >
                 <span className="sr-only">WhatsApp</span>
-                <svg
-                  viewBox="0 0 24 24"
-                  className="w-4 h-4 fill-current"
-                  aria-hidden="true"
-                >
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                </svg>
+                {WHATSAPP_SVG}
               </a>
               <a
                 href="https://instagram.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 rounded-lg bg-card/40 border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-smooth"
+                className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-primary transition-smooth hover:scale-110"
+                style={{
+                  background: "oklch(var(--card) / 0.4)",
+                  border: "1px solid oklch(var(--border) / 0.4)",
+                }}
                 aria-label="Instagram"
               >
                 <Instagram className="w-4 h-4" />
@@ -133,7 +165,11 @@ export function Footer() {
                 href="https://youtube.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 rounded-lg bg-card/40 border border-border flex items-center justify-center text-muted-foreground hover:text-primary hover:border-primary transition-smooth"
+                className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-primary transition-smooth hover:scale-110"
+                style={{
+                  background: "oklch(var(--card) / 0.4)",
+                  border: "1px solid oklch(var(--border) / 0.4)",
+                }}
                 aria-label="YouTube"
               >
                 <Youtube className="w-4 h-4" />
@@ -151,8 +187,9 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     to={link.href}
-                    className="text-sm text-muted-foreground hover:text-primary transition-smooth"
+                    className="text-sm text-muted-foreground hover:text-primary transition-smooth flex items-center gap-1.5 group"
                   >
+                    <span className="w-1 h-1 rounded-full bg-primary/30 group-hover:bg-primary transition-smooth" />
                     {link.label}
                   </Link>
                 </li>
@@ -161,8 +198,9 @@ export function Footer() {
                 <Link
                   to="/verify/$code"
                   params={{ code: "sample" }}
-                  className="text-sm text-muted-foreground hover:text-primary transition-smooth"
+                  className="text-sm text-muted-foreground hover:text-primary transition-smooth flex items-center gap-1.5 group"
                 >
+                  <span className="w-1 h-1 rounded-full bg-primary/30 group-hover:bg-primary transition-smooth" />
                   Verify Certificate
                 </Link>
               </li>
@@ -179,8 +217,9 @@ export function Footer() {
                 <li key={service}>
                   <Link
                     to="/services"
-                    className="text-sm text-muted-foreground hover:text-primary transition-smooth"
+                    className="text-sm text-muted-foreground hover:text-primary transition-smooth flex items-center gap-1.5 group"
                   >
+                    <span className="w-1 h-1 rounded-full bg-primary/30 group-hover:bg-primary transition-smooth" />
                     {service}
                   </Link>
                 </li>
@@ -198,7 +237,13 @@ export function Footer() {
                 href="mailto:ruchithabs550@gmail.com"
                 className="flex items-start gap-3 group"
               >
-                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center mt-0.5 flex-shrink-0">
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center mt-0.5 flex-shrink-0"
+                  style={{
+                    background: "oklch(0.7 0.22 70 / 0.1)",
+                    border: "1px solid oklch(0.7 0.22 70 / 0.25)",
+                  }}
+                >
                   <svg
                     viewBox="0 0 24 24"
                     className="w-4 h-4 fill-current text-primary"
@@ -214,43 +259,57 @@ export function Footer() {
                   <p className="text-xs text-muted-foreground">Email us</p>
                 </div>
               </a>
+
               <a
                 href="https://wa.me/917338501228"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 group"
                 aria-label="Chat on WhatsApp"
-                data-ocid="footer-whatsapp-link"
+                data-ocid="footer.whatsapp.button"
               >
-                <div className="w-8 h-8 rounded-lg bg-[#25D366]/10 flex items-center justify-center flex-shrink-0">
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="w-4 h-4 fill-[#25D366]"
-                    aria-hidden="true"
-                  >
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-                  </svg>
+                <div
+                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{
+                    background: "oklch(0.6 0.18 155 / 0.1)",
+                    border: "1px solid oklch(0.6 0.18 155 / 0.25)",
+                  }}
+                >
+                  <span style={{ color: "oklch(0.65 0.18 155)" }}>
+                    {WHATSAPP_SVG}
+                  </span>
                 </div>
-                <p className="text-sm text-foreground group-hover:text-[#25D366] transition-smooth">
+                <p className="text-sm text-foreground group-hover:text-primary transition-smooth">
                   Chat on WhatsApp
                 </p>
               </a>
-              <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
-                <p className="text-xs text-primary font-semibold mb-1">
-                  All Services & Courses
+
+              <div
+                className="p-3 rounded-lg"
+                style={{
+                  background: "oklch(0.7 0.22 70 / 0.06)",
+                  border: "1px solid oklch(0.7 0.22 70 / 0.2)",
+                }}
+              >
+                <p
+                  className="text-xs font-semibold mb-1"
+                  style={{ color: "oklch(0.7 0.22 70)" }}
+                >
+                  Book a Session
                 </p>
-                <p className="text-xl font-display font-bold text-primary">
-                  ₹5
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Min booking: ₹2 upfront
+                <p className="text-sm text-muted-foreground">
+                  Customized pricing shared at booking — tailored to your needs.
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        <Separator className="my-8 bg-border/30" />
+        {/* Divider */}
+        <div className="my-8 relative">
+          <Separator className="bg-border/20" />
+          <div className="absolute left-1/2 -translate-x-1/2 -top-2 w-4 h-4 rounded-full gradient-gold shadow-glow-gold" />
+        </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">

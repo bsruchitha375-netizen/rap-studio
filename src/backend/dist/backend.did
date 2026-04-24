@@ -22,6 +22,15 @@ type _ImmutableObjectStorageCreateCertificateResult =
    blob_hash: text;
    method: text;
  };
+type WhatsAppLog = 
+ record {
+   createdAt: Timestamp;
+   id: nat;
+   message: text;
+   phone: text;
+   relatedId: opt text;
+   sent: bool;
+ };
 type UserStatus = 
  variant {
    Active;
@@ -79,6 +88,11 @@ type SubService =
    id: text;
    name: text;
  };
+type StripeConfirmation = 
+ record {
+   stripePaymentIntentId: text;
+   stripeSessionId: text;
+ };
 type SlotStatus = 
  variant {
    Available;
@@ -110,17 +124,11 @@ type PaymentVerificationStatus =
  record {
    orderId: text;
    paymentId: PaymentId;
-   razorpayOrderId: text;
-   razorpayPaymentId: opt text;
    signatureVerified: bool;
    status: PaymentStatus;
+   stripePaymentIntentId: opt text;
+   stripeSessionId: opt text;
    verifiedAt: opt Timestamp;
- };
-type PaymentVerification = 
- record {
-   razorpayOrderId: text;
-   razorpayPaymentId: text;
-   razorpaySignature: text;
  };
 type PaymentType = 
  variant {
@@ -142,6 +150,16 @@ type PaymentStatus =
    Paid;
    Refunded;
  };
+type PaymentReceiptDetails = 
+ record {
+   amount: nat;
+   clientEmail: text;
+   clientPhone: text;
+   currency: text;
+   paidAt: text;
+   paymentId: text;
+   referenceId: text;
+ };
 type PaymentOrderExtended = 
  record {
    adminNotes: opt text;
@@ -161,18 +179,20 @@ type PaymentOrderExtended =
  };
 type PaymentOrder = 
  record {
+   adminNotes: opt text;
    amount: nat;
+   checkoutUrl: opt text;
    createdAt: Timestamp;
    currency: text;
    id: PaymentId;
    orderId: text;
    paidAt: opt Timestamp;
    paymentType: PaymentType;
-   razorpayOrderId: text;
-   razorpayPaymentId: opt text;
    referenceId: text;
    signatureVerified: bool;
    status: PaymentStatus;
+   stripePaymentIntentId: opt text;
+   stripeSessionId: opt text;
    userId: UserId;
    verifiedAt: opt Timestamp;
  };
@@ -185,10 +205,13 @@ type PaymentAdminAction =
  };
 type NotificationType = 
  variant {
+   BookingCompleted;
    BookingConfirmed;
+   BookingReminder;
+   CourseCompleted;
    CourseEnrolled;
    GeneralInfo;
-   PaymentRequired;
+   PaymentReceipt;
    WorkDelivered;
  };
 type NotificationRecord = 
@@ -279,6 +302,7 @@ type EmailLog =
    createdAt: Timestamp;
    id: nat;
    relatedId: opt text;
+   sent: bool;
    subject: text;
    to: text;
  };
@@ -402,6 +426,26 @@ type BookingInput =
    timeSlot: TimeSlot;
  };
 type BookingId = nat;
+type BookingDetails = 
+ record {
+   bookingId: text;
+   clientEmail: text;
+   clientPhone: text;
+   date: text;
+   location: text;
+   serviceName: text;
+   time: text;
+   totalAmount: nat;
+ };
+type AdminPaymentEntry = 
+ record {
+   bookingId: opt BookingId;
+   clientName: text;
+   clientPhone: text;
+   enrollmentId: opt EnrollmentId;
+   order: PaymentOrder;
+   serviceId: opt text;
+ };
 service : {
   _immutableObjectStorageBlobsAreLive: (hashes: vec blob) -> (vec bool) query;
   _immutableObjectStorageBlobsToDelete: () -> (vec blob) query;
@@ -415,10 +459,16 @@ service : {
   _initializeAccessControl: () -> ();
   addFeedback: (targetId: text, targetType: FeedbackTargetType, rating: 
    nat, comment: text) -> (Feedback);
+  adminAdjustAmount: (paymentId: PaymentId, newAmount: nat, note: text) ->
+   (bool);
+  adminConfirmPayment: (paymentId: PaymentId, note: text) -> (bool);
+  adminGetAllPayments: () -> (vec PaymentOrder) query;
+  adminRefundPayment: (paymentId: PaymentId, note: text) -> (bool);
   adminUpdatePayment: (paymentId: PaymentId, action: PaymentAdminAction,
    adminNote: opt text) -> (bool);
   assignCallerUserRole: (user: principal, role: UserRole__1) -> ();
   confirmBooking: (bookingId: BookingId) -> (bool);
+  confirmPayment: (confirmation: StripeConfirmation) -> (bool);
   createBookingRequest: (input: BookingInput) -> (BookingRequest);
   createMultiServiceBooking: (input: MultiServiceBookingInput) -> (BookingId);
   createPaymentOrder: (amount: nat, referenceId: text, paymentType:
@@ -430,13 +480,13 @@ service : {
   deleteSubServiceImage: (categoryId: text, subServiceId: text) -> ();
   enrollCourse: (courseId: CourseId) -> (CourseEnrollment);
   generateCertificate: (enrollmentId: EnrollmentId) -> (Certificate);
+  getAdminPaymentDashboard: () -> (vec AdminPaymentEntry) query;
   getAdminPayments: () -> (vec PaymentOrderExtended);
   getAllBookings: () -> (vec BookingRequest) query;
   getAllCmsContent: () -> (vec CmsContent) query;
   getAllCourses: () -> (vec Course) query;
   getAllEnrollments: () -> (vec CourseEnrollment) query;
   getAllFeedback: () -> (vec Feedback) query;
-  getAllPayments: () -> (vec PaymentOrder) query;
   getAllSubServiceImages: () -> (vec record {
                                        text;
                                        text;
@@ -456,21 +506,18 @@ service : {
   getMyFeedback: () -> (vec Feedback) query;
   getMyMultiServiceBookings: () -> (vec MultiServiceBooking) query;
   getMyNotifications: () -> (vec NotificationRecord) query;
-  getMyPayments: () -> (vec PaymentOrder) query;
   getMyProfile: () -> (opt UserProfile) query;
   getPaymentDetails: (paymentId: PaymentId) ->
    (opt PaymentOrderExtended) query;
-  getPaymentVerificationStatus: (internalPaymentId: nat) ->
+  getPaymentStatus: (internalPaymentId: nat) ->
    (opt PaymentVerificationStatus) query;
   getPublicCalendar: () -> (vec BookingSlot) query;
   getServiceCategories: () -> (vec ServiceCategory) query;
   getSubServiceImage: (categoryId: text, subServiceId: text) ->
    (opt text) query;
+  getWhatsAppLogs: () -> (vec WhatsAppLog) query;
   isCallerAdmin: () -> (bool) query;
-  logBookingConfirmedEmail: (toAddress: text, bookingId: text, serviceName:
-   text, date: text) -> (EmailLog);
-  logEnrollmentConfirmedEmail: (toAddress: text, enrollmentId: text,
-   courseTitle: text) -> (EmailLog);
+  listMyPayments: () -> (vec PaymentOrder) query;
   manageUser: (userId: UserId, action: text) -> (bool);
   markEnrollmentPaid: (enrollmentId: EnrollmentId) -> (bool);
   markNotificationRead: (notificationId: NotificationId) -> (bool);
@@ -478,16 +525,23 @@ service : {
   register: (name: text, phone: text, role: UserRole) -> (UserProfile);
   respondToFeedback: (feedbackId: nat, responderComment: text) -> (bool);
   saveCallerUserProfile: (name: text, phone: text, role: UserRole) -> ();
-  sendWhatsAppNotification: (phone: text, message: text) -> (bool);
+  sendBookingConfirmation: (userId: UserId, details: BookingDetails) ->
+   (bool);
+  sendCompletionMessage: (userId: UserId, details: BookingDetails,
+   feedbackLink: text) -> (bool);
+  sendPaymentReceipt: (userId: UserId, details: PaymentReceiptDetails) ->
+   (bool);
+  sendProgressReminder: (userId: UserId, details: BookingDetails) -> (bool);
   setCmsContent: (key: text, value: text, contentType: CmsContentType) -> ();
   setFeatured: (mediaId: MediaId, featured: bool) -> (bool);
   setSubServiceImage: (categoryId: text, subServiceId: text, imageUrl:
    text) -> ();
   transform: (input: TransformationInput) -> (TransformationOutput) query;
+  transformWhatsApp: (input: TransformationInput) ->
+   (TransformationOutput) query;
   triggerPaymentRequest: (bookingId: BookingId, paymentType: text) -> (text);
   updateCourseProgress: (courseId: CourseId, completed: bool) -> (bool);
   updateProfile: (name: text, phone: text) -> (bool);
   uploadMedia: (input: MediaInput) -> (MediaItem);
   verifyCertificate: (code: text) -> (bool) query;
-  verifyPayment: (verification: PaymentVerification) -> (bool);
 }
