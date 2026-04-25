@@ -59,6 +59,12 @@ module {
     #FullDay;
   };
 
+  // Admin-configurable Stripe keys stored in canister state
+  public type StripeConfig = {
+    var publishableKey : Text;
+    var secretKey : Text;
+  };
+
   // Enriched entry for the admin payment dashboard
   public type AdminPaymentEntry = {
     order : PaymentOrder;

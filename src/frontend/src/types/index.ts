@@ -210,6 +210,52 @@ export interface FeedbackRecord {
   createdAt: bigint;
 }
 
+// ─── Course Learning (Lessons, Quiz, Progress) ───────────────────────────────
+
+export interface Lesson {
+  id: number;
+  courseId: number;
+  title: string;
+  description: string;
+  youtubeUrl: string;
+  order: number;
+  quizQuestions: QuizQuestion[];
+}
+
+export interface QuizQuestion {
+  id: number;
+  lessonId: number;
+  question: string;
+  options: string[];
+  correctOptionIndex: number;
+}
+
+export interface LessonProgress {
+  studentId: string;
+  lessonId: number;
+  videoWatched: boolean;
+  quizScore?: number;
+  quizPassed: boolean;
+  completedAt?: number;
+}
+
+export interface CourseLessonProgress {
+  studentId: string;
+  courseId: number;
+  completedLessonIds: number[];
+  currentLessonId?: number;
+  overallPercent: number;
+  certificateEarned: boolean;
+}
+
+export interface QuizResult {
+  lessonId: number;
+  score: number;
+  totalQuestions: number;
+  passed: boolean;
+  courseProgress: CourseLessonProgress;
+}
+
 // ─── Media ───────────────────────────────────────────────────────────────────
 
 export interface MediaItem {

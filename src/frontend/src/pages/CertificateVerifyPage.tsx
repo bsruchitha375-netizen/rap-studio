@@ -4,22 +4,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useParams } from "@tanstack/react-router";
 import { AlertTriangle, Award, CheckCircle2 } from "lucide-react";
 import { motion } from "motion/react";
-import { useEffect, useState } from "react";
 import { Layout } from "../components/layout/Layout";
-import type { Certificate } from "../types";
+import { useGetCertificate } from "../hooks/useBackend";
 
-const DEMO_CERT: Certificate = {
-  code: "RAP-CERT-2024",
-  studentName: "Ruchitha B S",
-  courseName: "Wedding Photography Mastery",
-  issuedAt: BigInt(Date.now() * 1_000_000),
-  isValid: true,
-};
-
-function QRPlaceholder({ data }: { data: string }) {
+function QRCode({ data }: { data: string }) {
   const encoded = encodeURIComponent(data);
   const src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encoded}&bgcolor=ffffff&color=1a1a2e&margin=2`;
-
   return (
     <img
       src={src}
@@ -34,32 +24,19 @@ function QRPlaceholder({ data }: { data: string }) {
 
 export function CertificateVerifyPage() {
   const { code } = useParams({ from: "/verify/$code" });
-  const [certificate, setCertificate] = useState<Certificate | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
 
-  useEffect(() => {
-    async function fetchCert() {
-      setIsLoading(true);
-      await new Promise((r) => setTimeout(r, 900));
-
-      if (code && code.length > 3) {
-        setCertificate({ ...DEMO_CERT, code });
-        setNotFound(false);
-      } else {
-        setNotFound(true);
-      }
-      setIsLoading(false);
-    }
-    fetchCert();
-  }, [code]);
+  const {
+    data: certificate,
+    isLoading,
+    isError,
+  } = useGetCertificate(code ?? "");
 
   const verifyUrl =
     typeof window !== "undefined"
       ? `${window.location.origin}/verify/${code}`
       : `/verify/${code}`;
 
-  const issuedDate = certificate
+  const issuedDate = certificate?.issuedAt
     ? new Date(
         Number(certificate.issuedAt / BigInt(1_000_000)),
       ).toLocaleDateString("en-IN", {
@@ -69,22 +46,25 @@ export function CertificateVerifyPage() {
       })
     : "";
 
+  const isNotFound =
+    !isLoading && !isError && (!certificate || !certificate.isValid);
+
   return (
     <Layout>
       <div className="container mx-auto px-4 py-16 max-w-3xl">
         {isLoading && (
-          <div className="space-y-6" data-ocid="cert-loading">
+          <div className="space-y-6" data-ocid="cert-loading.loading_state">
             <Skeleton className="h-10 w-48 mx-auto" />
             <Skeleton className="h-64 rounded-2xl" />
           </div>
         )}
 
-        {!isLoading && (notFound || !certificate || !certificate.isValid) && (
+        {!isLoading && (isError || isNotFound) && (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="text-center py-20 space-y-6"
-            data-ocid="cert-not-found"
+            data-ocid="cert-not-found.error_state"
           >
             <div className="w-20 h-20 rounded-full bg-destructive/10 border border-destructive/30 flex items-center justify-center mx-auto">
               <AlertTriangle className="w-10 h-10 text-destructive" />
@@ -112,12 +92,12 @@ export function CertificateVerifyPage() {
           </motion.div>
         )}
 
-        {!isLoading && certificate && certificate.isValid && (
+        {!isLoading && !isError && certificate && certificate.isValid && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
-            data-ocid="cert-valid"
+            data-ocid="cert-valid.success_state"
           >
             {/* Verified banner */}
             <div className="text-center mb-8 space-y-3">
@@ -192,7 +172,7 @@ export function CertificateVerifyPage() {
                   </div>
 
                   <div className="flex flex-col items-center gap-2">
-                    <QRPlaceholder data={verifyUrl} />
+                    <QRCode data={verifyUrl} />
                     <p className="text-xs text-muted-foreground text-center">
                       Scan to verify
                     </p>
@@ -205,9 +185,9 @@ export function CertificateVerifyPage() {
                     <span className="text-primary font-medium">
                       RAP Integrated Studio Management
                     </span>{" "}
-                    · Founders: Ruchitha B S, Ashitha S & Prarthana R
+                    · Founders: Ruchitha B S, Ashitha S &amp; Prarthana R
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1 font-mono">
+                  <p className="text-xs text-muted-foreground mt-1 font-mono break-all">
                     {verifyUrl}
                   </p>
                 </div>

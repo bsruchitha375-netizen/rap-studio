@@ -35,7 +35,126 @@ export const Feedback = IDL.Record({
   'rating' : IDL.Nat,
   'targetId' : IDL.Text,
 });
+export const CourseId = IDL.Nat;
+export const LessonInput = IDL.Record({
+  'title' : IDL.Text,
+  'order' : IDL.Nat,
+  'description' : IDL.Text,
+  'youtubeUrl' : IDL.Text,
+  'courseId' : CourseId,
+});
+export const QuizQuestion = IDL.Record({
+  'id' : IDL.Nat,
+  'lessonId' : IDL.Nat,
+  'question' : IDL.Text,
+  'correctOptionIndex' : IDL.Nat,
+  'options' : IDL.Vec(IDL.Text),
+});
+export const Lesson = IDL.Record({
+  'id' : IDL.Nat,
+  'title' : IDL.Text,
+  'order' : IDL.Nat,
+  'description' : IDL.Text,
+  'quizQuestions' : IDL.Vec(QuizQuestion),
+  'youtubeUrl' : IDL.Text,
+  'courseId' : CourseId,
+});
+export const QuizQuestionInput = IDL.Record({
+  'lessonId' : IDL.Nat,
+  'question' : IDL.Text,
+  'correctOptionIndex' : IDL.Nat,
+  'options' : IDL.Vec(IDL.Text),
+});
+export const CourseStatus = IDL.Variant({
+  'Inactive' : IDL.Null,
+  'Active' : IDL.Null,
+  'ComingSoon' : IDL.Null,
+});
+export const CourseMode = IDL.Variant({
+  'Online' : IDL.Null,
+  'Offline' : IDL.Null,
+  'Hybrid' : IDL.Null,
+});
+export const AdminCourseInput = IDL.Record({
+  'status' : CourseStatus,
+  'title' : IDL.Text,
+  'duration' : IDL.Text,
+  'imageData' : IDL.Vec(IDL.Nat8),
+  'prerequisites' : IDL.Vec(IDL.Text),
+  'mode' : CourseMode,
+  'description' : IDL.Text,
+  'category' : IDL.Text,
+  'price' : IDL.Nat,
+});
+export const AdminCourse = IDL.Record({
+  'id' : CourseId,
+  'status' : CourseStatus,
+  'title' : IDL.Text,
+  'duration' : IDL.Text,
+  'imageBlob' : IDL.Opt(IDL.Vec(IDL.Nat8)),
+  'prerequisites' : IDL.Vec(IDL.Text),
+  'mode' : CourseMode,
+  'createdAt' : Timestamp,
+  'description' : IDL.Text,
+  'category' : IDL.Text,
+  'price' : IDL.Nat,
+});
+export const SubService = IDL.Record({ 'id' : IDL.Text, 'name' : IDL.Text });
+export const AdminServiceInput = IDL.Record({
+  'imageData' : IDL.Vec(IDL.Nat8),
+  'subServices' : IDL.Vec(SubService),
+  'icon' : IDL.Text,
+  'name' : IDL.Text,
+  'description' : IDL.Text,
+});
+export const ServiceId = IDL.Nat;
+export const AdminServiceCategory = IDL.Record({
+  'id' : ServiceId,
+  'imageBlob' : IDL.Opt(IDL.Vec(IDL.Nat8)),
+  'subServices' : IDL.Vec(SubService),
+  'icon' : IDL.Text,
+  'name' : IDL.Text,
+  'createdAt' : Timestamp,
+  'description' : IDL.Text,
+});
 export const PaymentId = IDL.Nat;
+export const UserRole = IDL.Variant({
+  'Staff' : IDL.Null,
+  'Client' : IDL.Null,
+  'Student' : IDL.Null,
+  'Receptionist' : IDL.Null,
+  'Admin' : IDL.Null,
+});
+export const StudentDetails = IDL.Record({
+  'learningMode' : IDL.Text,
+  'preferredSlot' : IDL.Text,
+  'courseType' : IDL.Text,
+});
+export const UserStatus = IDL.Variant({
+  'Active' : IDL.Null,
+  'Suspended' : IDL.Null,
+  'Rejected' : IDL.Null,
+  'Pending' : IDL.Null,
+});
+export const PublicProfile = IDL.Record({
+  'id' : UserId,
+  'status' : UserStatus,
+  'name' : IDL.Text,
+  'role' : UserRole,
+  'studentDetails' : IDL.Opt(StudentDetails),
+  'email' : IDL.Text,
+  'address' : IDL.Opt(IDL.Text),
+  'phone' : IDL.Text,
+  'registeredAt' : Timestamp,
+});
+export const CourseLessonProgress = IDL.Record({
+  'studentId' : UserId,
+  'overallPercent' : IDL.Nat,
+  'completedLessonIds' : IDL.Vec(IDL.Nat),
+  'certificateEarned' : IDL.Bool,
+  'currentLessonId' : IDL.Opt(IDL.Nat),
+  'courseId' : CourseId,
+});
 export const PaymentStatus = IDL.Variant({
   'Failed' : IDL.Null,
   'Refunded' : IDL.Null,
@@ -76,6 +195,36 @@ export const UserRole__1 = IDL.Variant({
   'guest' : IDL.Null,
 });
 export const BookingId = IDL.Nat;
+export const WorkAssignmentInput = IDL.Record({
+  'bookingId' : BookingId,
+  'sessionDate' : IDL.Text,
+  'staffId' : UserId,
+  'sessionType' : IDL.Text,
+  'notes' : IDL.Opt(IDL.Text),
+});
+export const AssignmentStatus = IDL.Variant({
+  'Delivered' : IDL.Null,
+  'Approved' : IDL.Null,
+  'InProgress' : IDL.Null,
+  'Assigned' : IDL.Null,
+});
+export const Deliverable = IDL.Record({
+  'submittedAt' : Timestamp,
+  'fileName' : IDL.Text,
+  'fileUrl' : IDL.Text,
+});
+export const WorkAssignment = IDL.Record({
+  'id' : IDL.Nat,
+  'status' : AssignmentStatus,
+  'bookingId' : BookingId,
+  'assignedAt' : Timestamp,
+  'sessionDate' : IDL.Text,
+  'staffId' : UserId,
+  'clientName' : IDL.Text,
+  'sessionType' : IDL.Text,
+  'notes' : IDL.Opt(IDL.Text),
+  'deliverables' : IDL.Vec(Deliverable),
+});
 export const StripeConfirmation = IDL.Record({
   'stripePaymentIntentId' : IDL.Text,
   'stripeSessionId' : IDL.Text,
@@ -106,6 +255,7 @@ export const BookingInput = IDL.Record({
 export const BookingStatus = IDL.Variant({
   'WorkDelivered' : IDL.Null,
   'Confirmed' : IDL.Null,
+  'Rejected' : IDL.Null,
   'PaymentPending' : IDL.Null,
   'Cancelled' : IDL.Null,
   'Completed' : IDL.Null,
@@ -115,9 +265,12 @@ export const BookingRequest = IDL.Record({
   'id' : BookingId,
   'status' : BookingStatus,
   'duration' : IDL.Text,
+  'rejectedReason' : IDL.Opt(IDL.Text),
   'userId' : UserId,
   'date' : IDL.Text,
   'createdAt' : Timestamp,
+  'rescheduledDate' : IDL.Opt(IDL.Text),
+  'rescheduledTime' : IDL.Opt(IDL.Text),
   'subService' : IDL.Text,
   'notes' : IDL.Opt(IDL.Text),
   'serviceId' : IDL.Text,
@@ -158,7 +311,6 @@ export const NotificationRecord = IDL.Record({
   'message' : IDL.Text,
 });
 export const MediaId = IDL.Nat;
-export const CourseId = IDL.Nat;
 export const EnrollmentId = IDL.Nat;
 export const PaymentStatus__1 = IDL.Variant({
   'PartiallyPaid' : IDL.Null,
@@ -211,6 +363,21 @@ export const PaymentOrderExtended = IDL.Record({
   'adminNotes' : IDL.Opt(IDL.Text),
   'paidAt' : IDL.Opt(Timestamp),
 });
+export const ActivityEventKind = IDL.Variant({
+  'Login' : IDL.Null,
+  'Registration' : IDL.Null,
+  'Booking' : IDL.Null,
+  'Enrollment' : IDL.Null,
+  'Payment' : IDL.Null,
+});
+export const ActivityEvent = IDL.Record({
+  'id' : IDL.Text,
+  'title' : IDL.Text,
+  'userId' : UserId,
+  'kind' : ActivityEventKind,
+  'detail' : IDL.Text,
+  'timestamp' : Timestamp,
+});
 export const CmsContentType = IDL.Variant({
   'color' : IDL.Null,
   'text' : IDL.Null,
@@ -222,16 +389,6 @@ export const CmsContent = IDL.Record({
   'value' : IDL.Text,
   'updatedAt' : Timestamp,
   'updatedBy' : UserId,
-});
-export const CourseStatus = IDL.Variant({
-  'Inactive' : IDL.Null,
-  'Active' : IDL.Null,
-  'ComingSoon' : IDL.Null,
-});
-export const CourseMode = IDL.Variant({
-  'Online' : IDL.Null,
-  'Offline' : IDL.Null,
-  'Hybrid' : IDL.Null,
 });
 export const Course = IDL.Record({
   'id' : CourseId,
@@ -245,34 +402,13 @@ export const Course = IDL.Record({
   'category' : IDL.Text,
   'price' : IDL.Nat,
 });
-export const UserStatus = IDL.Variant({
-  'Active' : IDL.Null,
-  'Suspended' : IDL.Null,
-  'Pending' : IDL.Null,
-});
-export const UserRole = IDL.Variant({
-  'Staff' : IDL.Null,
-  'Client' : IDL.Null,
-  'Student' : IDL.Null,
-  'Receptionist' : IDL.Null,
-  'Admin' : IDL.Null,
-});
-export const UserProfile = IDL.Record({
-  'status' : UserStatus,
-  'created' : Timestamp,
-  'principal' : UserId,
-  'name' : IDL.Text,
-  'role' : UserRole,
-  'email' : IDL.Opt(IDL.Text),
-  'phone' : IDL.Text,
-});
 export const ServiceRevenue = IDL.Record({
   'serviceName' : IDL.Text,
   'revenue' : IDL.Nat,
   'serviceId' : IDL.Text,
   'bookingCount' : IDL.Nat,
 });
-export const BookingStats = IDL.Record({
+export const AnalyticsSummary = IDL.Record({
   'pendingFeedbackCount' : IDL.Nat,
   'pendingBookings' : IDL.Nat,
   'totalEnrollments' : IDL.Nat,
@@ -284,6 +420,7 @@ export const BookingStats = IDL.Record({
   'totalFeedback' : IDL.Nat,
   'confirmedBookings' : IDL.Nat,
   'completedBookings' : IDL.Nat,
+  'totalUsers' : IDL.Nat,
   'totalRevenue' : IDL.Nat,
   'totalCmsEntries' : IDL.Nat,
   'revenueByService' : IDL.Vec(ServiceRevenue),
@@ -296,6 +433,14 @@ export const EmailLog = IDL.Record({
   'createdAt' : Timestamp,
   'sent' : IDL.Bool,
   'relatedId' : IDL.Opt(IDL.Text),
+});
+export const LessonProgress = IDL.Record({
+  'lessonId' : IDL.Nat,
+  'completedAt' : IDL.Opt(IDL.Int),
+  'studentId' : UserId,
+  'quizScore' : IDL.Opt(IDL.Nat),
+  'videoWatched' : IDL.Bool,
+  'quizPassed' : IDL.Bool,
 });
 export const ExternalBlob = IDL.Vec(IDL.Nat8);
 export const FileType = IDL.Variant({ 'Photo' : IDL.Null, 'Video' : IDL.Null });
@@ -340,7 +485,6 @@ export const BookingSlot = IDL.Record({
   'date' : IDL.Text,
   'timeSlot' : TimeSlot,
 });
-export const SubService = IDL.Record({ 'id' : IDL.Text, 'name' : IDL.Text });
 export const ServiceCategory = IDL.Record({
   'id' : IDL.Text,
   'subServices' : IDL.Vec(SubService),
@@ -355,6 +499,14 @@ export const WhatsAppLog = IDL.Record({
   'message' : IDL.Text,
   'phone' : IDL.Text,
   'relatedId' : IDL.Opt(IDL.Text),
+});
+export const LoginError = IDL.Variant({
+  'lockedOut' : IDL.Null,
+  'other' : IDL.Text,
+  'pendingApproval' : IDL.Null,
+  'notFound' : IDL.Null,
+  'incorrectPassword' : IDL.Null,
+  'suspended' : IDL.Null,
 });
 export const BookingDetails = IDL.Record({
   'serviceName' : IDL.Text,
@@ -374,6 +526,13 @@ export const PaymentReceiptDetails = IDL.Record({
   'paymentId' : IDL.Text,
   'amount' : IDL.Nat,
   'paidAt' : IDL.Text,
+});
+export const QuizResult = IDL.Record({
+  'lessonId' : IDL.Nat,
+  'score' : IDL.Nat,
+  'totalQuestions' : IDL.Nat,
+  'passed' : IDL.Bool,
+  'courseProgress' : CourseLessonProgress,
 });
 export const http_header = IDL.Record({
   'value' : IDL.Text,
@@ -433,20 +592,56 @@ export const idlService = IDL.Service({
       [Feedback],
       [],
     ),
+  'addLesson' : IDL.Func([LessonInput], [Lesson], []),
+  'addQuizQuestion' : IDL.Func([QuizQuestionInput], [Lesson], []),
+  'adminAddCourse' : IDL.Func([AdminCourseInput], [AdminCourse], []),
+  'adminAddService' : IDL.Func([AdminServiceInput], [AdminServiceCategory], []),
   'adminAdjustAmount' : IDL.Func(
       [PaymentId, IDL.Nat, IDL.Text],
       [IDL.Bool],
       [],
     ),
   'adminConfirmPayment' : IDL.Func([PaymentId, IDL.Text], [IDL.Bool], []),
+  'adminCreateUser' : IDL.Func(
+      [
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        UserRole,
+        IDL.Opt(IDL.Text),
+        IDL.Opt(StudentDetails),
+      ],
+      [IDL.Variant({ 'ok' : PublicProfile, 'err' : IDL.Text })],
+      [],
+    ),
+  'adminDeleteCourse' : IDL.Func([CourseId], [IDL.Bool], []),
+  'adminDeleteService' : IDL.Func([ServiceId], [IDL.Bool], []),
+  'adminGetAllCourseProgress' : IDL.Func(
+      [],
+      [IDL.Vec(CourseLessonProgress)],
+      ['query'],
+    ),
   'adminGetAllPayments' : IDL.Func([], [IDL.Vec(PaymentOrder)], ['query']),
   'adminRefundPayment' : IDL.Func([PaymentId, IDL.Text], [IDL.Bool], []),
+  'adminUpdateCourse' : IDL.Func([CourseId, AdminCourseInput], [IDL.Bool], []),
   'adminUpdatePayment' : IDL.Func(
       [PaymentId, PaymentAdminAction, IDL.Opt(IDL.Text)],
       [IDL.Bool],
       [],
     ),
+  'adminUpdateService' : IDL.Func(
+      [ServiceId, AdminServiceInput],
+      [IDL.Bool],
+      [],
+    ),
+  'approveUser' : IDL.Func(
+      [UserId],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole__1], [], []),
+  'assignWork' : IDL.Func([WorkAssignmentInput], [WorkAssignment], []),
   'confirmBooking' : IDL.Func([BookingId], [IDL.Bool], []),
   'confirmPayment' : IDL.Func([StripeConfirmation], [IDL.Bool], []),
   'createBookingRequest' : IDL.Func([BookingInput], [BookingRequest], []),
@@ -468,38 +663,87 @@ export const idlService = IDL.Service({
   'deleteCmsContent' : IDL.Func([IDL.Text], [], []),
   'deleteMedia' : IDL.Func([MediaId], [IDL.Bool], []),
   'deleteSubServiceImage' : IDL.Func([IDL.Text, IDL.Text], [], []),
+  'deleteUser' : IDL.Func(
+      [UserId],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'editLesson' : IDL.Func([IDL.Nat, LessonInput], [IDL.Bool], []),
+  'editQuizQuestion' : IDL.Func([IDL.Nat, QuizQuestionInput], [IDL.Bool], []),
   'enrollCourse' : IDL.Func([CourseId], [CourseEnrollment], []),
   'generateCertificate' : IDL.Func([EnrollmentId], [Certificate], []),
+  'getAdminCourseBlob' : IDL.Func(
+      [CourseId],
+      [IDL.Opt(IDL.Vec(IDL.Nat8))],
+      ['query'],
+    ),
   'getAdminPaymentDashboard' : IDL.Func(
       [],
       [IDL.Vec(AdminPaymentEntry)],
       ['query'],
     ),
   'getAdminPayments' : IDL.Func([], [IDL.Vec(PaymentOrderExtended)], []),
+  'getAdminServiceBlob' : IDL.Func(
+      [ServiceId],
+      [IDL.Opt(IDL.Vec(IDL.Nat8))],
+      ['query'],
+    ),
+  'getAdminUsers' : IDL.Func([], [IDL.Vec(PublicProfile)], ['query']),
+  'getAllActivityEvents' : IDL.Func([], [IDL.Vec(ActivityEvent)], ['query']),
+  'getAllAdminCourses' : IDL.Func([], [IDL.Vec(AdminCourse)], ['query']),
+  'getAllAdminServices' : IDL.Func(
+      [],
+      [IDL.Vec(AdminServiceCategory)],
+      ['query'],
+    ),
   'getAllBookings' : IDL.Func([], [IDL.Vec(BookingRequest)], ['query']),
   'getAllCmsContent' : IDL.Func([], [IDL.Vec(CmsContent)], ['query']),
   'getAllCourses' : IDL.Func([], [IDL.Vec(Course)], ['query']),
   'getAllEnrollments' : IDL.Func([], [IDL.Vec(CourseEnrollment)], ['query']),
   'getAllFeedback' : IDL.Func([], [IDL.Vec(Feedback)], ['query']),
+  'getAllPayments' : IDL.Func([], [IDL.Vec(PaymentOrder)], ['query']),
   'getAllSubServiceImages' : IDL.Func(
       [],
       [IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text))],
       ['query'],
     ),
-  'getAllUsers' : IDL.Func([], [IDL.Vec(UserProfile)], ['query']),
-  'getAnalytics' : IDL.Func([], [BookingStats], ['query']),
-  'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+  'getAllUsers' : IDL.Func([], [IDL.Vec(PublicProfile)], ['query']),
+  'getAllWorkAssignments' : IDL.Func([], [IDL.Vec(WorkAssignment)], ['query']),
+  'getAnalytics' : IDL.Func([], [AnalyticsSummary], ['query']),
+  'getBookingsByDate' : IDL.Func(
+      [IDL.Text],
+      [IDL.Vec(BookingRequest)],
+      ['query'],
+    ),
+  'getCallerUserProfile' : IDL.Func([], [IDL.Opt(PublicProfile)], ['query']),
   'getCallerUserRole' : IDL.Func([], [UserRole__1], ['query']),
   'getCertificate' : IDL.Func([IDL.Text], [IDL.Opt(Certificate)], ['query']),
   'getCmsContent' : IDL.Func([IDL.Text], [IDL.Opt(CmsContent)], ['query']),
   'getCourse' : IDL.Func([CourseId], [IDL.Opt(Course)], ['query']),
+  'getCourseProgress' : IDL.Func(
+      [CourseId],
+      [IDL.Opt(CourseLessonProgress)],
+      ['query'],
+    ),
   'getEmailLogs' : IDL.Func([], [IDL.Vec(EmailLog)], ['query']),
+  'getEnrollmentById' : IDL.Func(
+      [EnrollmentId],
+      [IDL.Opt(CourseEnrollment)],
+      ['query'],
+    ),
   'getFeedbackForTarget' : IDL.Func([IDL.Text], [IDL.Vec(Feedback)], ['query']),
+  'getLessonProgressForCourse' : IDL.Func(
+      [CourseId],
+      [IDL.Vec(LessonProgress)],
+      ['query'],
+    ),
+  'getLessons' : IDL.Func([CourseId], [IDL.Vec(Lesson)], ['query']),
   'getMediaItems' : IDL.Func(
       [IDL.Opt(IDL.Text)],
       [IDL.Vec(MediaItem)],
       ['query'],
     ),
+  'getMyAssignedWork' : IDL.Func([], [IDL.Vec(WorkAssignment)], ['query']),
   'getMyBookings' : IDL.Func([], [IDL.Vec(BookingRequest)], ['query']),
   'getMyEnrollments' : IDL.Func([], [IDL.Vec(CourseEnrollment)], ['query']),
   'getMyFeedback' : IDL.Func([], [IDL.Vec(Feedback)], ['query']),
@@ -509,7 +753,9 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'getMyNotifications' : IDL.Func([], [IDL.Vec(NotificationRecord)], ['query']),
-  'getMyProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+  'getMyPayments' : IDL.Func([], [IDL.Vec(PaymentOrder)], ['query']),
+  'getMyProfile' : IDL.Func([], [IDL.Opt(PublicProfile)], ['query']),
+  'getMyUploadedWork' : IDL.Func([], [IDL.Vec(WorkAssignment)], ['query']),
   'getPaymentDetails' : IDL.Func(
       [PaymentId],
       [IDL.Opt(PaymentOrderExtended)],
@@ -521,20 +767,85 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'getPublicCalendar' : IDL.Func([], [IDL.Vec(BookingSlot)], ['query']),
+  'getPublicProfile' : IDL.Func(
+      [IDL.Text],
+      [IDL.Opt(PublicProfile)],
+      ['query'],
+    ),
+  'getRecentActivity' : IDL.Func([], [IDL.Vec(ActivityEvent)], ['query']),
   'getServiceCategories' : IDL.Func([], [IDL.Vec(ServiceCategory)], ['query']),
+  'getStripeConfig' : IDL.Func(
+      [],
+      [
+        IDL.Record({
+          'secretKey' : IDL.Text,
+          'configured' : IDL.Bool,
+          'publishableKey' : IDL.Text,
+        }),
+      ],
+      ['query'],
+    ),
   'getSubServiceImage' : IDL.Func(
       [IDL.Text, IDL.Text],
       [IDL.Opt(IDL.Text)],
       ['query'],
     ),
+  'getSubServiceImageBlob' : IDL.Func(
+      [IDL.Text, IDL.Text],
+      [IDL.Opt(IDL.Vec(IDL.Nat8))],
+      ['query'],
+    ),
   'getWhatsAppLogs' : IDL.Func([], [IDL.Vec(WhatsAppLog)], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
   'listMyPayments' : IDL.Func([], [IDL.Vec(PaymentOrder)], ['query']),
+  'listPendingUsers' : IDL.Func([], [IDL.Vec(PublicProfile)], ['query']),
+  'loginByEmail' : IDL.Func(
+      [IDL.Text, IDL.Text],
+      [IDL.Variant({ 'ok' : PublicProfile, 'err' : LoginError })],
+      [],
+    ),
+  'loginByIdentifier' : IDL.Func(
+      [IDL.Text, IDL.Text],
+      [IDL.Variant({ 'ok' : PublicProfile, 'err' : LoginError })],
+      [],
+    ),
   'manageUser' : IDL.Func([UserId, IDL.Text], [IDL.Bool], []),
+  'markCourseComplete' : IDL.Func(
+      [EnrollmentId],
+      [IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text })],
+      [],
+    ),
   'markEnrollmentPaid' : IDL.Func([EnrollmentId], [IDL.Bool], []),
   'markNotificationRead' : IDL.Func([NotificationId], [IDL.Bool], []),
+  'markVideoWatched' : IDL.Func([IDL.Nat], [LessonProgress], []),
   'markWorkDelivered' : IDL.Func([BookingId], [IDL.Bool], []),
-  'register' : IDL.Func([IDL.Text, IDL.Text, UserRole], [UserProfile], []),
+  'register' : IDL.Func(
+      [
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        IDL.Text,
+        UserRole,
+        IDL.Opt(IDL.Text),
+        IDL.Opt(IDL.Vec(IDL.Nat8)),
+        IDL.Opt(StudentDetails),
+      ],
+      [IDL.Variant({ 'ok' : PublicProfile, 'err' : IDL.Text })],
+      [],
+    ),
+  'rejectBooking' : IDL.Func([BookingId, IDL.Text], [IDL.Bool], []),
+  'rejectUser' : IDL.Func(
+      [UserId],
+      [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+      [],
+    ),
+  'removeLesson' : IDL.Func([IDL.Nat], [IDL.Bool], []),
+  'removeQuizQuestion' : IDL.Func([IDL.Nat], [IDL.Bool], []),
+  'rescheduleBooking' : IDL.Func(
+      [BookingId, IDL.Text, IDL.Text],
+      [IDL.Bool],
+      [],
+    ),
   'respondToFeedback' : IDL.Func([IDL.Nat, IDL.Text], [IDL.Bool], []),
   'saveCallerUserProfile' : IDL.Func([IDL.Text, IDL.Text, UserRole], [], []),
   'sendBookingConfirmation' : IDL.Func(
@@ -555,7 +866,19 @@ export const idlService = IDL.Service({
   'sendProgressReminder' : IDL.Func([UserId, BookingDetails], [IDL.Bool], []),
   'setCmsContent' : IDL.Func([IDL.Text, IDL.Text, CmsContentType], [], []),
   'setFeatured' : IDL.Func([MediaId, IDL.Bool], [IDL.Bool], []),
+  'setStripeKeys' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
   'setSubServiceImage' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [], []),
+  'submitDeliverable' : IDL.Func([IDL.Nat, IDL.Text, IDL.Text], [IDL.Bool], []),
+  'submitQuiz' : IDL.Func(
+      [IDL.Nat, IDL.Vec(IDL.Nat)],
+      [IDL.Variant({ 'ok' : QuizResult, 'err' : IDL.Text })],
+      [],
+    ),
+  'testStripeConnection' : IDL.Func(
+      [],
+      [IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text })],
+      [],
+    ),
   'transform' : IDL.Func(
       [TransformationInput],
       [TransformationOutput],
@@ -567,9 +890,23 @@ export const idlService = IDL.Service({
       ['query'],
     ),
   'triggerPaymentRequest' : IDL.Func([BookingId, IDL.Text], [IDL.Text], []),
+  'updateAssignmentStatus' : IDL.Func(
+      [IDL.Nat, AssignmentStatus],
+      [IDL.Bool],
+      [],
+    ),
   'updateCourseProgress' : IDL.Func([CourseId, IDL.Bool], [IDL.Bool], []),
-  'updateProfile' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
+  'updateProfile' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Opt(IDL.Text)],
+      [IDL.Bool],
+      [],
+    ),
   'uploadMedia' : IDL.Func([MediaInput], [MediaItem], []),
+  'uploadSubServiceImage' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Vec(IDL.Nat8)],
+      [],
+      [],
+    ),
   'verifyCertificate' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
 });
 
@@ -603,7 +940,126 @@ export const idlFactory = ({ IDL }) => {
     'rating' : IDL.Nat,
     'targetId' : IDL.Text,
   });
+  const CourseId = IDL.Nat;
+  const LessonInput = IDL.Record({
+    'title' : IDL.Text,
+    'order' : IDL.Nat,
+    'description' : IDL.Text,
+    'youtubeUrl' : IDL.Text,
+    'courseId' : CourseId,
+  });
+  const QuizQuestion = IDL.Record({
+    'id' : IDL.Nat,
+    'lessonId' : IDL.Nat,
+    'question' : IDL.Text,
+    'correctOptionIndex' : IDL.Nat,
+    'options' : IDL.Vec(IDL.Text),
+  });
+  const Lesson = IDL.Record({
+    'id' : IDL.Nat,
+    'title' : IDL.Text,
+    'order' : IDL.Nat,
+    'description' : IDL.Text,
+    'quizQuestions' : IDL.Vec(QuizQuestion),
+    'youtubeUrl' : IDL.Text,
+    'courseId' : CourseId,
+  });
+  const QuizQuestionInput = IDL.Record({
+    'lessonId' : IDL.Nat,
+    'question' : IDL.Text,
+    'correctOptionIndex' : IDL.Nat,
+    'options' : IDL.Vec(IDL.Text),
+  });
+  const CourseStatus = IDL.Variant({
+    'Inactive' : IDL.Null,
+    'Active' : IDL.Null,
+    'ComingSoon' : IDL.Null,
+  });
+  const CourseMode = IDL.Variant({
+    'Online' : IDL.Null,
+    'Offline' : IDL.Null,
+    'Hybrid' : IDL.Null,
+  });
+  const AdminCourseInput = IDL.Record({
+    'status' : CourseStatus,
+    'title' : IDL.Text,
+    'duration' : IDL.Text,
+    'imageData' : IDL.Vec(IDL.Nat8),
+    'prerequisites' : IDL.Vec(IDL.Text),
+    'mode' : CourseMode,
+    'description' : IDL.Text,
+    'category' : IDL.Text,
+    'price' : IDL.Nat,
+  });
+  const AdminCourse = IDL.Record({
+    'id' : CourseId,
+    'status' : CourseStatus,
+    'title' : IDL.Text,
+    'duration' : IDL.Text,
+    'imageBlob' : IDL.Opt(IDL.Vec(IDL.Nat8)),
+    'prerequisites' : IDL.Vec(IDL.Text),
+    'mode' : CourseMode,
+    'createdAt' : Timestamp,
+    'description' : IDL.Text,
+    'category' : IDL.Text,
+    'price' : IDL.Nat,
+  });
+  const SubService = IDL.Record({ 'id' : IDL.Text, 'name' : IDL.Text });
+  const AdminServiceInput = IDL.Record({
+    'imageData' : IDL.Vec(IDL.Nat8),
+    'subServices' : IDL.Vec(SubService),
+    'icon' : IDL.Text,
+    'name' : IDL.Text,
+    'description' : IDL.Text,
+  });
+  const ServiceId = IDL.Nat;
+  const AdminServiceCategory = IDL.Record({
+    'id' : ServiceId,
+    'imageBlob' : IDL.Opt(IDL.Vec(IDL.Nat8)),
+    'subServices' : IDL.Vec(SubService),
+    'icon' : IDL.Text,
+    'name' : IDL.Text,
+    'createdAt' : Timestamp,
+    'description' : IDL.Text,
+  });
   const PaymentId = IDL.Nat;
+  const UserRole = IDL.Variant({
+    'Staff' : IDL.Null,
+    'Client' : IDL.Null,
+    'Student' : IDL.Null,
+    'Receptionist' : IDL.Null,
+    'Admin' : IDL.Null,
+  });
+  const StudentDetails = IDL.Record({
+    'learningMode' : IDL.Text,
+    'preferredSlot' : IDL.Text,
+    'courseType' : IDL.Text,
+  });
+  const UserStatus = IDL.Variant({
+    'Active' : IDL.Null,
+    'Suspended' : IDL.Null,
+    'Rejected' : IDL.Null,
+    'Pending' : IDL.Null,
+  });
+  const PublicProfile = IDL.Record({
+    'id' : UserId,
+    'status' : UserStatus,
+    'name' : IDL.Text,
+    'role' : UserRole,
+    'studentDetails' : IDL.Opt(StudentDetails),
+    'email' : IDL.Text,
+    'address' : IDL.Opt(IDL.Text),
+    'phone' : IDL.Text,
+    'registeredAt' : Timestamp,
+  });
+  const CourseLessonProgress = IDL.Record({
+    'studentId' : UserId,
+    'overallPercent' : IDL.Nat,
+    'completedLessonIds' : IDL.Vec(IDL.Nat),
+    'certificateEarned' : IDL.Bool,
+    'currentLessonId' : IDL.Opt(IDL.Nat),
+    'courseId' : CourseId,
+  });
   const PaymentStatus = IDL.Variant({
     'Failed' : IDL.Null,
     'Refunded' : IDL.Null,
@@ -644,6 +1100,36 @@ export const idlFactory = ({ IDL }) => {
     'guest' : IDL.Null,
   });
   const BookingId = IDL.Nat;
+  const WorkAssignmentInput = IDL.Record({
+    'bookingId' : BookingId,
+    'sessionDate' : IDL.Text,
+    'staffId' : UserId,
+    'sessionType' : IDL.Text,
+    'notes' : IDL.Opt(IDL.Text),
+  });
+  const AssignmentStatus = IDL.Variant({
+    'Delivered' : IDL.Null,
+    'Approved' : IDL.Null,
+    'InProgress' : IDL.Null,
+    'Assigned' : IDL.Null,
+  });
+  const Deliverable = IDL.Record({
+    'submittedAt' : Timestamp,
+    'fileName' : IDL.Text,
+    'fileUrl' : IDL.Text,
+  });
+  const WorkAssignment = IDL.Record({
+    'id' : IDL.Nat,
+    'status' : AssignmentStatus,
+    'bookingId' : BookingId,
+    'assignedAt' : Timestamp,
+    'sessionDate' : IDL.Text,
+    'staffId' : UserId,
+    'clientName' : IDL.Text,
+    'sessionType' : IDL.Text,
+    'notes' : IDL.Opt(IDL.Text),
+    'deliverables' : IDL.Vec(Deliverable),
+  });
   const StripeConfirmation = IDL.Record({
     'stripePaymentIntentId' : IDL.Text,
     'stripeSessionId' : IDL.Text,
@@ -674,6 +1160,7 @@ export const idlFactory = ({ IDL }) => {
   const BookingStatus = IDL.Variant({
     'WorkDelivered' : IDL.Null,
     'Confirmed' : IDL.Null,
+    'Rejected' : IDL.Null,
     'PaymentPending' : IDL.Null,
     'Cancelled' : IDL.Null,
     'Completed' : IDL.Null,
@@ -683,9 +1170,12 @@ export const idlFactory = ({ IDL }) => {
     'id' : BookingId,
     'status' : BookingStatus,
     'duration' : IDL.Text,
+    'rejectedReason' : IDL.Opt(IDL.Text),
     'userId' : UserId,
     'date' : IDL.Text,
     'createdAt' : Timestamp,
+    'rescheduledDate' : IDL.Opt(IDL.Text),
+    'rescheduledTime' : IDL.Opt(IDL.Text),
     'subService' : IDL.Text,
     'notes' : IDL.Opt(IDL.Text),
     'serviceId' : IDL.Text,
@@ -726,7 +1216,6 @@ export const idlFactory = ({ IDL }) => {
     'message' : IDL.Text,
   });
   const MediaId = IDL.Nat;
-  const CourseId = IDL.Nat;
   const EnrollmentId = IDL.Nat;
   const PaymentStatus__1 = IDL.Variant({
     'PartiallyPaid' : IDL.Null,
@@ -779,6 +1268,21 @@ export const idlFactory = ({ IDL }) => {
     'adminNotes' : IDL.Opt(IDL.Text),
     'paidAt' : IDL.Opt(Timestamp),
   });
+  const ActivityEventKind = IDL.Variant({
+    'Login' : IDL.Null,
+    'Registration' : IDL.Null,
+    'Booking' : IDL.Null,
+    'Enrollment' : IDL.Null,
+    'Payment' : IDL.Null,
+  });
+  const ActivityEvent = IDL.Record({
+    'id' : IDL.Text,
+    'title' : IDL.Text,
+    'userId' : UserId,
+    'kind' : ActivityEventKind,
+    'detail' : IDL.Text,
+    'timestamp' : Timestamp,
+  });
   const CmsContentType = IDL.Variant({
     'color' : IDL.Null,
     'text' : IDL.Null,
@@ -790,16 +1294,6 @@ export const idlFactory = ({ IDL }) => {
     'value' : IDL.Text,
     'updatedAt' : Timestamp,
     'updatedBy' : UserId,
-  });
-  const CourseStatus = IDL.Variant({
-    'Inactive' : IDL.Null,
-    'Active' : IDL.Null,
-    'ComingSoon' : IDL.Null,
-  });
-  const CourseMode = IDL.Variant({
-    'Online' : IDL.Null,
-    'Offline' : IDL.Null,
-    'Hybrid' : IDL.Null,
   });
   const Course = IDL.Record({
     'id' : CourseId,
@@ -813,34 +1307,13 @@ export const idlFactory = ({ IDL }) => {
     'category' : IDL.Text,
     'price' : IDL.Nat,
   });
-  const UserStatus = IDL.Variant({
-    'Active' : IDL.Null,
-    'Suspended' : IDL.Null,
-    'Pending' : IDL.Null,
-  });
-  const UserRole = IDL.Variant({
-    'Staff' : IDL.Null,
-    'Client' : IDL.Null,
-    'Student' : IDL.Null,
-    'Receptionist' : IDL.Null,
-    'Admin' : IDL.Null,
-  });
-  const UserProfile = IDL.Record({
-    'status' : UserStatus,
-    'created' : Timestamp,
-    'principal' : UserId,
-    'name' : IDL.Text,
-    'role' : UserRole,
-    'email' : IDL.Opt(IDL.Text),
-    'phone' : IDL.Text,
-  });
   const ServiceRevenue = IDL.Record({
     'serviceName' : IDL.Text,
     'revenue' : IDL.Nat,
     'serviceId' : IDL.Text,
     'bookingCount' : IDL.Nat,
   });
-  const BookingStats = IDL.Record({
+  const AnalyticsSummary = IDL.Record({
     'pendingFeedbackCount' : IDL.Nat,
     'pendingBookings' : IDL.Nat,
     'totalEnrollments' : IDL.Nat,
@@ -852,6 +1325,7 @@ export const idlFactory = ({ IDL }) => {
     'totalFeedback' : IDL.Nat,
     'confirmedBookings' : IDL.Nat,
     'completedBookings' : IDL.Nat,
+    'totalUsers' : IDL.Nat,
     'totalRevenue' : IDL.Nat,
     'totalCmsEntries' : IDL.Nat,
     'revenueByService' : IDL.Vec(ServiceRevenue),
@@ -864,6 +1338,14 @@ export const idlFactory = ({ IDL }) => {
     'createdAt' : Timestamp,
     'sent' : IDL.Bool,
     'relatedId' : IDL.Opt(IDL.Text),
+  });
+  const LessonProgress = IDL.Record({
+    'lessonId' : IDL.Nat,
+    'completedAt' : IDL.Opt(IDL.Int),
+    'studentId' : UserId,
+    'quizScore' : IDL.Opt(IDL.Nat),
+    'videoWatched' : IDL.Bool,
+    'quizPassed' : IDL.Bool,
   });
   const ExternalBlob = IDL.Vec(IDL.Nat8);
   const FileType = IDL.Variant({ 'Photo' : IDL.Null, 'Video' : IDL.Null });
@@ -908,7 +1390,6 @@ export const idlFactory = ({ IDL }) => {
     'date' : IDL.Text,
     'timeSlot' : TimeSlot,
   });
-  const SubService = IDL.Record({ 'id' : IDL.Text, 'name' : IDL.Text });
   const ServiceCategory = IDL.Record({
     'id' : IDL.Text,
     'subServices' : IDL.Vec(SubService),
@@ -923,6 +1404,14 @@ export const idlFactory = ({ IDL }) => {
     'message' : IDL.Text,
     'phone' : IDL.Text,
     'relatedId' : IDL.Opt(IDL.Text),
+  });
+  const LoginError = IDL.Variant({
+    'lockedOut' : IDL.Null,
+    'other' : IDL.Text,
+    'pendingApproval' : IDL.Null,
+    'notFound' : IDL.Null,
+    'incorrectPassword' : IDL.Null,
+    'suspended' : IDL.Null,
   });
   const BookingDetails = IDL.Record({
     'serviceName' : IDL.Text,
@@ -942,6 +1431,13 @@ export const idlFactory = ({ IDL }) => {
     'paymentId' : IDL.Text,
     'amount' : IDL.Nat,
     'paidAt' : IDL.Text,
+  });
+  const QuizResult = IDL.Record({
+    'lessonId' : IDL.Nat,
+    'score' : IDL.Nat,
+    'totalQuestions' : IDL.Nat,
+    'passed' : IDL.Bool,
+    'courseProgress' : CourseLessonProgress,
   });
   const http_header = IDL.Record({ 'value' : IDL.Text, 'name' : IDL.Text });
   const http_request_result = IDL.Record({
@@ -998,20 +1494,64 @@ export const idlFactory = ({ IDL }) => {
         [Feedback],
         [],
       ),
+    'addLesson' : IDL.Func([LessonInput], [Lesson], []),
+    'addQuizQuestion' : IDL.Func([QuizQuestionInput], [Lesson], []),
+    'adminAddCourse' : IDL.Func([AdminCourseInput], [AdminCourse], []),
+    'adminAddService' : IDL.Func(
+        [AdminServiceInput],
+        [AdminServiceCategory],
+        [],
+      ),
     'adminAdjustAmount' : IDL.Func(
         [PaymentId, IDL.Nat, IDL.Text],
         [IDL.Bool],
         [],
       ),
     'adminConfirmPayment' : IDL.Func([PaymentId, IDL.Text], [IDL.Bool], []),
+    'adminCreateUser' : IDL.Func(
+        [
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          UserRole,
+          IDL.Opt(IDL.Text),
+          IDL.Opt(StudentDetails),
+        ],
+        [IDL.Variant({ 'ok' : PublicProfile, 'err' : IDL.Text })],
+        [],
+      ),
+    'adminDeleteCourse' : IDL.Func([CourseId], [IDL.Bool], []),
+    'adminDeleteService' : IDL.Func([ServiceId], [IDL.Bool], []),
+    'adminGetAllCourseProgress' : IDL.Func(
+        [],
+        [IDL.Vec(CourseLessonProgress)],
+        ['query'],
+      ),
     'adminGetAllPayments' : IDL.Func([], [IDL.Vec(PaymentOrder)], ['query']),
     'adminRefundPayment' : IDL.Func([PaymentId, IDL.Text], [IDL.Bool], []),
+    'adminUpdateCourse' : IDL.Func(
+        [CourseId, AdminCourseInput],
+        [IDL.Bool],
+        [],
+      ),
     'adminUpdatePayment' : IDL.Func(
         [PaymentId, PaymentAdminAction, IDL.Opt(IDL.Text)],
         [IDL.Bool],
         [],
       ),
+    'adminUpdateService' : IDL.Func(
+        [ServiceId, AdminServiceInput],
+        [IDL.Bool],
+        [],
+      ),
+    'approveUser' : IDL.Func(
+        [UserId],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole__1], [], []),
+    'assignWork' : IDL.Func([WorkAssignmentInput], [WorkAssignment], []),
     'confirmBooking' : IDL.Func([BookingId], [IDL.Bool], []),
     'confirmPayment' : IDL.Func([StripeConfirmation], [IDL.Bool], []),
     'createBookingRequest' : IDL.Func([BookingInput], [BookingRequest], []),
@@ -1033,42 +1573,95 @@ export const idlFactory = ({ IDL }) => {
     'deleteCmsContent' : IDL.Func([IDL.Text], [], []),
     'deleteMedia' : IDL.Func([MediaId], [IDL.Bool], []),
     'deleteSubServiceImage' : IDL.Func([IDL.Text, IDL.Text], [], []),
+    'deleteUser' : IDL.Func(
+        [UserId],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'editLesson' : IDL.Func([IDL.Nat, LessonInput], [IDL.Bool], []),
+    'editQuizQuestion' : IDL.Func([IDL.Nat, QuizQuestionInput], [IDL.Bool], []),
     'enrollCourse' : IDL.Func([CourseId], [CourseEnrollment], []),
     'generateCertificate' : IDL.Func([EnrollmentId], [Certificate], []),
+    'getAdminCourseBlob' : IDL.Func(
+        [CourseId],
+        [IDL.Opt(IDL.Vec(IDL.Nat8))],
+        ['query'],
+      ),
     'getAdminPaymentDashboard' : IDL.Func(
         [],
         [IDL.Vec(AdminPaymentEntry)],
         ['query'],
       ),
     'getAdminPayments' : IDL.Func([], [IDL.Vec(PaymentOrderExtended)], []),
+    'getAdminServiceBlob' : IDL.Func(
+        [ServiceId],
+        [IDL.Opt(IDL.Vec(IDL.Nat8))],
+        ['query'],
+      ),
+    'getAdminUsers' : IDL.Func([], [IDL.Vec(PublicProfile)], ['query']),
+    'getAllActivityEvents' : IDL.Func([], [IDL.Vec(ActivityEvent)], ['query']),
+    'getAllAdminCourses' : IDL.Func([], [IDL.Vec(AdminCourse)], ['query']),
+    'getAllAdminServices' : IDL.Func(
+        [],
+        [IDL.Vec(AdminServiceCategory)],
+        ['query'],
+      ),
     'getAllBookings' : IDL.Func([], [IDL.Vec(BookingRequest)], ['query']),
     'getAllCmsContent' : IDL.Func([], [IDL.Vec(CmsContent)], ['query']),
     'getAllCourses' : IDL.Func([], [IDL.Vec(Course)], ['query']),
     'getAllEnrollments' : IDL.Func([], [IDL.Vec(CourseEnrollment)], ['query']),
     'getAllFeedback' : IDL.Func([], [IDL.Vec(Feedback)], ['query']),
+    'getAllPayments' : IDL.Func([], [IDL.Vec(PaymentOrder)], ['query']),
     'getAllSubServiceImages' : IDL.Func(
         [],
         [IDL.Vec(IDL.Tuple(IDL.Text, IDL.Text))],
         ['query'],
       ),
-    'getAllUsers' : IDL.Func([], [IDL.Vec(UserProfile)], ['query']),
-    'getAnalytics' : IDL.Func([], [BookingStats], ['query']),
-    'getCallerUserProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+    'getAllUsers' : IDL.Func([], [IDL.Vec(PublicProfile)], ['query']),
+    'getAllWorkAssignments' : IDL.Func(
+        [],
+        [IDL.Vec(WorkAssignment)],
+        ['query'],
+      ),
+    'getAnalytics' : IDL.Func([], [AnalyticsSummary], ['query']),
+    'getBookingsByDate' : IDL.Func(
+        [IDL.Text],
+        [IDL.Vec(BookingRequest)],
+        ['query'],
+      ),
+    'getCallerUserProfile' : IDL.Func([], [IDL.Opt(PublicProfile)], ['query']),
     'getCallerUserRole' : IDL.Func([], [UserRole__1], ['query']),
     'getCertificate' : IDL.Func([IDL.Text], [IDL.Opt(Certificate)], ['query']),
     'getCmsContent' : IDL.Func([IDL.Text], [IDL.Opt(CmsContent)], ['query']),
     'getCourse' : IDL.Func([CourseId], [IDL.Opt(Course)], ['query']),
+    'getCourseProgress' : IDL.Func(
+        [CourseId],
+        [IDL.Opt(CourseLessonProgress)],
+        ['query'],
+      ),
     'getEmailLogs' : IDL.Func([], [IDL.Vec(EmailLog)], ['query']),
+    'getEnrollmentById' : IDL.Func(
+        [EnrollmentId],
+        [IDL.Opt(CourseEnrollment)],
+        ['query'],
+      ),
     'getFeedbackForTarget' : IDL.Func(
         [IDL.Text],
         [IDL.Vec(Feedback)],
         ['query'],
       ),
+    'getLessonProgressForCourse' : IDL.Func(
+        [CourseId],
+        [IDL.Vec(LessonProgress)],
+        ['query'],
+      ),
+    'getLessons' : IDL.Func([CourseId], [IDL.Vec(Lesson)], ['query']),
     'getMediaItems' : IDL.Func(
         [IDL.Opt(IDL.Text)],
         [IDL.Vec(MediaItem)],
         ['query'],
       ),
+    'getMyAssignedWork' : IDL.Func([], [IDL.Vec(WorkAssignment)], ['query']),
     'getMyBookings' : IDL.Func([], [IDL.Vec(BookingRequest)], ['query']),
     'getMyEnrollments' : IDL.Func([], [IDL.Vec(CourseEnrollment)], ['query']),
     'getMyFeedback' : IDL.Func([], [IDL.Vec(Feedback)], ['query']),
@@ -1082,7 +1675,9 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Vec(NotificationRecord)],
         ['query'],
       ),
-    'getMyProfile' : IDL.Func([], [IDL.Opt(UserProfile)], ['query']),
+    'getMyPayments' : IDL.Func([], [IDL.Vec(PaymentOrder)], ['query']),
+    'getMyProfile' : IDL.Func([], [IDL.Opt(PublicProfile)], ['query']),
+    'getMyUploadedWork' : IDL.Func([], [IDL.Vec(WorkAssignment)], ['query']),
     'getPaymentDetails' : IDL.Func(
         [PaymentId],
         [IDL.Opt(PaymentOrderExtended)],
@@ -1094,9 +1689,26 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'getPublicCalendar' : IDL.Func([], [IDL.Vec(BookingSlot)], ['query']),
+    'getPublicProfile' : IDL.Func(
+        [IDL.Text],
+        [IDL.Opt(PublicProfile)],
+        ['query'],
+      ),
+    'getRecentActivity' : IDL.Func([], [IDL.Vec(ActivityEvent)], ['query']),
     'getServiceCategories' : IDL.Func(
         [],
         [IDL.Vec(ServiceCategory)],
+        ['query'],
+      ),
+    'getStripeConfig' : IDL.Func(
+        [],
+        [
+          IDL.Record({
+            'secretKey' : IDL.Text,
+            'configured' : IDL.Bool,
+            'publishableKey' : IDL.Text,
+          }),
+        ],
         ['query'],
       ),
     'getSubServiceImage' : IDL.Func(
@@ -1104,14 +1716,62 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(IDL.Text)],
         ['query'],
       ),
+    'getSubServiceImageBlob' : IDL.Func(
+        [IDL.Text, IDL.Text],
+        [IDL.Opt(IDL.Vec(IDL.Nat8))],
+        ['query'],
+      ),
     'getWhatsAppLogs' : IDL.Func([], [IDL.Vec(WhatsAppLog)], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
     'listMyPayments' : IDL.Func([], [IDL.Vec(PaymentOrder)], ['query']),
+    'listPendingUsers' : IDL.Func([], [IDL.Vec(PublicProfile)], ['query']),
+    'loginByEmail' : IDL.Func(
+        [IDL.Text, IDL.Text],
+        [IDL.Variant({ 'ok' : PublicProfile, 'err' : LoginError })],
+        [],
+      ),
+    'loginByIdentifier' : IDL.Func(
+        [IDL.Text, IDL.Text],
+        [IDL.Variant({ 'ok' : PublicProfile, 'err' : LoginError })],
+        [],
+      ),
     'manageUser' : IDL.Func([UserId, IDL.Text], [IDL.Bool], []),
+    'markCourseComplete' : IDL.Func(
+        [EnrollmentId],
+        [IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text })],
+        [],
+      ),
     'markEnrollmentPaid' : IDL.Func([EnrollmentId], [IDL.Bool], []),
     'markNotificationRead' : IDL.Func([NotificationId], [IDL.Bool], []),
+    'markVideoWatched' : IDL.Func([IDL.Nat], [LessonProgress], []),
     'markWorkDelivered' : IDL.Func([BookingId], [IDL.Bool], []),
-    'register' : IDL.Func([IDL.Text, IDL.Text, UserRole], [UserProfile], []),
+    'register' : IDL.Func(
+        [
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          IDL.Text,
+          UserRole,
+          IDL.Opt(IDL.Text),
+          IDL.Opt(IDL.Vec(IDL.Nat8)),
+          IDL.Opt(StudentDetails),
+        ],
+        [IDL.Variant({ 'ok' : PublicProfile, 'err' : IDL.Text })],
+        [],
+      ),
+    'rejectBooking' : IDL.Func([BookingId, IDL.Text], [IDL.Bool], []),
+    'rejectUser' : IDL.Func(
+        [UserId],
+        [IDL.Variant({ 'ok' : IDL.Null, 'err' : IDL.Text })],
+        [],
+      ),
+    'removeLesson' : IDL.Func([IDL.Nat], [IDL.Bool], []),
+    'removeQuizQuestion' : IDL.Func([IDL.Nat], [IDL.Bool], []),
+    'rescheduleBooking' : IDL.Func(
+        [BookingId, IDL.Text, IDL.Text],
+        [IDL.Bool],
+        [],
+      ),
     'respondToFeedback' : IDL.Func([IDL.Nat, IDL.Text], [IDL.Bool], []),
     'saveCallerUserProfile' : IDL.Func([IDL.Text, IDL.Text, UserRole], [], []),
     'sendBookingConfirmation' : IDL.Func(
@@ -1132,7 +1792,23 @@ export const idlFactory = ({ IDL }) => {
     'sendProgressReminder' : IDL.Func([UserId, BookingDetails], [IDL.Bool], []),
     'setCmsContent' : IDL.Func([IDL.Text, IDL.Text, CmsContentType], [], []),
     'setFeatured' : IDL.Func([MediaId, IDL.Bool], [IDL.Bool], []),
+    'setStripeKeys' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
     'setSubServiceImage' : IDL.Func([IDL.Text, IDL.Text, IDL.Text], [], []),
+    'submitDeliverable' : IDL.Func(
+        [IDL.Nat, IDL.Text, IDL.Text],
+        [IDL.Bool],
+        [],
+      ),
+    'submitQuiz' : IDL.Func(
+        [IDL.Nat, IDL.Vec(IDL.Nat)],
+        [IDL.Variant({ 'ok' : QuizResult, 'err' : IDL.Text })],
+        [],
+      ),
+    'testStripeConnection' : IDL.Func(
+        [],
+        [IDL.Variant({ 'ok' : IDL.Text, 'err' : IDL.Text })],
+        [],
+      ),
     'transform' : IDL.Func(
         [TransformationInput],
         [TransformationOutput],
@@ -1144,9 +1820,23 @@ export const idlFactory = ({ IDL }) => {
         ['query'],
       ),
     'triggerPaymentRequest' : IDL.Func([BookingId, IDL.Text], [IDL.Text], []),
+    'updateAssignmentStatus' : IDL.Func(
+        [IDL.Nat, AssignmentStatus],
+        [IDL.Bool],
+        [],
+      ),
     'updateCourseProgress' : IDL.Func([CourseId, IDL.Bool], [IDL.Bool], []),
-    'updateProfile' : IDL.Func([IDL.Text, IDL.Text], [IDL.Bool], []),
+    'updateProfile' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Opt(IDL.Text)],
+        [IDL.Bool],
+        [],
+      ),
     'uploadMedia' : IDL.Func([MediaInput], [MediaItem], []),
+    'uploadSubServiceImage' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Vec(IDL.Nat8)],
+        [],
+        [],
+      ),
     'verifyCertificate' : IDL.Func([IDL.Text], [IDL.Bool], ['query']),
   });
 };

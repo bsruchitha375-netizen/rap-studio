@@ -10,6 +10,43 @@ import type { ActorMethod } from '@icp-sdk/core/agent';
 import type { IDL } from '@icp-sdk/core/candid';
 import type { Principal } from '@icp-sdk/core/principal';
 
+export interface ActivityEvent {
+  'id' : string,
+  'title' : string,
+  'userId' : UserId,
+  'kind' : ActivityEventKind,
+  'detail' : string,
+  'timestamp' : Timestamp,
+}
+export type ActivityEventKind = { 'Login' : null } |
+  { 'Registration' : null } |
+  { 'Booking' : null } |
+  { 'Enrollment' : null } |
+  { 'Payment' : null };
+export interface AdminCourse {
+  'id' : CourseId,
+  'status' : CourseStatus,
+  'title' : string,
+  'duration' : string,
+  'imageBlob' : [] | [Uint8Array],
+  'prerequisites' : Array<string>,
+  'mode' : CourseMode,
+  'createdAt' : Timestamp,
+  'description' : string,
+  'category' : string,
+  'price' : bigint,
+}
+export interface AdminCourseInput {
+  'status' : CourseStatus,
+  'title' : string,
+  'duration' : string,
+  'imageData' : Uint8Array,
+  'prerequisites' : Array<string>,
+  'mode' : CourseMode,
+  'description' : string,
+  'category' : string,
+  'price' : bigint,
+}
 export interface AdminPaymentEntry {
   'enrollmentId' : [] | [EnrollmentId],
   'bookingId' : [] | [BookingId],
@@ -18,6 +55,43 @@ export interface AdminPaymentEntry {
   'clientPhone' : string,
   'serviceId' : [] | [string],
 }
+export interface AdminServiceCategory {
+  'id' : ServiceId,
+  'imageBlob' : [] | [Uint8Array],
+  'subServices' : Array<SubService>,
+  'icon' : string,
+  'name' : string,
+  'createdAt' : Timestamp,
+  'description' : string,
+}
+export interface AdminServiceInput {
+  'imageData' : Uint8Array,
+  'subServices' : Array<SubService>,
+  'icon' : string,
+  'name' : string,
+  'description' : string,
+}
+export interface AnalyticsSummary {
+  'pendingFeedbackCount' : bigint,
+  'pendingBookings' : bigint,
+  'totalEnrollments' : bigint,
+  'emailLogCount' : bigint,
+  'cancelledBookings' : bigint,
+  'totalBookings' : bigint,
+  'totalCourseRevenue' : bigint,
+  'totalMultiServiceBookings' : bigint,
+  'totalFeedback' : bigint,
+  'confirmedBookings' : bigint,
+  'completedBookings' : bigint,
+  'totalUsers' : bigint,
+  'totalRevenue' : bigint,
+  'totalCmsEntries' : bigint,
+  'revenueByService' : Array<ServiceRevenue>,
+}
+export type AssignmentStatus = { 'Delivered' : null } |
+  { 'Approved' : null } |
+  { 'InProgress' : null } |
+  { 'Assigned' : null };
 export interface BookingDetails {
   'serviceName' : string,
   'bookingId' : string,
@@ -42,9 +116,12 @@ export interface BookingRequest {
   'id' : BookingId,
   'status' : BookingStatus,
   'duration' : string,
+  'rejectedReason' : [] | [string],
   'userId' : UserId,
   'date' : string,
   'createdAt' : Timestamp,
+  'rescheduledDate' : [] | [string],
+  'rescheduledTime' : [] | [string],
   'subService' : string,
   'notes' : [] | [string],
   'serviceId' : string,
@@ -56,24 +133,9 @@ export interface BookingSlot {
   'date' : string,
   'timeSlot' : TimeSlot,
 }
-export interface BookingStats {
-  'pendingFeedbackCount' : bigint,
-  'pendingBookings' : bigint,
-  'totalEnrollments' : bigint,
-  'emailLogCount' : bigint,
-  'cancelledBookings' : bigint,
-  'totalBookings' : bigint,
-  'totalCourseRevenue' : bigint,
-  'totalMultiServiceBookings' : bigint,
-  'totalFeedback' : bigint,
-  'confirmedBookings' : bigint,
-  'completedBookings' : bigint,
-  'totalRevenue' : bigint,
-  'totalCmsEntries' : bigint,
-  'revenueByService' : Array<ServiceRevenue>,
-}
 export type BookingStatus = { 'WorkDelivered' : null } |
   { 'Confirmed' : null } |
+  { 'Rejected' : null } |
   { 'PaymentPending' : null } |
   { 'Cancelled' : null } |
   { 'Completed' : null } |
@@ -122,12 +184,25 @@ export interface CourseEnrollment {
   'courseId' : CourseId,
 }
 export type CourseId = bigint;
+export interface CourseLessonProgress {
+  'studentId' : UserId,
+  'overallPercent' : bigint,
+  'completedLessonIds' : Array<bigint>,
+  'certificateEarned' : boolean,
+  'currentLessonId' : [] | [bigint],
+  'courseId' : CourseId,
+}
 export type CourseMode = { 'Online' : null } |
   { 'Offline' : null } |
   { 'Hybrid' : null };
 export type CourseStatus = { 'Inactive' : null } |
   { 'Active' : null } |
   { 'ComingSoon' : null };
+export interface Deliverable {
+  'submittedAt' : Timestamp,
+  'fileName' : string,
+  'fileUrl' : string,
+}
 export interface EmailLog {
   'id' : bigint,
   'to' : string,
@@ -153,10 +228,40 @@ export type FeedbackTargetType = { 'Course' : null } |
   { 'Service' : null };
 export type FileType = { 'Photo' : null } |
   { 'Video' : null };
+export interface Lesson {
+  'id' : bigint,
+  'title' : string,
+  'order' : bigint,
+  'description' : string,
+  'quizQuestions' : Array<QuizQuestion>,
+  'youtubeUrl' : string,
+  'courseId' : CourseId,
+}
+export interface LessonInput {
+  'title' : string,
+  'order' : bigint,
+  'description' : string,
+  'youtubeUrl' : string,
+  'courseId' : CourseId,
+}
+export interface LessonProgress {
+  'lessonId' : bigint,
+  'completedAt' : [] | [bigint],
+  'studentId' : UserId,
+  'quizScore' : [] | [bigint],
+  'videoWatched' : boolean,
+  'quizPassed' : boolean,
+}
 export type LocationType = { 'Studio' : null } |
   { 'Custom' : string } |
   { 'Outdoor' : null } |
   { 'Indoor' : null };
+export type LoginError = { 'lockedOut' : null } |
+  { 'other' : string } |
+  { 'pendingApproval' : null } |
+  { 'notFound' : null } |
+  { 'incorrectPassword' : null } |
+  { 'suspended' : null };
 export type MediaId = bigint;
 export interface MediaInput {
   'title' : string,
@@ -279,6 +384,37 @@ export interface PaymentVerificationStatus {
   'stripeSessionId' : [] | [string],
   'verifiedAt' : [] | [Timestamp],
 }
+export interface PublicProfile {
+  'id' : UserId,
+  'status' : UserStatus,
+  'name' : string,
+  'role' : UserRole,
+  'studentDetails' : [] | [StudentDetails],
+  'email' : string,
+  'address' : [] | [string],
+  'phone' : string,
+  'registeredAt' : Timestamp,
+}
+export interface QuizQuestion {
+  'id' : bigint,
+  'lessonId' : bigint,
+  'question' : string,
+  'correctOptionIndex' : bigint,
+  'options' : Array<string>,
+}
+export interface QuizQuestionInput {
+  'lessonId' : bigint,
+  'question' : string,
+  'correctOptionIndex' : bigint,
+  'options' : Array<string>,
+}
+export interface QuizResult {
+  'lessonId' : bigint,
+  'score' : bigint,
+  'totalQuestions' : bigint,
+  'passed' : boolean,
+  'courseProgress' : CourseLessonProgress,
+}
 export interface SelectedServiceItem {
   'name' : string,
   'subServiceId' : string,
@@ -292,6 +428,7 @@ export interface ServiceCategory {
   'name' : string,
   'description' : string,
 }
+export type ServiceId = bigint;
 export interface ServiceRevenue {
   'serviceName' : string,
   'revenue' : bigint,
@@ -303,6 +440,11 @@ export type SlotStatus = { 'Available' : null } |
 export interface StripeConfirmation {
   'stripePaymentIntentId' : string,
   'stripeSessionId' : string,
+}
+export interface StudentDetails {
+  'learningMode' : string,
+  'preferredSlot' : string,
+  'courseType' : string,
 }
 export interface SubService { 'id' : string, 'name' : string }
 export type TimeSlot = { 'Night' : null } |
@@ -322,15 +464,6 @@ export interface TransformationOutput {
   'headers' : Array<http_header>,
 }
 export type UserId = Principal;
-export interface UserProfile {
-  'status' : UserStatus,
-  'created' : Timestamp,
-  'principal' : UserId,
-  'name' : string,
-  'role' : UserRole,
-  'email' : [] | [string],
-  'phone' : string,
-}
 export type UserRole = { 'Staff' : null } |
   { 'Client' : null } |
   { 'Student' : null } |
@@ -341,6 +474,7 @@ export type UserRole__1 = { 'admin' : null } |
   { 'guest' : null };
 export type UserStatus = { 'Active' : null } |
   { 'Suspended' : null } |
+  { 'Rejected' : null } |
   { 'Pending' : null };
 export interface WhatsAppLog {
   'id' : bigint,
@@ -349,6 +483,25 @@ export interface WhatsAppLog {
   'message' : string,
   'phone' : string,
   'relatedId' : [] | [string],
+}
+export interface WorkAssignment {
+  'id' : bigint,
+  'status' : AssignmentStatus,
+  'bookingId' : BookingId,
+  'assignedAt' : Timestamp,
+  'sessionDate' : string,
+  'staffId' : UserId,
+  'clientName' : string,
+  'sessionType' : string,
+  'notes' : [] | [string],
+  'deliverables' : Array<Deliverable>,
+}
+export interface WorkAssignmentInput {
+  'bookingId' : BookingId,
+  'sessionDate' : string,
+  'staffId' : UserId,
+  'sessionType' : string,
+  'notes' : [] | [string],
 }
 export interface _ImmutableObjectStorageCreateCertificateResult {
   'method' : string,
@@ -391,15 +544,39 @@ export interface _SERVICE {
     [string, FeedbackTargetType, bigint, string],
     Feedback
   >,
+  'addLesson' : ActorMethod<[LessonInput], Lesson>,
+  'addQuizQuestion' : ActorMethod<[QuizQuestionInput], Lesson>,
+  'adminAddCourse' : ActorMethod<[AdminCourseInput], AdminCourse>,
+  'adminAddService' : ActorMethod<[AdminServiceInput], AdminServiceCategory>,
   'adminAdjustAmount' : ActorMethod<[PaymentId, bigint, string], boolean>,
   'adminConfirmPayment' : ActorMethod<[PaymentId, string], boolean>,
+  'adminCreateUser' : ActorMethod<
+    [
+      string,
+      string,
+      string,
+      string,
+      UserRole,
+      [] | [string],
+      [] | [StudentDetails],
+    ],
+    { 'ok' : PublicProfile } |
+      { 'err' : string }
+  >,
+  'adminDeleteCourse' : ActorMethod<[CourseId], boolean>,
+  'adminDeleteService' : ActorMethod<[ServiceId], boolean>,
+  'adminGetAllCourseProgress' : ActorMethod<[], Array<CourseLessonProgress>>,
   'adminGetAllPayments' : ActorMethod<[], Array<PaymentOrder>>,
   'adminRefundPayment' : ActorMethod<[PaymentId, string], boolean>,
+  'adminUpdateCourse' : ActorMethod<[CourseId, AdminCourseInput], boolean>,
   'adminUpdatePayment' : ActorMethod<
     [PaymentId, PaymentAdminAction, [] | [string]],
     boolean
   >,
+  'adminUpdateService' : ActorMethod<[ServiceId, AdminServiceInput], boolean>,
+  'approveUser' : ActorMethod<[UserId], { 'ok' : null } | { 'err' : string }>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole__1], undefined>,
+  'assignWork' : ActorMethod<[WorkAssignmentInput], WorkAssignment>,
   'confirmBooking' : ActorMethod<[BookingId], boolean>,
   'confirmPayment' : ActorMethod<[StripeConfirmation], boolean>,
   'createBookingRequest' : ActorMethod<[BookingInput], BookingRequest>,
@@ -418,45 +595,106 @@ export interface _SERVICE {
   'deleteCmsContent' : ActorMethod<[string], undefined>,
   'deleteMedia' : ActorMethod<[MediaId], boolean>,
   'deleteSubServiceImage' : ActorMethod<[string, string], undefined>,
+  'deleteUser' : ActorMethod<[UserId], { 'ok' : null } | { 'err' : string }>,
+  'editLesson' : ActorMethod<[bigint, LessonInput], boolean>,
+  'editQuizQuestion' : ActorMethod<[bigint, QuizQuestionInput], boolean>,
   'enrollCourse' : ActorMethod<[CourseId], CourseEnrollment>,
   'generateCertificate' : ActorMethod<[EnrollmentId], Certificate>,
+  'getAdminCourseBlob' : ActorMethod<[CourseId], [] | [Uint8Array]>,
   'getAdminPaymentDashboard' : ActorMethod<[], Array<AdminPaymentEntry>>,
   'getAdminPayments' : ActorMethod<[], Array<PaymentOrderExtended>>,
+  'getAdminServiceBlob' : ActorMethod<[ServiceId], [] | [Uint8Array]>,
+  'getAdminUsers' : ActorMethod<[], Array<PublicProfile>>,
+  'getAllActivityEvents' : ActorMethod<[], Array<ActivityEvent>>,
+  'getAllAdminCourses' : ActorMethod<[], Array<AdminCourse>>,
+  'getAllAdminServices' : ActorMethod<[], Array<AdminServiceCategory>>,
   'getAllBookings' : ActorMethod<[], Array<BookingRequest>>,
   'getAllCmsContent' : ActorMethod<[], Array<CmsContent>>,
   'getAllCourses' : ActorMethod<[], Array<Course>>,
   'getAllEnrollments' : ActorMethod<[], Array<CourseEnrollment>>,
   'getAllFeedback' : ActorMethod<[], Array<Feedback>>,
+  'getAllPayments' : ActorMethod<[], Array<PaymentOrder>>,
   'getAllSubServiceImages' : ActorMethod<[], Array<[string, string]>>,
-  'getAllUsers' : ActorMethod<[], Array<UserProfile>>,
-  'getAnalytics' : ActorMethod<[], BookingStats>,
-  'getCallerUserProfile' : ActorMethod<[], [] | [UserProfile]>,
+  'getAllUsers' : ActorMethod<[], Array<PublicProfile>>,
+  'getAllWorkAssignments' : ActorMethod<[], Array<WorkAssignment>>,
+  'getAnalytics' : ActorMethod<[], AnalyticsSummary>,
+  'getBookingsByDate' : ActorMethod<[string], Array<BookingRequest>>,
+  'getCallerUserProfile' : ActorMethod<[], [] | [PublicProfile]>,
   'getCallerUserRole' : ActorMethod<[], UserRole__1>,
   'getCertificate' : ActorMethod<[string], [] | [Certificate]>,
   'getCmsContent' : ActorMethod<[string], [] | [CmsContent]>,
   'getCourse' : ActorMethod<[CourseId], [] | [Course]>,
+  'getCourseProgress' : ActorMethod<[CourseId], [] | [CourseLessonProgress]>,
   'getEmailLogs' : ActorMethod<[], Array<EmailLog>>,
+  'getEnrollmentById' : ActorMethod<[EnrollmentId], [] | [CourseEnrollment]>,
   'getFeedbackForTarget' : ActorMethod<[string], Array<Feedback>>,
+  'getLessonProgressForCourse' : ActorMethod<[CourseId], Array<LessonProgress>>,
+  'getLessons' : ActorMethod<[CourseId], Array<Lesson>>,
   'getMediaItems' : ActorMethod<[[] | [string]], Array<MediaItem>>,
+  'getMyAssignedWork' : ActorMethod<[], Array<WorkAssignment>>,
   'getMyBookings' : ActorMethod<[], Array<BookingRequest>>,
   'getMyEnrollments' : ActorMethod<[], Array<CourseEnrollment>>,
   'getMyFeedback' : ActorMethod<[], Array<Feedback>>,
   'getMyMultiServiceBookings' : ActorMethod<[], Array<MultiServiceBooking>>,
   'getMyNotifications' : ActorMethod<[], Array<NotificationRecord>>,
-  'getMyProfile' : ActorMethod<[], [] | [UserProfile]>,
+  'getMyPayments' : ActorMethod<[], Array<PaymentOrder>>,
+  'getMyProfile' : ActorMethod<[], [] | [PublicProfile]>,
+  'getMyUploadedWork' : ActorMethod<[], Array<WorkAssignment>>,
   'getPaymentDetails' : ActorMethod<[PaymentId], [] | [PaymentOrderExtended]>,
   'getPaymentStatus' : ActorMethod<[bigint], [] | [PaymentVerificationStatus]>,
   'getPublicCalendar' : ActorMethod<[], Array<BookingSlot>>,
+  'getPublicProfile' : ActorMethod<[string], [] | [PublicProfile]>,
+  'getRecentActivity' : ActorMethod<[], Array<ActivityEvent>>,
   'getServiceCategories' : ActorMethod<[], Array<ServiceCategory>>,
+  'getStripeConfig' : ActorMethod<
+    [],
+    { 'secretKey' : string, 'configured' : boolean, 'publishableKey' : string }
+  >,
   'getSubServiceImage' : ActorMethod<[string, string], [] | [string]>,
+  'getSubServiceImageBlob' : ActorMethod<[string, string], [] | [Uint8Array]>,
   'getWhatsAppLogs' : ActorMethod<[], Array<WhatsAppLog>>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
   'listMyPayments' : ActorMethod<[], Array<PaymentOrder>>,
+  'listPendingUsers' : ActorMethod<[], Array<PublicProfile>>,
+  'loginByEmail' : ActorMethod<
+    [string, string],
+    { 'ok' : PublicProfile } |
+      { 'err' : LoginError }
+  >,
+  'loginByIdentifier' : ActorMethod<
+    [string, string],
+    { 'ok' : PublicProfile } |
+      { 'err' : LoginError }
+  >,
   'manageUser' : ActorMethod<[UserId, string], boolean>,
+  'markCourseComplete' : ActorMethod<
+    [EnrollmentId],
+    { 'ok' : string } |
+      { 'err' : string }
+  >,
   'markEnrollmentPaid' : ActorMethod<[EnrollmentId], boolean>,
   'markNotificationRead' : ActorMethod<[NotificationId], boolean>,
+  'markVideoWatched' : ActorMethod<[bigint], LessonProgress>,
   'markWorkDelivered' : ActorMethod<[BookingId], boolean>,
-  'register' : ActorMethod<[string, string, UserRole], UserProfile>,
+  'register' : ActorMethod<
+    [
+      string,
+      string,
+      string,
+      string,
+      UserRole,
+      [] | [string],
+      [] | [Uint8Array],
+      [] | [StudentDetails],
+    ],
+    { 'ok' : PublicProfile } |
+      { 'err' : string }
+  >,
+  'rejectBooking' : ActorMethod<[BookingId, string], boolean>,
+  'rejectUser' : ActorMethod<[UserId], { 'ok' : null } | { 'err' : string }>,
+  'removeLesson' : ActorMethod<[bigint], boolean>,
+  'removeQuizQuestion' : ActorMethod<[bigint], boolean>,
+  'rescheduleBooking' : ActorMethod<[BookingId, string, string], boolean>,
   'respondToFeedback' : ActorMethod<[bigint, string], boolean>,
   'saveCallerUserProfile' : ActorMethod<[string, string, UserRole], undefined>,
   'sendBookingConfirmation' : ActorMethod<[UserId, BookingDetails], boolean>,
@@ -468,16 +706,33 @@ export interface _SERVICE {
   'sendProgressReminder' : ActorMethod<[UserId, BookingDetails], boolean>,
   'setCmsContent' : ActorMethod<[string, string, CmsContentType], undefined>,
   'setFeatured' : ActorMethod<[MediaId, boolean], boolean>,
+  'setStripeKeys' : ActorMethod<[string, string], boolean>,
   'setSubServiceImage' : ActorMethod<[string, string, string], undefined>,
+  'submitDeliverable' : ActorMethod<[bigint, string, string], boolean>,
+  'submitQuiz' : ActorMethod<
+    [bigint, Array<bigint>],
+    { 'ok' : QuizResult } |
+      { 'err' : string }
+  >,
+  'testStripeConnection' : ActorMethod<
+    [],
+    { 'ok' : string } |
+      { 'err' : string }
+  >,
   'transform' : ActorMethod<[TransformationInput], TransformationOutput>,
   'transformWhatsApp' : ActorMethod<
     [TransformationInput],
     TransformationOutput
   >,
   'triggerPaymentRequest' : ActorMethod<[BookingId, string], string>,
+  'updateAssignmentStatus' : ActorMethod<[bigint, AssignmentStatus], boolean>,
   'updateCourseProgress' : ActorMethod<[CourseId, boolean], boolean>,
-  'updateProfile' : ActorMethod<[string, string], boolean>,
+  'updateProfile' : ActorMethod<[string, string, [] | [string]], boolean>,
   'uploadMedia' : ActorMethod<[MediaInput], MediaItem>,
+  'uploadSubServiceImage' : ActorMethod<
+    [string, string, Uint8Array],
+    undefined
+  >,
   'verifyCertificate' : ActorMethod<[string], boolean>,
 }
 export declare const idlService: IDL.ServiceClass;

@@ -72,7 +72,7 @@ export function ReceptionistBookingQueue({
             ? ` — ${booking.location.placeName}`
             : "";
           const whatsappMsg = encodeURIComponent(
-            `📸 Booking Update from RAP Integrated Studio\n\nService: ${booking.serviceCategoryId.replace(/_/g, " ")}\nSub-service: ${booking.subServiceId.replace(/_/g, " ")}\nDate: ${booking.date}\nTime: ${timeLabel}\nLocation: ${locationLabel}${locationDetail}\nStatus: Confirmed\n\nPlease pay ₹2 to confirm your slot.\nBooking ID: ${booking.id}`,
+            `📸 Booking Update from RAP Integrated Studio\n\nService: ${(booking.serviceCategoryId ?? "—").replace(/_/g, " ")}\nSub-service: ${(booking.subServiceId ?? "—").replace(/_/g, " ")}\nDate: ${booking.date}\nTime: ${timeLabel}\nLocation: ${locationLabel}${locationDetail}\nStatus: Confirmed\n\nPlease pay ₹2 to confirm your slot.\nBooking ID: ${booking.id}`,
           );
 
           return (
@@ -91,11 +91,11 @@ export function ReceptionistBookingQueue({
                   <div className="flex items-center gap-2 mb-0.5">
                     <Camera className="w-4 h-4 text-primary flex-shrink-0" />
                     <span className="font-semibold text-foreground text-sm truncate capitalize">
-                      {booking.serviceCategoryId.replace(/_/g, " ")}
+                      {booking.serviceCategoryId?.replace(/_/g, " ") || "—"}
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground capitalize ml-6">
-                    {booking.subServiceId.replace(/_/g, " ")}
+                    {booking.subServiceId?.replace(/_/g, " ") || "—"}
                   </p>
                 </div>
                 <Badge className="text-xs border bg-yellow-500/20 text-yellow-300 border-yellow-500/30 flex-shrink-0">

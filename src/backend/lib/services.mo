@@ -1,6 +1,7 @@
 import List "mo:core/List";
 import Time "mo:core/Time";
 import Runtime "mo:core/Runtime";
+import Blob "mo:core/Blob";
 import Common "../types/common";
 import Types "../types/services";
 
@@ -351,7 +352,8 @@ module {
     for (existing in bookings.values()) {
       if (existing.date == input.date and
           timeSlotsConflict(existing.timeSlot, input.timeSlot) and
-          existing.status != #Cancelled) {
+          existing.status != #Cancelled and
+          existing.status != #Rejected) {
         Runtime.trap("Time slot already booked");
       };
     };
@@ -367,6 +369,9 @@ module {
       status = #Pending;
       createdAt = Time.now();
       notes = input.notes;
+      rejectedReason = null;
+      rescheduledDate = null;
+      rescheduledTime = null;
     };
     bookings.add(booking);
     booking;
@@ -413,6 +418,44 @@ module {
     found;
   };
 
+  public func rejectBooking(
+    bookings : List.List<Types.BookingRequest>,
+    bookingId : Common.BookingId,
+    reason : Text,
+  ) : Bool {
+    var found = false;
+    bookings.mapInPlace(func(b) {
+      if (b.id == bookingId) {
+        found := true;
+        { b with status = #Rejected; rejectedReason = ?reason };
+      } else { b };
+    });
+    found;
+  };
+
+  public func rescheduleBooking(
+    bookings : List.List<Types.BookingRequest>,
+    bookingId : Common.BookingId,
+    newDate : Text,
+    newTime : Text,
+  ) : Bool {
+    var found = false;
+    bookings.mapInPlace(func(b) {
+      if (b.id == bookingId) {
+        found := true;
+        { b with rescheduledDate = ?newDate; rescheduledTime = ?newTime; status = #Confirmed };
+      } else { b };
+    });
+    found;
+  };
+
+  public func getBookingsByDate(
+    bookings : List.List<Types.BookingRequest>,
+    date : Text,
+  ) : [Types.BookingRequest] {
+    bookings.filter(func(b) { b.date == date }).toArray();
+  };
+
   public func updateBookingStatus(
     bookings : List.List<Types.BookingRequest>,
     bookingId : Common.BookingId,
@@ -433,5 +476,100 @@ module {
     bookingId : Common.BookingId,
   ) : ?Types.BookingRequest {
     bookings.find(func(b) { b.id == bookingId });
+  };
+
+  // ── Admin service CRUD ────────────────────────────────────────────────────
+
+  // Merge static service categories with admin-added ones.
+  // Admin services are projected to ServiceCategory (imageBlob not included in public type).
+  public func getMergedServiceCategories(
+    adminServices : List.List<Types.AdminServiceCategory>,
+  ) : [Types.ServiceCategory] {
+    let staticCategories = getServiceCategories();
+    let adminConverted = List.empty<Types.ServiceCategory>();
+    for (svc in adminServices.values()) {
+      adminConverted.add({
+        id = svc.id.toText();
+        name = svc.name;
+        icon = svc.icon;
+        description = svc.description;
+        subServices = svc.subServices;
+      });
+    };
+    staticCategories.concat(adminConverted.toArray());
+  };
+
+  public func adminAddService(
+    adminServices : List.List<Types.AdminServiceCategory>,
+    nextId : Nat,
+    input : Types.AdminServiceInput,
+  ) : Types.AdminServiceCategory {
+    let imageBlob : ?Blob = if (input.imageData.size() == 0) {
+      null;
+    } else {
+      ?Blob.fromArray(input.imageData);
+    };
+    let svc : Types.AdminServiceCategory = {
+      id = nextId;
+      name = input.name;
+      icon = input.icon;
+      description = input.description;
+      subServices = input.subServices;
+      imageBlob = imageBlob;
+      createdAt = Time.now();
+    };
+    adminServices.add(svc);
+    svc;
+  };
+
+  public func adminUpdateService(
+    adminServices : List.List<Types.AdminServiceCategory>,
+    serviceId : Common.ServiceId,
+    input : Types.AdminServiceInput,
+  ) : Bool {
+    var found = false;
+    adminServices.mapInPlace(func(svc) {
+      if (svc.id == serviceId) {
+        found := true;
+        let newBlob : ?Blob = if (input.imageData.size() == 0) {
+          svc.imageBlob;
+        } else {
+          ?Blob.fromArray(input.imageData);
+        };
+        {
+          svc with
+          name = input.name;
+          icon = input.icon;
+          description = input.description;
+          subServices = input.subServices;
+          imageBlob = newBlob;
+        };
+      } else { svc };
+    });
+    found;
+  };
+
+  public func adminDeleteService(
+    adminServices : List.List<Types.AdminServiceCategory>,
+    serviceId : Common.ServiceId,
+  ) : Bool {
+    let before = adminServices.size();
+    let filtered = adminServices.filter(func(svc) { svc.id != serviceId });
+    adminServices.clear();
+    adminServices.append(filtered);
+    adminServices.size() < before;
+  };
+
+  public func getAllAdminServices(
+    adminServices : List.List<Types.AdminServiceCategory>,
+  ) : [Types.AdminServiceCategory] {
+    adminServices.toArray();
+  };
+
+  public func getAdminServiceById(
+    adminServices : List.List<Types.AdminServiceCategory>,
+    serviceId : Common.ServiceId,
+  ) : ?Types.AdminServiceCategory {
+    adminServices.find(func(svc) { svc.id == serviceId });
   };
 };

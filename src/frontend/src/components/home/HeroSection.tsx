@@ -1,15 +1,16 @@
 import { Link } from "@tanstack/react-router";
-import { Camera, ChevronDown, Play } from "lucide-react";
+import { Camera, ChevronDown, Play, Sparkles } from "lucide-react";
 import { motion, useScroll, useTransform } from "motion/react";
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useCmsSection } from "../../hooks/useCmsContent";
 
-const PARTICLES = Array.from({ length: 22 }, (_, i) => ({
+const PARTICLES = Array.from({ length: 20 }, (_, i) => ({
   id: i,
-  x: Math.random() * 100,
-  y: Math.random() * 100,
-  size: Math.random() * 3 + 1,
-  duration: Math.random() * 8 + 6,
-  delay: Math.random() * 5,
+  x: (i * 17 + 3) % 100,
+  y: (i * 23 + 7) % 100,
+  size: (i % 4) + 1,
+  duration: 7 + (i % 7),
+  delay: (i % 5) * 1.1,
 }));
 
 const SHUTTER_BLADES = Array.from({ length: 8 }, (_, i) => i);
@@ -25,15 +26,72 @@ const FILM_IMAGES = [
   "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=120&h=80&fit=crop",
 ];
 
+const DEFAULT_HEADING = "Turning Visions Into Timeless Art";
+const DEFAULT_SUBHEADING =
+  "India's premier photography, videography & short film studio — where every frame becomes a masterpiece";
+const DEFAULT_CTA = "Book a Session";
+const DEFAULT_CTA_SECONDARY = "View Services";
+
+const STATS = [
+  ["500+", "Happy Clients"],
+  ["23", "Services"],
+  ["50+", "Courses"],
+];
+
 export function HeroSection() {
   const ref = useRef<HTMLElement>(null);
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start start", "end start"],
   });
-  const bgY = useTransform(scrollYProgress, [0, 1], ["0%", "30%"]);
-  const textY = useTransform(scrollYProgress, [0, 1], ["0%", "15%"]);
-  const overlayOpacity = useTransform(scrollYProgress, [0, 1], [0.7, 0.9]);
+  const bgY = useTransform(scrollYProgress, [0, 1], ["0%", "25%"]);
+  const textY = useTransform(scrollYProgress, [0, 1], ["0%", "12%"]);
+  const overlayOpacity = useTransform(scrollYProgress, [0, 1], [0.72, 0.92]);
+
+  const cmsHero = useCmsSection("hero");
+  const [heading, setHeading] = useState(DEFAULT_HEADING);
+  const [subheading, setSubheading] = useState(DEFAULT_SUBHEADING);
+  const [ctaText, setCtaText] = useState(DEFAULT_CTA);
+  const [ctaSecondaryText, setCtaSecondaryText] = useState(
+    DEFAULT_CTA_SECONDARY,
+  );
+
+  useEffect(() => {
+    const handleCmsUpdate = () => {
+      try {
+        const raw = localStorage.getItem("cms_hero");
+        if (!raw) return;
+        const data = JSON.parse(raw) as {
+          heading?: string;
+          subheading?: string;
+          ctaText?: string;
+          ctaSecondaryText?: string;
+        };
+        if (data.heading) setHeading(data.heading);
+        if (data.subheading) setSubheading(data.subheading);
+        if (data.ctaText) setCtaText(data.ctaText);
+        if (data.ctaSecondaryText) setCtaSecondaryText(data.ctaSecondaryText);
+      } catch {
+        // ignore parse errors
+      }
+    };
+    window.addEventListener("cms-updated", handleCmsUpdate);
+    window.addEventListener("storage", handleCmsUpdate);
+    handleCmsUpdate();
+    return () => {
+      window.removeEventListener("cms-updated", handleCmsUpdate);
+      window.removeEventListener("storage", handleCmsUpdate);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (cmsHero.heading) setHeading(cmsHero.heading);
+    if (cmsHero.subheading) setSubheading(cmsHero.subheading);
+    if (cmsHero.ctaText) setCtaText(cmsHero.ctaText);
+    if (cmsHero.ctaSecondaryText) setCtaSecondaryText(cmsHero.ctaSecondaryText);
+  }, [cmsHero]);
+
+  const headingParts = heading.split(/\b(Timeless Art|Art|Visions|Studio)\b/);
 
   return (
     <section
@@ -41,22 +99,22 @@ export function HeroSection() {
       className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden"
       data-ocid="hero.section"
     >
-      {/* Parallax background image */}
+      {/* Parallax background */}
       <motion.div
         className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-110"
         style={{
           backgroundImage:
-            "url('https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=1920&q=80')",
+            "url('/assets/generated/hero-studio-cinematic.dim_1920x1080.jpg'), url('https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=1920&q=80')",
           y: bgY,
         }}
       />
 
-      {/* Cinematic dark overlay */}
+      {/* Dark cinematic overlay */}
       <motion.div
         className="absolute inset-0"
         style={{
           background:
-            "linear-gradient(135deg, oklch(0.06 0.02 280 / 0.92) 0%, oklch(0.08 0.025 290 / 0.78) 50%, oklch(0.05 0.015 270 / 0.95) 100%)",
+            "linear-gradient(160deg, oklch(0.05 0.015 270 / 0.94) 0%, oklch(0.07 0.02 280 / 0.78) 50%, oklch(0.04 0.01 265 / 0.96) 100%)",
           opacity: overlayOpacity,
         }}
       />
@@ -66,14 +124,14 @@ export function HeroSection() {
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse 80% 80% at 50% 50%, transparent 40%, oklch(0.04 0.01 280 / 0.8) 100%)",
+            "radial-gradient(ellipse 80% 75% at 50% 50%, transparent 35%, oklch(0.04 0.01 270 / 0.85) 100%)",
         }}
       />
 
-      {/* Animated gradient pulses */}
+      {/* Gold light pulse */}
       <motion.div
         className="absolute inset-0 pointer-events-none"
-        animate={{ opacity: [0.25, 0.55, 0.25] }}
+        animate={{ opacity: [0.2, 0.5, 0.2] }}
         transition={{
           duration: 6,
           repeat: Number.POSITIVE_INFINITY,
@@ -81,36 +139,36 @@ export function HeroSection() {
         }}
         style={{
           background:
-            "radial-gradient(ellipse 60% 40% at 25% 65%, oklch(0.7 0.22 70 / 0.1) 0%, transparent 70%)",
+            "radial-gradient(ellipse 55% 35% at 20% 70%, oklch(0.72 0.14 82 / 0.12) 0%, transparent 70%)",
         }}
       />
       <motion.div
         className="absolute inset-0 pointer-events-none"
-        animate={{ opacity: [0.15, 0.45, 0.15] }}
+        animate={{ opacity: [0.1, 0.35, 0.1] }}
         transition={{
-          duration: 8,
+          duration: 9,
           repeat: Number.POSITIVE_INFINITY,
           ease: "easeInOut",
-          delay: 2,
+          delay: 3,
         }}
         style={{
           background:
-            "radial-gradient(ellipse 50% 50% at 75% 35%, oklch(0.68 0.2 290 / 0.1) 0%, transparent 70%)",
+            "radial-gradient(ellipse 45% 45% at 80% 30%, oklch(0.68 0.2 290 / 0.1) 0%, transparent 70%)",
         }}
       />
 
-      {/* Light leak */}
+      {/* Top-left light leak */}
       <motion.div
-        className="absolute -top-20 -left-20 w-96 h-96 pointer-events-none"
-        animate={{ opacity: [0.05, 0.18, 0.05], scale: [1, 1.1, 1] }}
+        className="absolute -top-20 -left-20 w-80 h-80 pointer-events-none"
+        animate={{ opacity: [0.04, 0.16, 0.04], scale: [1, 1.12, 1] }}
         transition={{
-          duration: 10,
+          duration: 12,
           repeat: Number.POSITIVE_INFINITY,
           ease: "easeInOut",
         }}
         style={{
           background:
-            "radial-gradient(circle, oklch(0.78 0.2 70 / 0.25) 0%, transparent 70%)",
+            "radial-gradient(circle, oklch(0.82 0.18 88 / 0.3) 0%, transparent 70%)",
           filter: "blur(40px)",
         }}
       />
@@ -127,15 +185,15 @@ export function HeroSection() {
             height: p.size,
             background:
               p.id % 3 === 0
-                ? "oklch(0.7 0.22 70 / 0.8)"
+                ? "oklch(0.72 0.14 82 / 0.8)"
                 : p.id % 3 === 1
                   ? "oklch(0.68 0.2 290 / 0.6)"
-                  : "oklch(0.9 0.01 280 / 0.5)",
+                  : "oklch(0.9 0.01 280 / 0.4)",
           }}
           animate={{
-            y: [0, -35, 0],
-            opacity: [0.2, 1, 0.2],
-            scale: [1, 1.6, 1],
+            y: [0, -30, 0],
+            opacity: [0.15, 0.9, 0.15],
+            scale: [1, 1.5, 1],
           }}
           transition={{
             duration: p.duration,
@@ -150,10 +208,10 @@ export function HeroSection() {
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
         <motion.div
           className="relative"
-          style={{ width: 560, height: 560 }}
+          style={{ width: 580, height: 580 }}
           animate={{ rotate: 360 }}
           transition={{
-            duration: 70,
+            duration: 75,
             repeat: Number.POSITIVE_INFINITY,
             ease: "linear",
           }}
@@ -165,7 +223,7 @@ export function HeroSection() {
               style={{
                 transform: `rotate(${blade * 45}deg)`,
                 background:
-                  "linear-gradient(0deg, oklch(0.7 0.22 70 / 0.04) 0%, transparent 50%)",
+                  "linear-gradient(0deg, oklch(0.72 0.14 82 / 0.05) 0%, transparent 50%)",
                 clipPath: "polygon(50% 0%, 55% 50%, 50% 100%, 45% 50%)",
               }}
             />
@@ -176,14 +234,14 @@ export function HeroSection() {
             key={ring}
             className="absolute rounded-full border pointer-events-none"
             style={{
-              inset: `${-ring * 55}px`,
-              borderColor: `oklch(0.7 0.22 70 / ${(0.1 - ring * 0.02).toString()})`,
+              inset: `${-ring * 60}px`,
+              borderColor: `oklch(0.72 0.14 82 / ${(0.1 - ring * 0.02).toString()})`,
             }}
-            animate={{ scale: [1, 1.04, 1], opacity: [0.3, 0.7, 0.3] }}
+            animate={{ scale: [1, 1.04, 1], opacity: [0.25, 0.65, 0.25] }}
             transition={{
-              duration: 4,
+              duration: 4.5,
               repeat: Number.POSITIVE_INFINITY,
-              delay: ring * 1.1,
+              delay: ring * 1.2,
               ease: "easeInOut",
             }}
           />
@@ -192,81 +250,103 @@ export function HeroSection() {
 
       {/* Main content */}
       <motion.div
-        className="relative z-10 container mx-auto px-4 text-center flex flex-col items-center gap-6 py-24"
+        className="relative z-10 container mx-auto px-4 text-center flex flex-col items-center gap-7 py-28"
         style={{ y: textY }}
       >
-        {/* RAP Logo badge */}
+        {/* Badge */}
         <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="flex items-center gap-2 px-4 py-2 rounded-full border"
+          initial={{ opacity: 0, y: -20, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          className="flex items-center gap-2 px-5 py-2 rounded-full border"
           style={{
-            borderColor: "oklch(0.7 0.22 70 / 0.35)",
-            background: "oklch(0.12 0.02 280 / 0.7)",
+            borderColor: "oklch(0.72 0.14 82 / 0.4)",
+            background: "oklch(0.08 0.01 270 / 0.75)",
+            backdropFilter: "blur(12px)",
           }}
         >
-          <Camera size={16} className="text-primary" />
-          <span className="section-label text-xs">RAP Integrated Studio</span>
+          <Sparkles size={13} className="text-primary" />
+          <span className="section-label text-xs tracking-[2px]">
+            RAP Integrated Studio
+          </span>
         </motion.div>
 
-        {/* Main headline */}
+        {/* Headline */}
         <motion.h1
-          className="hero-text text-foreground text-glow-gold"
-          style={{ fontFamily: "var(--font-display)" }}
+          className="hero-text text-foreground"
+          style={{
+            fontFamily: "var(--font-display)",
+            textShadow: "0 2px 40px oklch(0 0 0 / 0.5)",
+          }}
           initial={{ opacity: 0, y: 50 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1.1, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 1.1, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
         >
-          Turning Visions Into{" "}
-          <span
-            className="bg-clip-text text-transparent"
-            style={{ backgroundImage: "var(--gradient-gold)" }}
-          >
-            Timeless Art
-          </span>
+          {heading === DEFAULT_HEADING ? (
+            <>
+              Turning Visions Into{" "}
+              <span
+                className="bg-clip-text text-transparent"
+                style={{
+                  backgroundImage: "var(--gradient-gold)",
+                  textShadow: "none",
+                }}
+              >
+                Timeless Art
+              </span>
+            </>
+          ) : (
+            headingParts.map((part, i) =>
+              i % 2 === 1 ? (
+                <span
+                  key={`hl-${part.slice(0, 8)}`}
+                  className="bg-clip-text text-transparent"
+                  style={{
+                    backgroundImage: "var(--gradient-gold)",
+                    textShadow: "none",
+                  }}
+                >
+                  {part}
+                </span>
+              ) : (
+                <span key={`pl-${part.slice(0, 8)}-${i}`}>{part}</span>
+              ),
+            )
+          )}
         </motion.h1>
 
         {/* Sub-headline */}
         <motion.p
           className="text-xl md:text-2xl max-w-3xl leading-relaxed"
-          style={{ color: "oklch(0.78 0.01 280)" }}
-          initial={{ opacity: 0, y: 30 }}
+          style={{ color: "oklch(0.75 0.01 280)" }}
+          initial={{ opacity: 0, y: 28 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
+          transition={{ duration: 1, delay: 0.4, ease: [0.22, 1, 0.36, 1] }}
         >
-          India&apos;s premier photography, videography &amp; short film studio
-          —{" "}
-          <em style={{ color: "oklch(0.7 0.22 70 / 0.9)" }}>
-            where every frame becomes a masterpiece
-          </em>
+          {subheading}
         </motion.p>
 
         {/* Stats row */}
         <motion.div
-          className="flex flex-wrap items-center justify-center gap-8 py-2"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.6 }}
+          className="flex flex-wrap items-center justify-center gap-10 py-1"
+          initial={{ opacity: 0, y: 14 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.55, duration: 0.8 }}
         >
-          {[
-            ["500+", "Happy Clients"],
-            ["23", "Services"],
-            ["50+", "Courses"],
-          ].map(([num, label]) => (
+          {STATS.map(([num, label]) => (
             <div key={label} className="text-center">
               <div
                 className="text-2xl font-bold"
                 style={{
-                  color: "oklch(0.7 0.22 70)",
+                  color: "oklch(0.82 0.16 88)",
                   fontFamily: "var(--font-display)",
                 }}
               >
                 {num}
               </div>
               <div
-                className="text-xs tracking-widest uppercase"
-                style={{ color: "oklch(0.55 0.01 280)" }}
+                className="text-[10px] tracking-widest uppercase mt-0.5"
+                style={{ color: "oklch(0.52 0.01 280)" }}
               >
                 {label}
               </div>
@@ -276,39 +356,41 @@ export function HeroSection() {
 
         {/* CTAs */}
         <motion.div
-          className="flex flex-wrap items-center justify-center gap-4 mt-2"
-          initial={{ opacity: 0, y: 20 }}
+          className="flex flex-wrap items-center justify-center gap-4 mt-1"
+          initial={{ opacity: 0, y: 22 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 0.7 }}
+          transition={{ duration: 0.8, delay: 0.68 }}
         >
           <Link to="/booking" data-ocid="hero.book_cta.primary_button">
             <motion.button
               type="button"
-              className="btn-primary-luxury flex items-center gap-2 text-base px-8 py-4 rounded-xl shadow-elevated"
-              whileHover={{ scale: 1.06 }}
-              whileTap={{ scale: 0.97 }}
+              className="btn-primary-luxury flex items-center gap-2 text-base px-9 py-4 rounded-xl shadow-glow-gold"
+              whileHover={{ scale: 1.07 }}
+              whileTap={{ scale: 0.96 }}
             >
               <Camera size={18} />
-              Book a Session
+              {ctaText}
             </motion.button>
           </Link>
           <Link to="/services" data-ocid="hero.services_cta.secondary_button">
             <motion.button
               type="button"
-              className="flex items-center gap-2 px-6 py-4 rounded-xl font-semibold text-base transition-smooth"
+              className="flex items-center gap-2 px-7 py-4 rounded-xl font-semibold text-base transition-smooth"
               style={{
-                background: "oklch(0.12 0.02 280 / 0.6)",
-                border: "1px solid oklch(0.3 0.02 280 / 0.6)",
-                color: "oklch(0.78 0.01 280)",
+                background: "oklch(0.12 0.012 275 / 0.65)",
+                border: "1px solid oklch(0.28 0.018 275 / 0.7)",
+                color: "oklch(0.78 0.008 280)",
+                backdropFilter: "blur(10px)",
               }}
               whileHover={{
-                scale: 1.06,
-                borderColor: "oklch(0.7 0.22 70 / 0.5)",
+                scale: 1.07,
+                borderColor: "oklch(0.72 0.14 82 / 0.55)",
+                color: "oklch(0.92 0.01 280)",
               }}
-              whileTap={{ scale: 0.97 }}
+              whileTap={{ scale: 0.96 }}
             >
-              <Play size={16} />
-              View Services
+              <Play size={15} />
+              {ctaSecondaryText}
             </motion.button>
           </Link>
         </motion.div>
@@ -316,49 +398,57 @@ export function HeroSection() {
 
       {/* Film strip */}
       <div className="absolute bottom-0 left-0 right-0 h-20 flex items-center overflow-hidden pointer-events-none">
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "linear-gradient(to top, oklch(0.06 0.01 270 / 0.8), transparent)",
+          }}
+        />
         <motion.div
-          className="flex gap-1 items-center"
+          className="flex gap-1.5 items-center relative"
           animate={{ x: ["0%", "-50%"] }}
           transition={{
-            duration: 25,
+            duration: 28,
             repeat: Number.POSITIVE_INFINITY,
             ease: "linear",
           }}
         >
-          {[...FILM_IMAGES, ...FILM_IMAGES, ...FILM_IMAGES].map((src, i) => {
-            const filmKey = `film-${i}`;
-            return (
-              <div
-                key={filmKey}
-                className="flex-shrink-0 w-28 h-16 rounded overflow-hidden border"
-                style={{ borderColor: "oklch(0.7 0.22 70 / 0.25)" }}
-              >
-                <img
-                  src={src}
-                  alt=""
-                  className="w-full h-full object-cover opacity-60"
-                  loading="lazy"
-                />
-              </div>
-            );
-          })}
+          {[
+            ...FILM_IMAGES.map((src, i) => ({ src, key: `a-${i}-${src}` })),
+            ...FILM_IMAGES.map((src, i) => ({ src, key: `b-${i}-${src}` })),
+            ...FILM_IMAGES.map((src, i) => ({ src, key: `c-${i}-${src}` })),
+          ].map(({ src, key }) => (
+            <div
+              key={key}
+              className="flex-shrink-0 w-28 h-16 rounded-sm overflow-hidden border"
+              style={{ borderColor: "oklch(0.72 0.14 82 / 0.22)" }}
+            >
+              <img
+                src={src}
+                alt=""
+                className="w-full h-full object-cover opacity-50"
+                loading="lazy"
+              />
+            </div>
+          ))}
         </motion.div>
       </div>
 
-      {/* Scroll arrow */}
+      {/* Scroll indicator */}
       <motion.div
-        className="absolute bottom-24 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1"
-        style={{ color: "oklch(0.55 0.01 280)" }}
-        animate={{ y: [0, 8, 0] }}
+        className="absolute bottom-24 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center gap-1.5"
+        style={{ color: "oklch(0.48 0.01 280)" }}
+        animate={{ y: [0, 7, 0] }}
         transition={{
-          duration: 2,
+          duration: 2.2,
           repeat: Number.POSITIVE_INFINITY,
           ease: "easeInOut",
         }}
         initial={{ opacity: 0 }}
       >
-        <span className="text-xs tracking-widest uppercase">Scroll</span>
-        <ChevronDown size={20} />
+        <span className="text-[10px] tracking-[3px] uppercase">Scroll</span>
+        <ChevronDown size={18} />
       </motion.div>
     </section>
   );

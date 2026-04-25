@@ -7,7 +7,8 @@ interface RoleOption {
   description: string;
   icon: React.ReactNode;
   isAdmin?: boolean;
-  accentColor: string;
+  /** CSS custom-property-based color class for selected state */
+  colorVar: "primary" | "accent";
 }
 
 const ClientIcon = () => (
@@ -111,28 +112,28 @@ const ALL_ROLES: RoleOption[] = [
     label: "Client",
     description: "Book shoots & sessions",
     icon: <ClientIcon />,
-    accentColor: "oklch(0.7 0.22 70)",
+    colorVar: "primary",
   },
   {
     role: "student",
     label: "Student",
     description: "Courses & certificates",
     icon: <StudentIcon />,
-    accentColor: "oklch(0.65 0.2 230)",
+    colorVar: "accent",
   },
   {
     role: "receptionist",
     label: "Receptionist",
     description: "Manage bookings",
     icon: <ReceptionistIcon />,
-    accentColor: "oklch(0.65 0.16 160)",
+    colorVar: "primary",
   },
   {
     role: "staff",
     label: "Staff",
     description: "Upload & manage work",
     icon: <StaffIcon />,
-    accentColor: "oklch(0.65 0.18 190)",
+    colorVar: "accent",
   },
   {
     role: "admin",
@@ -140,7 +141,7 @@ const ALL_ROLES: RoleOption[] = [
     description: "→ Redirects to secure portal",
     icon: <AdminIcon />,
     isAdmin: true,
-    accentColor: "oklch(0.78 0.2 85)",
+    colorVar: "primary",
   },
 ];
 
@@ -148,9 +149,7 @@ interface RoleSelectorProps {
   selectedRole: UserRole | null;
   onRoleSelect: (role: UserRole) => void;
   availableRoles?: UserRole[];
-  /** When true, clicking just selects (no redirect for admin). Used in registration panel. */
   registrationMode?: boolean;
-  "data-ocid"?: string;
 }
 
 export function RoleSelector({
@@ -167,7 +166,7 @@ export function RoleSelector({
     <div className="grid grid-cols-2 gap-2">
       {roles.map((option, i) => {
         const isSelected = selectedRole === option.role;
-        const { accentColor, isAdmin } = option;
+        const cv = option.colorVar;
 
         return (
           <motion.button
@@ -184,23 +183,23 @@ export function RoleSelector({
             className="relative flex flex-col items-start gap-1.5 p-3 rounded-xl text-left transition-all duration-300 border overflow-hidden"
             style={{
               background: isSelected
-                ? accentColor.replace(")", " / 0.12)")
-                : "oklch(0.18 0.02 280 / 0.5)",
+                ? `oklch(var(--${cv}) / 0.12)`
+                : "oklch(var(--muted) / 0.5)",
               borderColor: isSelected
-                ? accentColor.replace(")", " / 0.7)")
-                : "oklch(0.32 0.02 280 / 0.6)",
+                ? `oklch(var(--${cv}) / 0.7)`
+                : "oklch(var(--border) / 0.6)",
               boxShadow: isSelected
-                ? `0 0 18px ${accentColor.replace(")", " / 0.25)")}`
+                ? `0 0 18px oklch(var(--${cv}) / 0.2)`
                 : "none",
             }}
           >
-            {/* Admin shimmer */}
-            {isAdmin && !registrationMode && (
+            {/* Admin shimmer effect */}
+            {option.isAdmin && !registrationMode && (
               <motion.span
                 className="absolute inset-0 pointer-events-none"
                 style={{
                   background:
-                    "linear-gradient(110deg, transparent 25%, oklch(0.85 0.18 85 / 0.12) 50%, transparent 75%)",
+                    "linear-gradient(110deg, transparent 25%, oklch(var(--primary) / 0.1) 50%, transparent 75%)",
                   backgroundSize: "200% 100%",
                 }}
                 animate={{ backgroundPosition: ["200% 0", "-200% 0"] }}
@@ -214,20 +213,13 @@ export function RoleSelector({
               />
             )}
 
-            {/* Selected highlight */}
-            {isSelected && (
-              <motion.div
-                layoutId="role-highlight"
-                className="absolute inset-0 rounded-xl pointer-events-none"
-                style={{ background: accentColor.replace(")", " / 0.05)") }}
-              />
-            )}
-
             {/* Icon */}
             <span
               className="relative z-10 transition-colors duration-300"
               style={{
-                color: isSelected ? accentColor : "oklch(0.55 0.01 280)",
+                color: isSelected
+                  ? `oklch(var(--${cv}))`
+                  : "oklch(var(--muted-foreground))",
               }}
             >
               {option.icon}
@@ -237,7 +229,9 @@ export function RoleSelector({
               <div
                 className="font-semibold text-xs leading-tight transition-colors duration-300"
                 style={{
-                  color: isSelected ? accentColor : "oklch(0.82 0.008 280)",
+                  color: isSelected
+                    ? `oklch(var(--${cv}))`
+                    : "oklch(var(--foreground))",
                 }}
               >
                 {option.label}
@@ -254,12 +248,13 @@ export function RoleSelector({
                 animate={{ scale: 1, rotate: 0 }}
                 transition={{ type: "spring", stiffness: 400, damping: 20 }}
                 className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center z-10"
-                style={{ background: accentColor }}
+                style={{ background: `oklch(var(--${cv}))` }}
               >
                 <svg
                   viewBox="0 0 24 24"
                   fill="currentColor"
-                  className="w-2.5 h-2.5 text-black"
+                  className="w-2.5 h-2.5"
+                  style={{ color: "oklch(var(--primary-foreground))" }}
                   aria-hidden="true"
                 >
                   <title>Selected</title>
@@ -273,13 +268,12 @@ export function RoleSelector({
             )}
 
             {/* Admin OWNER badge */}
-            {isAdmin && !isSelected && !registrationMode && (
+            {option.isAdmin && !isSelected && !registrationMode && (
               <span
-                className="absolute top-1.5 right-1.5 text-[9px] font-bold px-1 py-0.5 rounded leading-none"
+                className="absolute top-1.5 right-1.5 text-[9px] font-bold px-1 py-0.5 rounded leading-none text-primary"
                 style={{
-                  background: "oklch(0.78 0.2 85 / 0.1)",
-                  border: "1px solid oklch(0.78 0.2 85 / 0.35)",
-                  color: "oklch(0.78 0.2 85 / 0.8)",
+                  background: "oklch(var(--primary) / 0.1)",
+                  border: "1px solid oklch(var(--primary) / 0.35)",
                 }}
               >
                 OWNER

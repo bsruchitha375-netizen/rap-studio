@@ -13,7 +13,7 @@ const WhatsAppIcon = () => (
   <svg
     viewBox="0 0 24 24"
     fill="currentColor"
-    className="w-7 h-7"
+    className="w-6 h-6"
     aria-hidden="true"
   >
     <title>WhatsApp</title>
@@ -25,14 +25,14 @@ const WhatsAppIcon = () => (
 export function Layout({ children }: LayoutProps) {
   return (
     <div className="min-h-screen bg-background flex flex-col relative overflow-x-hidden">
-      {/* Background ambient effects */}
+      {/* Ambient background — subtle gold glow visible in both modes */}
       <div
         className="fixed inset-0 pointer-events-none overflow-hidden"
         aria-hidden="true"
       >
-        <div className="absolute -top-40 -right-40 w-96 h-96 rounded-full opacity-[0.04] bg-primary blur-3xl" />
-        <div className="absolute top-1/3 -left-40 w-80 h-80 rounded-full opacity-[0.04] bg-accent blur-3xl" />
-        <div className="absolute bottom-0 right-1/4 w-72 h-72 rounded-full opacity-[0.03] bg-primary blur-3xl" />
+        <div className="absolute -top-60 -right-60 w-[600px] h-[600px] rounded-full opacity-[0.04] bg-primary blur-[100px]" />
+        <div className="absolute top-1/3 -left-60 w-[500px] h-[500px] rounded-full opacity-[0.03] bg-accent blur-[100px]" />
+        <div className="absolute bottom-0 right-1/3 w-96 h-96 rounded-full opacity-[0.025] bg-primary blur-3xl" />
       </div>
 
       <Navbar />
@@ -42,58 +42,57 @@ export function Layout({ children }: LayoutProps) {
       <Footer />
       <ChatbotWidget />
 
-      {/* Floating WhatsApp Button — direct chat, no form or modal */}
+      {/* Floating WhatsApp Button */}
       <motion.button
         type="button"
         aria-label="Chat with us on WhatsApp"
         data-ocid="btn-whatsapp-float"
-        onClick={() => window.open("https://wa.me/917338501228", "_blank")}
-        initial={{ opacity: 0, y: 60, scale: 0.8 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
+        onClick={() =>
+          window.open(
+            "https://wa.me/917338501228",
+            "_blank",
+            "noopener,noreferrer",
+          )
+        }
+        initial={{ opacity: 0, scale: 0.6, y: 40 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{
-          delay: 1.2,
-          duration: 0.5,
+          delay: 1.5,
+          duration: 0.55,
           type: "spring",
-          stiffness: 200,
-          damping: 18,
+          stiffness: 220,
+          damping: 20,
         }}
-        whileHover={{ scale: 1.1 }}
-        whileTap={{ scale: 0.95 }}
-        className="fixed z-[9999] flex flex-col items-center gap-1 group bg-transparent border-0 p-0 cursor-pointer"
-        style={{ bottom: "90px", right: "24px" }}
+        whileHover={{ scale: 1.12 }}
+        whileTap={{ scale: 0.93 }}
+        className="fixed z-[9999] flex flex-col items-center gap-1 bg-transparent border-0 p-0 cursor-pointer"
+        style={{ bottom: "88px", right: "22px" }}
       >
         {/* Pulse ring */}
         <motion.span
-          className="absolute inset-0 rounded-full"
+          className="absolute inset-0 rounded-full pointer-events-none"
           style={{ backgroundColor: "#25D366" }}
-          animate={{ scale: [1, 1.55, 1], opacity: [0.5, 0, 0.5] }}
+          animate={{ scale: [1, 1.6, 1], opacity: [0.45, 0, 0.45] }}
           transition={{
-            duration: 2.8,
+            duration: 3,
             repeat: Number.POSITIVE_INFINITY,
             ease: "easeInOut",
           }}
           aria-hidden="true"
         />
         {/* Button circle */}
-        <motion.span
-          className="relative w-14 h-14 rounded-full flex items-center justify-center shadow-2xl"
+        <span
+          className="relative w-14 h-14 rounded-full flex items-center justify-center shadow-2xl text-white"
           style={{ backgroundColor: "#25D366" }}
-          animate={{ scale: [1, 1.06, 1] }}
-          transition={{
-            duration: 3,
-            repeat: Number.POSITIVE_INFINITY,
-            ease: "easeInOut",
-            delay: 0.5,
-          }}
         >
           <WhatsAppIcon />
-        </motion.span>
+        </span>
         {/* Label */}
         <span
-          className="text-[10px] font-semibold px-2 py-0.5 rounded-full shadow-md whitespace-nowrap"
-          style={{ backgroundColor: "#25D366", color: "#fff" }}
+          className="text-[9px] font-bold px-2 py-0.5 rounded-full shadow-lg whitespace-nowrap tracking-wide uppercase"
+          style={{ backgroundColor: "#1da851", color: "#fff" }}
         >
-          WhatsApp
+          Chat
         </span>
       </motion.button>
 

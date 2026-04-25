@@ -1,3 +1,5 @@
+import Common "common";
+
 module {
   public type ServiceRevenue = {
     serviceId : Text;
@@ -21,5 +23,27 @@ module {
     emailLogCount : Nat;
     totalCmsEntries : Nat;
     totalMultiServiceBookings : Nat;
+    totalUsers : Nat;
+  };
+
+  // Alias so frontend can refer to either name
+  public type AnalyticsSummary = BookingStats;
+
+  public type ActivityEventKind = {
+    #Booking;
+    #Enrollment;
+    #Payment;
+    #Registration;
+    #Login;
+  };
+
+  /// A single activity event for the live admin feed.
+  public type ActivityEvent = {
+    id : Text;                      // "<kind>-<entityId>"
+    kind : ActivityEventKind;
+    title : Text;                   // human-readable headline
+    detail : Text;                  // secondary line
+    userId : Common.UserId;
+    timestamp : Common.Timestamp;
   };
 };

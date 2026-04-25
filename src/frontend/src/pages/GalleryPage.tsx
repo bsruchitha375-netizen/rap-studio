@@ -2,11 +2,12 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Aperture, Camera, Plus, Star } from "lucide-react";
 import { motion, useInView } from "motion/react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { GalleryGrid } from "../components/gallery/GalleryGrid";
 import { UploadForm } from "../components/gallery/UploadForm";
 import { Layout } from "../components/layout/Layout";
 import { useIsStaff } from "../hooks/useAuth";
+import { useCmsSection } from "../hooks/useCmsContent";
 import type { MediaItem } from "../types";
 
 const FILTER_TABS = [
@@ -20,7 +21,7 @@ const FILTER_TABS = [
   { label: "Short Films", value: "Short Films" },
 ];
 
-const GALLERY_ITEMS: MediaItem[] = [
+const DEFAULT_GALLERY_ITEMS: MediaItem[] = [
   {
     id: "g1",
     title: "Golden Hour Wedding",
@@ -266,6 +267,49 @@ const GALLERY_ITEMS: MediaItem[] = [
 const FEATURED_IDS = ["g1", "g5", "g15", "g11"];
 const ITEMS_PER_PAGE = 12;
 
+function mergeGalleryItems(
+  defaults: MediaItem[],
+  cmsItems: {
+    id: string;
+    title: string;
+    category: string;
+    url: string;
+    thumbnailUrl: string;
+    type: "image" | "video";
+  }[],
+): MediaItem[] {
+  if (!cmsItems.length) return defaults;
+  const cmsMap = new Map(cmsItems.map((i) => [i.id, i]));
+  const merged = defaults.map((item) => {
+    const override = cmsMap.get(item.id);
+    if (override) {
+      return {
+        ...item,
+        title: override.title,
+        category: override.category,
+        url: override.url,
+        thumbnailUrl: override.thumbnailUrl,
+        type: override.type,
+      };
+    }
+    return item;
+  });
+  for (const ci of cmsItems) {
+    if (!merged.find((m) => m.id === ci.id)) {
+      merged.push({
+        id: ci.id,
+        title: ci.title,
+        category: ci.category,
+        url: ci.url,
+        thumbnailUrl: ci.thumbnailUrl,
+        type: ci.type,
+        createdAt: BigInt(Date.now() * 1_000_000),
+      });
+    }
+  }
+  return merged;
+}
+
 export function GalleryPage() {
   const isStaff = useIsStaff();
   const [activeFilter, setActiveFilter] = useState("all");
@@ -274,11 +318,50 @@ export function GalleryPage() {
   const mainRef = useRef<HTMLDivElement>(null);
   const isInView = useInView(mainRef, { once: true });
 
+  const cmsGallery = useCmsSection("gallery");
+  const [galleryItems, setGalleryItems] = useState<MediaItem[]>(() =>
+    mergeGalleryItems(DEFAULT_GALLERY_ITEMS, cmsGallery),
+  );
+
+  useEffect(() => {
+    const handleUpdate = (e: Event) => {
+      const detail = (e as CustomEvent<{ section?: string }>).detail;
+      if (!detail?.section || detail.section === "gallery") {
+        try {
+          const raw = localStorage.getItem("cms_gallery");
+          const items = raw
+            ? (JSON.parse(raw) as Array<{
+                id: string;
+                title: string;
+                category: string;
+                url: string;
+                thumbnailUrl: string;
+                type: "image" | "video";
+              }>)
+            : [];
+          setGalleryItems(mergeGalleryItems(DEFAULT_GALLERY_ITEMS, items));
+        } catch {
+          setGalleryItems(DEFAULT_GALLERY_ITEMS);
+        }
+        setVisibleCount(ITEMS_PER_PAGE);
+      }
+    };
+    window.addEventListener("cms-updated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+    return () => {
+      window.removeEventListener("cms-updated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
+
+  useEffect(() => {
+    setGalleryItems(mergeGalleryItems(DEFAULT_GALLERY_ITEMS, cmsGallery));
+  }, [cmsGallery]);
+
   const filteredItems =
     activeFilter === "all"
-      ? GALLERY_ITEMS
-      : GALLERY_ITEMS.filter((item) => item.category === activeFilter);
-
+      ? galleryItems
+      : galleryItems.filter((item) => item.category === activeFilter);
   const visibleItems = filteredItems.slice(0, visibleCount);
   const hasMore = visibleCount < filteredItems.length;
 
@@ -286,37 +369,35 @@ export function GalleryPage() {
     <Layout>
       {/* Cinematic Hero Banner */}
       <section
-        className="relative overflow-hidden bg-card border-b border-border/30"
-        style={{ minHeight: "380px" }}
+        className="relative overflow-hidden border-b border-border/20"
+        style={{ minHeight: "420px" }}
       >
+        {/* Background image with parallax feel */}
         <div
-          className="absolute inset-0 pointer-events-none"
-          aria-hidden="true"
-        >
-          <div className="absolute inset-0 bg-gradient-to-br from-background via-card to-background" />
-          <motion.div
-            className="absolute top-10 left-1/3 w-[500px] h-[500px] rounded-full opacity-[0.08]"
-            style={{ background: "oklch(0.7 0.22 70)" }}
-            animate={{ scale: [1, 1.15, 1], x: [-20, 20, -20] }}
-            transition={{
-              duration: 8,
-              repeat: Number.POSITIVE_INFINITY,
-              ease: "easeInOut",
-            }}
-          />
-          <motion.div
-            className="absolute bottom-0 right-1/4 w-96 h-96 rounded-full opacity-[0.05]"
-            style={{ background: "oklch(0.68 0.2 290)" }}
-            animate={{ scale: [1.1, 1, 1.1], y: [-10, 10, -10] }}
-            transition={{
-              duration: 10,
-              repeat: Number.POSITIVE_INFINITY,
-              ease: "easeInOut",
-            }}
-          />
-        </div>
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "url('https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=1600&q=80')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            filter: "brightness(0.22) saturate(0.7)",
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/60 to-background" />
 
-        <div className="container mx-auto px-4 py-24 relative z-10 text-center">
+        {/* Gold ambient glow */}
+        <motion.div
+          className="absolute top-1/4 left-1/3 w-[600px] h-[400px] rounded-full opacity-[0.1] pointer-events-none"
+          style={{ background: "oklch(0.72 0.14 82)" }}
+          animate={{ scale: [1, 1.12, 1], x: [-15, 15, -15] }}
+          transition={{
+            duration: 10,
+            repeat: Number.POSITIVE_INFINITY,
+            ease: "easeInOut",
+          }}
+        />
+
+        <div className="container mx-auto px-4 py-28 relative z-10 text-center">
           <motion.div
             initial={{ opacity: 0, y: 40 }}
             animate={{ opacity: 1, y: 0 }}
@@ -325,15 +406,15 @@ export function GalleryPage() {
           >
             <motion.div
               className="flex items-center justify-center gap-3"
-              initial={{ opacity: 0, scale: 0.8 }}
+              initial={{ opacity: 0, scale: 0.85 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6, delay: 0.1 }}
             >
-              <div className="h-px w-16 bg-gradient-to-r from-transparent to-primary/60" />
+              <div className="h-px w-20 bg-gradient-to-r from-transparent to-primary/50" />
               <Camera className="w-5 h-5 text-primary" />
-              <span className="section-label">Portfolio</span>
+              <span className="section-label tracking-[2px]">Portfolio</span>
               <Aperture className="w-5 h-5 text-primary" />
-              <div className="h-px w-16 bg-gradient-to-l from-transparent to-primary/60" />
+              <div className="h-px w-20 bg-gradient-to-l from-transparent to-primary/50" />
             </motion.div>
 
             <motion.h1
@@ -344,7 +425,7 @@ export function GalleryPage() {
             >
               Our{" "}
               <span className="text-primary text-glow-gold relative inline-block">
-                Portfolio
+                Gallery
                 <motion.span
                   className="absolute -bottom-1 left-0 right-0 h-0.5 rounded-full"
                   style={{ background: "var(--gradient-gold)" }}
@@ -365,22 +446,23 @@ export function GalleryPage() {
               story is a memory — crafted with cinematic precision.
             </motion.p>
 
+            {/* Stats */}
             <motion.div
-              className="flex items-center justify-center gap-10 pt-2"
+              className="flex items-center justify-center gap-12 pt-2"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.6 }}
+              transition={{ duration: 0.6, delay: 0.55 }}
             >
               {[
                 { value: "500+", label: "Shoots" },
-                { value: "24", label: "Galleries" },
+                { value: String(galleryItems.length), label: "Photos" },
                 { value: "8", label: "Categories" },
               ].map(({ value, label }) => (
                 <div key={label} className="text-center">
                   <div className="font-display text-2xl font-bold text-primary">
                     {value}
                   </div>
-                  <div className="text-xs text-muted-foreground tracking-widest uppercase">
+                  <div className="text-[10px] text-muted-foreground tracking-widest uppercase mt-0.5">
                     {label}
                   </div>
                 </div>
@@ -390,27 +472,26 @@ export function GalleryPage() {
         </div>
       </section>
 
-      {/* Featured Section */}
-      <section className="py-14 bg-muted/20 border-b border-border/20">
+      {/* Featured */}
+      <section className="py-14 bg-muted/15 border-b border-border/15">
         <div className="container mx-auto px-4">
           <motion.div
             className="flex items-center gap-3 mb-8"
             initial={{ opacity: 0, x: -20 }}
             whileInView={{ opacity: 1, x: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
           >
             <div className="w-1 h-7 rounded-full bg-primary" />
             <Star className="w-5 h-5 text-primary fill-primary" />
             <h2 className="font-display text-2xl font-bold text-foreground">
               Featured Work
             </h2>
-            <Badge className="gradient-gold text-background border-0 text-xs shadow-glow-gold">
+            <Badge className="gradient-gold text-primary-foreground border-0 text-xs shadow-glow-gold">
               Editor's Pick
             </Badge>
           </motion.div>
           <GalleryGrid
-            items={GALLERY_ITEMS.filter((i) => FEATURED_IDS.includes(i.id))}
+            items={galleryItems.filter((i) => FEATURED_IDS.includes(i.id))}
             featuredIds={FEATURED_IDS}
             isLoading={false}
           />
@@ -420,7 +501,7 @@ export function GalleryPage() {
       {/* Main Gallery */}
       <section className="py-14 bg-background" ref={mainRef}>
         <div className="container mx-auto px-4">
-          {/* Filter tabs */}
+          {/* Filter + upload row */}
           <motion.div
             className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8"
             initial={{ opacity: 0, y: 16 }}
@@ -428,7 +509,7 @@ export function GalleryPage() {
             transition={{ duration: 0.5 }}
           >
             <div
-              className="relative flex flex-wrap gap-2"
+              className="flex flex-wrap gap-2"
               role="tablist"
               aria-label="Gallery category filters"
             >
@@ -444,8 +525,8 @@ export function GalleryPage() {
                   }}
                   className={`relative px-5 py-2 rounded-full text-sm font-semibold transition-all duration-300 ${
                     activeFilter === tab.value
-                      ? "text-background shadow-glow-gold"
-                      : "glass-effect-subtle text-muted-foreground hover:text-foreground hover:border-primary/40"
+                      ? "text-primary-foreground shadow-glow-gold"
+                      : "glass-effect-subtle text-muted-foreground hover:text-foreground hover:border-primary/30"
                   }`}
                   style={
                     activeFilter === tab.value
@@ -455,18 +536,6 @@ export function GalleryPage() {
                   data-ocid="gallery.filter.tab"
                 >
                   {tab.label}
-                  {activeFilter === tab.value && (
-                    <motion.span
-                      layoutId="gallery-filter-indicator"
-                      className="absolute inset-0 rounded-full"
-                      style={{ background: "var(--gradient-gold)", zIndex: -1 }}
-                      transition={{
-                        type: "spring",
-                        stiffness: 400,
-                        damping: 35,
-                      }}
-                    />
-                  )}
                 </button>
               ))}
             </div>
@@ -474,7 +543,7 @@ export function GalleryPage() {
             {isStaff && (
               <Button
                 type="button"
-                className="gradient-gold text-background border-0 hover:opacity-90 gap-2 shrink-0 shadow-glow-gold"
+                className="gradient-gold text-primary-foreground border-0 hover:opacity-90 gap-2 shrink-0 shadow-glow-gold"
                 onClick={() => setShowUpload(true)}
                 data-ocid="gallery.upload_button"
               >
@@ -484,8 +553,7 @@ export function GalleryPage() {
             )}
           </motion.div>
 
-          {/* Count */}
-          <div className="mb-6 flex items-center gap-3">
+          <div className="mb-5 flex items-center gap-3">
             <span className="text-muted-foreground text-sm">
               Showing{" "}
               <strong className="text-foreground">{visibleItems.length}</strong>{" "}

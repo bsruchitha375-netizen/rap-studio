@@ -3,6 +3,7 @@ module {
   public type Timestamp = Int;
   public type BookingId = Nat;
   public type CourseId = Nat;
+  public type ServiceId = Nat;
   public type PaymentId = Nat;
   public type EnrollmentId = Nat;
   public type MediaId = Nat;

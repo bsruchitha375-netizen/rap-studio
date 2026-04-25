@@ -2,13 +2,45 @@ import { Button } from "@/components/ui/button";
 import { useParams } from "@tanstack/react-router";
 import { Link } from "@tanstack/react-router";
 import { AlertCircle, ChevronLeft } from "lucide-react";
+import { useMemo } from "react";
 import { CourseDetail } from "../components/courses/CourseDetail";
 import { Layout } from "../components/layout/Layout";
 import { getCourseById, getCoursesByCategory } from "../data/courses";
+import { useAuth } from "../hooks/useAuth";
+import { useCourses, useMyEnrollments } from "../hooks/useBackend";
 
 export function CourseDetailPage() {
   const { courseId } = useParams({ from: "/courses/$courseId" });
-  const course = getCourseById(courseId);
+  const { isAuthenticated } = useAuth();
+
+  // Try static data first (for fast load), then backend data
+  const staticCourse = getCourseById(courseId);
+  const { data: backendCourses = [] } = useCourses();
+  const { data: enrollments = [] } = useMyEnrollments();
+
+  // Find course — prefer static data (richer syllabus etc.), fall back to backend
+  const course = useMemo(() => {
+    if (staticCourse) return staticCourse;
+    const bc = backendCourses.find((c) => String(c.id) === courseId);
+    if (!bc) return undefined;
+    return bc;
+  }, [staticCourse, backendCourses, courseId]);
+
+  // Check if already enrolled
+  const isEnrolled = useMemo(
+    () =>
+      isAuthenticated &&
+      enrollments.some((e) => String(e.courseId) === String(courseId)),
+    [enrollments, courseId, isAuthenticated],
+  );
+
+  const enrollment = useMemo(
+    () =>
+      enrollments.find((e) => String(e.courseId) === String(courseId)) ?? null,
+    [enrollments, courseId],
+  );
+
+  const progress = enrollment?.progress ?? 0;
 
   if (!course) {
     return (
@@ -53,8 +85,8 @@ export function CourseDetailPage() {
       <CourseDetail
         course={course}
         relatedCourses={related}
-        isEnrolled={false}
-        progress={0}
+        isEnrolled={isEnrolled}
+        progress={progress}
       />
     </Layout>
   );

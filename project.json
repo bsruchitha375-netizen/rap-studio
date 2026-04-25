@@ -1,27 +1,25 @@
 {
-  "overview": "RAP Integrated Studio Management — a luxury, cinematic platform for a premium photography, videography, and short film studio. Features multi-role authentication, real-time multi-service booking with Stripe payments, a 50-course learning platform, gallery, AI chatbot, and a full admin CMS with instant site updates.",
+  "overview": "RAP Integrated Studio Management platform — a luxury, cinematic web application for a premium photography, videography, and short film studio. Features multi-role access (Admin, Client, Student, Receptionist, Staff), online course learning with YouTube videos and quizzes, Stripe payment integration, booking system, gallery, and a full admin CMS.",
   "features": [
-    "Premium cinematic dark theme with gold accents and glassmorphism UI",
-    "Multi-role login: Admin, Client, Staff, Student, Receptionist",
-    "Stripe payment gateway with dynamic hour-based pricing",
-    "Multi-service booking with real-time total calculation",
-    "50-course learning platform with progress tracking and certificates",
-    "Admin CMS dashboard with real-time booking confirmations and analytics",
-    "Masonry gallery with lightbox and category filters",
-    "AI chatbot widget and full-page FAQ",
-    "QR-code certificate verification",
-    "Email and WhatsApp notifications for all bookings and payments"
+    "Online course learning with YouTube video lessons and 10-question quizzes",
+    "Step-by-step learning: video → quiz → certificate flow",
+    "Admin CMS to manage lesson YouTube URLs and quiz questions",
+    "Live Stripe payment configuration for real enrollment payments",
+    "Multi-role authentication with admin approval workflow",
+    "Real-time admin dashboard with 5-second polling",
+    "Certificate generation with QR code after course completion",
+    "Premium cinematic UI with dark/light theme toggle"
   ],
-  "category": "business",
+  "category": "education-studio-management",
   "tags": [
-    "photography",
     "studio",
-    "booking",
     "courses",
-    "stripe",
-    "cms",
-    "luxury",
-    "cinematic"
+    "learning",
+    "payments",
+    "admin",
+    "cinematic",
+    "certificates",
+    "youtube"
   ],
-  "last_updated": "2026-04-24T08:15:39.483Z"
+  "last_updated": "2026-04-25T17:51:33.963Z"
 }

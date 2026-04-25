@@ -1,6 +1,7 @@
 import Map "mo:core/Map";
 import List "mo:core/List";
 import Runtime "mo:core/Runtime";
+import Blob "mo:core/Blob";
 
 import AccessControl "mo:caffeineai-authorization/access-control";
 
@@ -19,6 +20,7 @@ mixin (
   multiBookingCounter : Common.Counter,
   paymentExtended : Map.Map<Common.PaymentId, T.PaymentOrderExtended>,
   subServiceImages : Map.Map<Text, Text>,
+  subServiceBlobs : Map.Map<Text, Blob>,
 ) {
 
   // ── CMS — public reads ─────────────────────────────────────────────────────
@@ -94,6 +96,15 @@ mixin (
     Lib.getAllSubServiceImages(subServiceImages);
   };
 
+  // Retrieve a stored sub-service image blob directly
+  public query func getSubServiceImageBlob(
+    categoryId : Text,
+    subServiceId : Text,
+  ) : async ?Blob {
+    let key = categoryId # "/" # subServiceId;
+    subServiceBlobs.get(key);
+  };
+
   // ── Sub-Service Images — admin writes ──────────────────────────────────────
 
   public shared ({ caller }) func setSubServiceImage(
@@ -111,5 +122,25 @@ mixin (
   ) : async () {
     UserLib.requireRole(profiles, caller, #Admin);
     Lib.deleteSubServiceImage(subServiceImages, categoryId, subServiceId);
+    // Also remove the blob if stored
+    let key = categoryId # "/" # subServiceId;
+    subServiceBlobs.remove(key);
+  };
+
+  // Upload a binary blob for a sub-service image; stores blob and records key
+  public shared ({ caller }) func uploadSubServiceImage(
+    categoryId : Text,
+    subServiceId : Text,
+    imageData : [Nat8],
+  ) : async () {
+    UserLib.requireRole(profiles, caller, #Admin);
+    if (imageData.size() == 0) {
+      Runtime.trap("imageData must not be empty");
+    };
+    let key = categoryId # "/" # subServiceId;
+    let blob = Blob.fromArray(imageData);
+    subServiceBlobs.add(key, blob);
+    // Store a sentinel URL so getSubServiceImage returns a non-null value
+    subServiceImages.add(key, "blob:" # key);
   };
 };

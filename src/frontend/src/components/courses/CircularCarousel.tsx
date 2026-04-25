@@ -8,7 +8,7 @@ interface CircularCarouselProps {
   courses: Course[];
 }
 
-const VISIBLE_SIDES = 2; // cards visible on each side of center
+const VISIBLE_SIDES = 2;
 
 function getOffset(index: number, active: number, total: number): number {
   let offset = index - active;
@@ -18,7 +18,7 @@ function getOffset(index: number, active: number, total: number): number {
 }
 
 function getCardTransform(offset: number, isMobile: boolean) {
-  const spread = isMobile ? 160 : 280;
+  const spread = isMobile ? 155 : 275;
   const maxVisible = isMobile ? 1 : VISIBLE_SIDES;
   const abs = Math.abs(offset);
 
@@ -36,8 +36,8 @@ function getCardTransform(offset: number, isMobile: boolean) {
   return {
     x: offset * spread,
     rotateY: offset * -18,
-    scale: 1 - abs * 0.14,
-    opacity: abs === 0 ? 1 : 1 - abs * 0.28,
+    scale: 1 - abs * 0.13,
+    opacity: abs === 0 ? 1 : 1 - abs * 0.3,
     zIndex: 10 - abs,
     display: "block",
   };
@@ -49,7 +49,6 @@ export function CircularCarousel({ courses }: CircularCarouselProps) {
   const [isMobile, setIsMobile] = useState(false);
   const dragStartX = useRef<number | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
   const total = courses.length;
 
   useEffect(() => {
@@ -62,14 +61,13 @@ export function CircularCarousel({ courses }: CircularCarouselProps) {
   const prev = useCallback(() => {
     setActiveIndex((i) => (i - 1 + total) % total);
   }, [total]);
-
   const next = useCallback(() => {
     setActiveIndex((i) => (i + 1) % total);
   }, [total]);
 
   useEffect(() => {
     if (isPaused || total === 0) return;
-    intervalRef.current = setInterval(next, 4000);
+    intervalRef.current = setInterval(next, 4200);
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
     };
@@ -86,8 +84,7 @@ export function CircularCarousel({ courses }: CircularCarouselProps) {
       "changedTouches" in e ? e.changedTouches[0].clientX : e.clientX;
     const delta = endX - dragStartX.current;
     if (Math.abs(delta) > 50) {
-      if (delta < 0) next();
-      else prev();
+      delta < 0 ? next() : prev();
     }
     dragStartX.current = null;
     setTimeout(() => setIsPaused(false), 500);
@@ -101,22 +98,20 @@ export function CircularCarousel({ courses }: CircularCarouselProps) {
     );
   }
 
-  // Dot pagination: show max 7 dots
   const dotCount = Math.min(total, 7);
   const dotStep = total > 7 ? Math.floor(total / 7) : 1;
 
-  // Ambient glow color changes with active course category
   const activeCourse = courses[activeIndex];
   const glowColor =
     activeCourse.category === "photography"
-      ? "oklch(0.7 0.15 70 / 0.12)"
+      ? "oklch(0.72 0.12 82 / 0.14)"
       : activeCourse.category === "videography"
-        ? "oklch(0.7 0.15 290 / 0.12)"
+        ? "oklch(0.68 0.14 290 / 0.14)"
         : activeCourse.category === "editing"
-          ? "oklch(0.7 0.15 185 / 0.12)"
+          ? "oklch(0.68 0.14 185 / 0.14)"
           : activeCourse.category === "business"
-            ? "oklch(0.7 0.15 240 / 0.12)"
-            : "oklch(0.7 0.15 350 / 0.12)";
+            ? "oklch(0.68 0.14 240 / 0.14)"
+            : "oklch(0.68 0.14 350 / 0.14)";
 
   return (
     <div
@@ -124,7 +119,7 @@ export function CircularCarousel({ courses }: CircularCarouselProps) {
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
     >
-      {/* Ambient glow behind carousel */}
+      {/* Ambient glow */}
       <motion.div
         className="absolute inset-x-0 top-1/2 -translate-y-1/2 h-80 rounded-full pointer-events-none blur-3xl"
         animate={{ background: glowColor }}
@@ -165,8 +160,8 @@ export function CircularCarousel({ courses }: CircularCarouselProps) {
                   }}
                   transition={{
                     type: "spring",
-                    stiffness: 300,
-                    damping: 35,
+                    stiffness: 280,
+                    damping: 32,
                     mass: 0.8,
                   }}
                   className="absolute"
@@ -175,9 +170,7 @@ export function CircularCarousel({ courses }: CircularCarouselProps) {
                     pointerEvents: offset === 0 ? "auto" : "none",
                   }}
                   onClick={() => {
-                    if (offset !== 0) {
-                      setActiveIndex(index);
-                    }
+                    if (offset !== 0) setActiveIndex(index);
                   }}
                 >
                   <CourseCard course={course} isCenter={offset === 0} />
@@ -192,11 +185,12 @@ export function CircularCarousel({ courses }: CircularCarouselProps) {
       <button
         type="button"
         onClick={prev}
-        className="absolute left-2 md:left-6 top-1/2 -translate-y-1/2 z-20
-          w-12 h-12 rounded-full bg-card/80 border border-primary/40
-          flex items-center justify-center text-primary
-          hover:bg-primary hover:text-primary-foreground
-          transition-all duration-200 shadow-lg backdrop-blur-sm"
+        className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full border flex items-center justify-center transition-all duration-200 shadow-luxury backdrop-blur-sm"
+        style={{
+          background: "oklch(0.12 0.014 275 / 0.85)",
+          borderColor: "oklch(0.72 0.14 82 / 0.4)",
+          color: "oklch(0.82 0.16 88)",
+        }}
         aria-label="Previous course"
         data-ocid="carousel-prev"
       >
@@ -206,11 +200,12 @@ export function CircularCarousel({ courses }: CircularCarouselProps) {
       <button
         type="button"
         onClick={next}
-        className="absolute right-2 md:right-6 top-1/2 -translate-y-1/2 z-20
-          w-12 h-12 rounded-full bg-card/80 border border-primary/40
-          flex items-center justify-center text-primary
-          hover:bg-primary hover:text-primary-foreground
-          transition-all duration-200 shadow-lg backdrop-blur-sm"
+        className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 z-20 w-12 h-12 rounded-full border flex items-center justify-center transition-all duration-200 shadow-luxury backdrop-blur-sm"
+        style={{
+          background: "oklch(0.12 0.014 275 / 0.85)",
+          borderColor: "oklch(0.72 0.14 82 / 0.4)",
+          color: "oklch(0.82 0.16 88)",
+        }}
         aria-label="Next course"
         data-ocid="carousel-next"
       >
@@ -228,17 +223,19 @@ export function CircularCarousel({ courses }: CircularCarouselProps) {
             targetIndex === activeIndex ||
             (di === dotCount - 1 &&
               activeIndex >= dotCount * dotStep - dotStep);
-          const dotId = `dot-${di}-${targetIndex}`;
           return (
             <button
               type="button"
-              key={dotId}
+              key={`dot-${targetIndex}`}
               onClick={() => setActiveIndex(targetIndex)}
-              className={`rounded-full transition-all duration-300 ${
-                isActive
-                  ? "bg-primary w-6 h-2"
-                  : "bg-border w-2 h-2 hover:bg-muted-foreground"
-              }`}
+              className="rounded-full transition-all duration-300"
+              style={{
+                width: isActive ? 24 : 8,
+                height: 8,
+                background: isActive
+                  ? "var(--gradient-gold)"
+                  : "oklch(var(--border) / 0.8)",
+              }}
               aria-label={`Go to course ${di + 1}`}
             />
           );

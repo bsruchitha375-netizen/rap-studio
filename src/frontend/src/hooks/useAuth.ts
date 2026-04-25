@@ -1,295 +1,153 @@
-import { useInternetIdentity } from "@caffeineai/core-infrastructure";
 import { useActor } from "@caffeineai/core-infrastructure";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { createActor } from "../backend";
-import type { UserProfile, UserRole } from "../types";
+import { UserRole } from "../backend";
+import type { LoginError, PublicProfile } from "../backend";
+import type { UserRole as LocalUserRole } from "../types";
 
-const ROLE_STORAGE_KEY = "rap_user_role";
-const PROFILE_STORAGE_KEY = "rap_user_profile";
-const AUTH_CACHE_KEY = "rap_auth_cache";
-const II_WARMUP_KEY = "rap_ii_warmed";
-// 48hr TTL — returning users skip II roundtrip
+// ── Constants ──────────────────────────────────────────────────────────────
+const SESSION_KEY = "rap_session";
+const ADMIN_SESSION_KEY = "rap_admin_session";
 const CACHE_TTL_MS = 48 * 60 * 60 * 1000;
 
-// ── Resource hints — injected eagerly at module load (app boot) ────────────
-(function injectResourceHints() {
-  if (typeof document === "undefined") return;
-  const hints: Array<{ rel: string; href: string; crossOrigin?: string }> = [
-    {
-      rel: "preconnect",
-      href: "https://identity.ic0.app",
-      crossOrigin: "anonymous",
-    },
-    { rel: "dns-prefetch", href: "https://identity.ic0.app" },
-    { rel: "preconnect", href: "https://icp-api.io", crossOrigin: "anonymous" },
-    { rel: "dns-prefetch", href: "https://icp-api.io" },
-  ];
-  for (const { rel, href, crossOrigin } of hints) {
-    const id = `hint-${rel}-${href.replace(/[^a-z0-9]/gi, "-")}`;
-    if (document.getElementById(id)) continue;
-    const link = document.createElement("link");
-    link.id = id;
-    link.rel = rel;
-    link.href = href;
-    if (crossOrigin) link.crossOrigin = crossOrigin;
-    document.head.appendChild(link);
-  }
-})();
-
-// ── Auth cache (principal + expiry) ───────────────────────────────────────
-interface AuthCache {
-  principalText: string;
-  cachedAt: number;
-  expiry: number;
+// ── Session types ──────────────────────────────────────────────────────────
+export interface RapSession {
+  email: string;
+  role: LocalUserRole;
+  profile: SerializableProfile;
+  expiresAt: number;
 }
 
-export function readAuthCache(): AuthCache | null {
-  try {
-    const raw = localStorage.getItem(AUTH_CACHE_KEY);
-    if (!raw) return null;
-    const cache = JSON.parse(raw) as AuthCache;
-    if (Date.now() > cache.expiry) {
-      localStorage.removeItem(AUTH_CACHE_KEY);
-      return null;
-    }
-    return cache;
-  } catch {
-    return null;
-  }
-}
-
-function writeAuthCache(principalText: string) {
-  const cache: AuthCache = {
-    principalText,
-    cachedAt: Date.now(),
-    expiry: Date.now() + CACHE_TTL_MS,
-  };
-  localStorage.setItem(AUTH_CACHE_KEY, JSON.stringify(cache));
-}
-
-function clearAuthCache() {
-  localStorage.removeItem(AUTH_CACHE_KEY);
-  localStorage.removeItem(II_WARMUP_KEY);
-}
-
-// ── Eager II warmup — called once at app boot ──────────────────────────────
-let iiWarmupPromise: Promise<void> | null = null;
-
-export function warmupInternetIdentity(): void {
-  if (iiWarmupPromise) return;
-  if (typeof window === "undefined") return;
-
-  iiWarmupPromise = (async () => {
-    try {
-      const { AuthClient } = await import("@dfinity/auth-client");
-      const client = await AuthClient.create({
-        idleOptions: { disableIdle: true },
-      });
-      (window as Window & { __iiAuthClient?: typeof client }).__iiAuthClient =
-        client;
-      localStorage.setItem(II_WARMUP_KEY, String(Date.now()));
-    } catch {
-      // warmup is best-effort
-    }
-  })();
-}
-
-// ── Stored profile helpers ─────────────────────────────────────────────────
-export function readStoredProfile(): UserProfile | null {
-  try {
-    const raw = localStorage.getItem(PROFILE_STORAGE_KEY);
-    return raw ? (JSON.parse(raw) as UserProfile) : null;
-  } catch {
-    return null;
-  }
-}
-
-export function saveUserSession(
-  name: string,
-  phone: string,
-  role: UserRole,
-  remember: boolean,
-): void {
-  const profile: UserProfile = {
-    id: `user_${Date.now()}`,
-    name,
-    phone,
-    role,
-    isActive: true,
-    createdAt: BigInt(Date.now()),
-  };
-  if (remember) {
-    localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
-    localStorage.setItem(ROLE_STORAGE_KEY, role);
-  } else {
-    sessionStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
-  }
-}
-
-// ── Main auth hook ─────────────────────────────────────────────────────────
-export function useAuth() {
-  const { identity, loginStatus, login, clear, isInitializing } =
-    useInternetIdentity();
-  const isAuthenticated = loginStatus === "success";
-
-  useEffect(() => {
-    if (isAuthenticated && identity) {
-      const principalText = identity.getPrincipal().toString();
-      const existing = readAuthCache();
-      if (!existing || existing.principalText !== principalText) {
-        writeAuthCache(principalText);
-      }
-    }
-    if (!isAuthenticated && !isInitializing) {
-      const role = localStorage.getItem(ROLE_STORAGE_KEY);
-      if (!role) clearAuthCache();
-    }
-  }, [isAuthenticated, isInitializing, identity]);
-
-  const principal =
-    identity?.getPrincipal()?.toString() ?? readAuthCache()?.principalText;
-
-  const handleLogout = useCallback(() => {
-    clearAuthCache();
-    localStorage.removeItem(ROLE_STORAGE_KEY);
-    localStorage.removeItem(PROFILE_STORAGE_KEY);
-    clear();
-  }, [clear]);
-
-  return {
-    identity,
-    isAuthenticated,
-    principal,
-    isLoading: isInitializing,
-    login,
-    logout: handleLogout,
+// PublicProfile with bigint fields serialized as strings
+export interface SerializableProfile {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  address?: string;
+  status: string;
+  registeredAt: string;
+  studentDetails?: {
+    courseType: string;
+    preferredSlot: string;
+    learningMode: string;
   };
 }
 
-// ── Stored role ────────────────────────────────────────────────────────────
-export function useStoredRole(): [UserRole | null, (role: UserRole) => void] {
-  const [role, setRoleState] = useState<UserRole | null>(() => {
-    const stored = localStorage.getItem(ROLE_STORAGE_KEY);
-    return stored as UserRole | null;
-  });
-
-  const setRole = useCallback((newRole: UserRole) => {
-    localStorage.setItem(ROLE_STORAGE_KEY, newRole);
-    setRoleState(newRole);
-  }, []);
-
-  return [role, setRole];
-}
-
-// ── User profile ───────────────────────────────────────────────────────────
-export function useUserProfile() {
-  const { actor, isFetching } = useActor(createActor);
-  const { isAuthenticated } = useAuth();
-  const queryClient = useQueryClient();
-
-  const storedProfile = useMemo<UserProfile | null>(() => {
-    return readStoredProfile();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const query = useQuery<UserProfile | null>({
-    queryKey: ["userProfile"],
-    queryFn: async () => {
-      if (!actor) return storedProfile;
-      return storedProfile;
-    },
-    enabled: isAuthenticated && !!actor && !isFetching,
-    initialData: storedProfile,
-    staleTime: 5 * 60 * 1000,
-  });
-
-  const setProfile = useCallback(
-    (profile: UserProfile) => {
-      localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
-      localStorage.setItem(ROLE_STORAGE_KEY, profile.role);
-      queryClient.setQueryData<UserProfile | null>(["userProfile"], profile);
-    },
-    [queryClient],
-  );
-
-  return { ...query, setProfile };
-}
-
-// ── Role helpers ───────────────────────────────────────────────────────────
-export function useRole(): UserRole | null {
-  const { isAuthenticated } = useAuth();
-  const stored = useMemo(
-    () => localStorage.getItem(ROLE_STORAGE_KEY),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [],
-  );
-  if (!isAuthenticated) return null;
-  return (stored as UserRole) || null;
-}
-
-export function useRequireRole(requiredRoles: UserRole[]) {
-  const { isAuthenticated, isLoading } = useAuth();
-  const role = useRole();
-
-  const hasAccess =
-    isAuthenticated && role !== null && requiredRoles.includes(role);
-  const shouldRedirect = !isLoading && (!isAuthenticated || !hasAccess);
-
-  return { hasAccess, shouldRedirect, isLoading, role };
-}
-
-export function useIsAdmin(): boolean {
-  const role = useRole();
-  const adminSession = getAdminSession();
-  return adminSession !== null || role === "admin";
-}
-
-export function useIsStaff(): boolean {
-  const role = useRole();
-  return role === "staff" || role === "admin";
-}
-
-export function useIsReceptionist(): boolean {
-  const role = useRole();
-  return role === "receptionist" || role === "admin";
-}
-
-// ── II connection state (used by LoginPage for "Connecting…" indicator) ───
-export function useIIConnectionState(): { isConnecting: boolean } {
-  const [isConnecting, setIsConnecting] = useState(false);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    const warmedAt = localStorage.getItem(II_WARMUP_KEY);
-    const alreadyWarmed = warmedAt && Date.now() - Number(warmedAt) < 10_000;
-    if (!alreadyWarmed) {
-      timerRef.current = setTimeout(() => setIsConnecting(true), 400);
-    }
-
-    void iiWarmupPromise?.then(() => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-      setIsConnecting(false);
-    });
-
-    return () => {
-      if (timerRef.current) clearTimeout(timerRef.current);
-    };
-  }, []);
-
-  return { isConnecting };
-}
-
-// ── Admin session helpers (password-only, no II required) ─────────────────
-const ADMIN_SESSION_KEY = "rap_admin_session";
-
-interface AdminSession {
+export interface AdminSession {
   name: string;
   phone: string;
   loggedIn: true;
   expiry: number;
 }
 
+// ── Login result type ──────────────────────────────────────────────────────
+export type LoginResult =
+  | { success: true }
+  | { success: false; error: string; isPendingApproval?: boolean };
+
+// ── Serialization helpers ──────────────────────────────────────────────────
+function serializeProfile(p: PublicProfile): SerializableProfile {
+  return {
+    id: p.id.toString(),
+    name: p.name,
+    email: p.email,
+    phone: p.phone,
+    role: p.role as string,
+    address: p.address,
+    status: p.status as string,
+    registeredAt: p.registeredAt.toString(),
+    studentDetails: p.studentDetails
+      ? {
+          courseType: p.studentDetails.courseType,
+          preferredSlot: p.studentDetails.preferredSlot,
+          learningMode: p.studentDetails.learningMode,
+        }
+      : undefined,
+  };
+}
+
+// ── Map LoginError variant → human-readable message ────────────────────────
+function mapLoginError(err: LoginError): {
+  message: string;
+  isPendingApproval: boolean;
+} {
+  switch (err.__kind__) {
+    case "pendingApproval":
+      return {
+        message:
+          "Your account is awaiting admin approval. You will be able to log in once the admin approves your registration.",
+        isPendingApproval: true,
+      };
+    case "notFound":
+      return {
+        message: "No account found. Please register first.",
+        isPendingApproval: false,
+      };
+    case "incorrectPassword":
+      return {
+        message: "Incorrect password. Please try again.",
+        isPendingApproval: false,
+      };
+    case "suspended":
+      return {
+        message: "Your account has been suspended. Contact admin.",
+        isPendingApproval: false,
+      };
+    case "lockedOut":
+      return {
+        message: "Too many failed attempts. Please try again later.",
+        isPendingApproval: false,
+      };
+    case "other":
+      return {
+        message: err.other ?? "Login failed. Please try again.",
+        isPendingApproval: false,
+      };
+    default:
+      return {
+        message: "Login failed. Please try again.",
+        isPendingApproval: false,
+      };
+  }
+}
+
+// ── Session read/write ─────────────────────────────────────────────────────
+export function readSession(): RapSession | null {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const session = JSON.parse(raw) as RapSession;
+    if (Date.now() > session.expiresAt) {
+      localStorage.removeItem(SESSION_KEY);
+      return null;
+    }
+    return session;
+  } catch {
+    return null;
+  }
+}
+
+export function writeSession(
+  email: string,
+  role: LocalUserRole,
+  profile: PublicProfile,
+): void {
+  const session: RapSession = {
+    email,
+    role,
+    profile: serializeProfile(profile),
+    expiresAt: Date.now() + CACHE_TTL_MS,
+  };
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+}
+
+export function clearSession(): void {
+  localStorage.removeItem(SESSION_KEY);
+}
+
+// ── Admin session helpers (password-only, no II required) ─────────────────
 export function getAdminSession(): AdminSession | null {
   try {
     const raw = localStorage.getItem(ADMIN_SESSION_KEY);
@@ -305,7 +163,7 @@ export function getAdminSession(): AdminSession | null {
   }
 }
 
-export function saveAdminSession(name: string, phone: string) {
+export function saveAdminSession(name: string, phone: string): void {
   const session: AdminSession = {
     name,
     phone,
@@ -313,20 +171,318 @@ export function saveAdminSession(name: string, phone: string) {
     expiry: Date.now() + CACHE_TTL_MS,
   };
   localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(session));
-  const profile = {
-    id: "admin",
-    name,
-    phone,
-    role: "admin" as UserRole,
-    createdAt: BigInt(Date.now()).toString(),
-    isActive: true,
-  };
-  localStorage.setItem(PROFILE_STORAGE_KEY, JSON.stringify(profile));
-  localStorage.setItem(ROLE_STORAGE_KEY, "admin");
+  // Also write a rap_session so role checks work across the app
+  localStorage.setItem(
+    SESSION_KEY,
+    JSON.stringify({
+      email: "admin@rapstudio.local",
+      role: "admin",
+      profile: {
+        id: "admin",
+        name,
+        email: "admin@rapstudio.local",
+        phone,
+        role: "Admin",
+        status: "Active",
+        registeredAt: "0",
+      },
+      expiresAt: Date.now() + CACHE_TTL_MS,
+    } satisfies RapSession),
+  );
 }
 
-export function clearAdminSession() {
+export function clearAdminSession(): void {
   localStorage.removeItem(ADMIN_SESSION_KEY);
-  localStorage.removeItem(PROFILE_STORAGE_KEY);
-  localStorage.removeItem(ROLE_STORAGE_KEY);
+  localStorage.removeItem(SESSION_KEY);
+}
+
+// ── Hash password (simple SHA-256 via Web Crypto) ─────────────────────────
+export async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+// ── Registration input ─────────────────────────────────────────────────────
+export interface RegisterInput {
+  email: string;
+  name: string;
+  phone: string;
+  password: string;
+  role: "client" | "student" | "receptionist" | "staff";
+  address?: string;
+  profilePhotoBytes?: Uint8Array | null;
+  studentDetails?: {
+    courseType: string;
+    preferredSlot: string;
+    learningMode: string;
+  } | null;
+}
+
+// ── Map local role strings to backend UserRole enum ───────────────────────
+function toBackendRole(role: string): UserRole {
+  const map: Record<string, UserRole> = {
+    client: UserRole.Client,
+    student: UserRole.Student,
+    staff: UserRole.Staff,
+    receptionist: UserRole.Receptionist,
+    admin: UserRole.Admin,
+  };
+  return map[role.toLowerCase()] ?? UserRole.Client;
+}
+
+function fromBackendRole(role: UserRole): LocalUserRole {
+  const map: Record<UserRole, LocalUserRole> = {
+    [UserRole.Client]: "client",
+    [UserRole.Student]: "student",
+    [UserRole.Staff]: "staff",
+    [UserRole.Receptionist]: "receptionist",
+    [UserRole.Admin]: "admin",
+  };
+  return map[role] ?? "client";
+}
+
+// ── Normalize identifier → canonical form for backend loginByIdentifier ──────
+function normalizeIdentifier(identifier: string): string {
+  const trimmed = identifier.trim();
+  if (/^\d{10}$/.test(trimmed)) return trimmed;
+  if (/^\+91\d{10}$/.test(trimmed)) return trimmed.slice(3);
+  if (/^91\d{10}$/.test(trimmed)) return trimmed.slice(2);
+  if (trimmed.includes("@")) return trimmed.toLowerCase();
+  return trimmed.toLowerCase();
+}
+
+// ── Main useAuth hook ──────────────────────────────────────────────────────
+export function useAuth() {
+  const { actor, isFetching } = useActor(createActor);
+  const [session, setSessionState] = useState<RapSession | null>(() =>
+    readSession(),
+  );
+  const [loading, setLoading] = useState(false);
+
+  // On mount: validate session
+  useEffect(() => {
+    const stored = readSession();
+    setSessionState(stored);
+  }, []);
+
+  const login = useCallback(
+    async (identifier: string, password: string): Promise<LoginResult> => {
+      if (!actor || isFetching) {
+        return {
+          success: false,
+          error: "Backend not ready. Please try again in a moment.",
+        };
+      }
+      setLoading(true);
+      try {
+        const passwordHash = await hashPassword(password);
+        const normalizedId = normalizeIdentifier(identifier);
+        const result = await actor.loginByIdentifier(
+          normalizedId,
+          passwordHash,
+        );
+
+        if (result.__kind__ === "err") {
+          const { message, isPendingApproval } = mapLoginError(result.err);
+          return { success: false, error: message, isPendingApproval };
+        }
+
+        const profile = result.ok;
+        const role = fromBackendRole(profile.role);
+        writeSession(profile.email || normalizedId, role, profile);
+        setSessionState(readSession());
+        return { success: true };
+      } catch (err) {
+        const msg =
+          err instanceof Error
+            ? err.message
+            : "Login failed. Please try again.";
+        return { success: false, error: msg };
+      } finally {
+        setLoading(false);
+      }
+    },
+    [actor, isFetching],
+  );
+
+  const register = useCallback(
+    async (
+      input: RegisterInput,
+    ): Promise<
+      | { success: true; profile: PublicProfile; isPending: boolean }
+      | { success: false; error: string }
+    > => {
+      if (!actor || isFetching) {
+        return {
+          success: false,
+          error: "Backend not ready. Please try again.",
+        };
+      }
+      setLoading(true);
+      try {
+        const passwordHash = await hashPassword(input.password);
+        const backendRole = toBackendRole(input.role);
+        const studentDetails = input.studentDetails
+          ? {
+              courseType: input.studentDetails.courseType,
+              preferredSlot: input.studentDetails.preferredSlot,
+              learningMode: input.studentDetails.learningMode,
+            }
+          : null;
+
+        const result = await actor.register(
+          input.email.trim().toLowerCase(),
+          input.name.trim(),
+          input.phone,
+          passwordHash,
+          backendRole,
+          input.address?.trim() ?? null,
+          input.profilePhotoBytes ?? null,
+          studentDetails,
+        );
+
+        if (result.__kind__ === "err") {
+          return { success: false, error: result.err };
+        }
+
+        const profile = result.ok;
+        const role = fromBackendRole(profile.role);
+        // Non-client roles are Pending — don't write session for them
+        const isPending = input.role !== "client";
+        if (!isPending) {
+          writeSession(input.email.trim().toLowerCase(), role, profile);
+          setSessionState(readSession());
+        }
+        return { success: true, profile, isPending };
+      } catch (err) {
+        const msg =
+          err instanceof Error
+            ? err.message
+            : "Registration failed. Please try again.";
+        return { success: false, error: msg };
+      } finally {
+        setLoading(false);
+      }
+    },
+    [actor, isFetching],
+  );
+
+  const logout = useCallback(() => {
+    clearSession();
+    clearAdminSession();
+    setSessionState(null);
+  }, []);
+
+  return {
+    user: session?.profile ?? null,
+    role: session?.role ?? null,
+    loading: loading || isFetching,
+    isLoggedIn: session !== null,
+    isAuthenticated: session !== null,
+    login,
+    register,
+    logout,
+    isActorReady: !!actor && !isFetching,
+  };
+}
+
+// ── Role helpers (non-hook, read directly from storage) ───────────────────
+export function getStoredRole(): LocalUserRole | null {
+  const session = readSession();
+  return session?.role ?? null;
+}
+
+export function useIsAdmin(): boolean {
+  const adminSession = getAdminSession();
+  const session = readSession();
+  return adminSession !== null || session?.role === "admin";
+}
+
+export function useIsStaff(): boolean {
+  const session = readSession();
+  return session?.role === "staff" || session?.role === "admin";
+}
+
+export function useIsReceptionist(): boolean {
+  const session = readSession();
+  return session?.role === "receptionist" || session?.role === "admin";
+}
+
+// ── Legacy compatibility shims ─────────────────────────────────────────────
+/** @deprecated Use readSession() instead */
+export function readStoredProfile(): {
+  name?: string;
+  role?: LocalUserRole;
+} | null {
+  const s = readSession();
+  if (!s) return null;
+  return { name: s.profile.name, role: s.role };
+}
+
+/** @deprecated Use writeSession() instead */
+export function saveUserSession(
+  name: string,
+  email: string,
+  phone: string,
+  role: LocalUserRole,
+  _remember: boolean,
+): void {
+  const syntheticProfile: SerializableProfile = {
+    id: `user_${email}`,
+    name,
+    email,
+    phone,
+    role: role.charAt(0).toUpperCase() + role.slice(1),
+    status: "Active",
+    registeredAt: "0",
+  };
+  const session: RapSession = {
+    email,
+    role,
+    profile: syntheticProfile,
+    expiresAt: Date.now() + CACHE_TTL_MS,
+  };
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+}
+
+/** @deprecated Use useAuth().user instead */
+export function useUserProfile(): { data: SerializableProfile | null } {
+  const session = readSession();
+  return { data: session?.profile ?? null };
+}
+
+/** @deprecated Use getStoredRole() instead */
+export function useStoredRole(): [
+  LocalUserRole | null,
+  (role: LocalUserRole) => void,
+] {
+  const [role, setRoleState] = useState<LocalUserRole | null>(() =>
+    getStoredRole(),
+  );
+  const setRole = useCallback((newRole: LocalUserRole) => {
+    const s = readSession();
+    if (s) {
+      s.role = newRole;
+      localStorage.setItem(SESSION_KEY, JSON.stringify(s));
+    }
+    setRoleState(newRole);
+  }, []);
+  return [role, setRole];
+}
+
+/** @deprecated No longer supported */
+export function loginWithEmail(
+  _email: string,
+  _password: string,
+  _role: LocalUserRole,
+): { success: false; error: "email_not_found" } {
+  return { success: false, error: "email_not_found" };
+}
+
+/** @deprecated Use useAuth().role instead */
+export function useRole(): LocalUserRole | null {
+  return getStoredRole();
 }

@@ -15,12 +15,14 @@ import { AnimatePresence, motion } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { createActor } from "../../backend";
 import type { NotificationRecord } from "../../backend.d";
-import { useAuth } from "../../hooks/useAuth";
+import { getAdminSession, useAuth } from "../../hooks/useAuth";
 
-// ─── Hook ────────────────────────────────────────────────────────────────────
+// ─── Hook — 5s polling ────────────────────────────────────────────────────────
 function useAdminNotifications() {
   const { actor, isFetching } = useActor(createActor);
   const { isAuthenticated } = useAuth();
+  const adminSession = getAdminSession();
+  const isAdmin = !!adminSession || isAuthenticated;
 
   return useQuery<NotificationRecord[]>({
     queryKey: ["adminNotifications"],
@@ -32,14 +34,15 @@ function useAdminNotifications() {
         return [];
       }
     },
-    enabled: isAuthenticated && !!actor && !isFetching,
-    refetchInterval: 15_000,
-    staleTime: 10_000,
+    enabled: isAdmin && !!actor && !isFetching,
+    refetchInterval: 5_000,
+    refetchIntervalInBackground: true,
+    staleTime: 4_000,
     initialData: [],
   });
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatRelTs(ts: bigint): string {
   const ms = Number(ts) / 1_000_000;
   const diff = Date.now() - ms;
@@ -57,64 +60,32 @@ function notifTypeConfig(type: string): {
     case "BookingConfirmed":
     case "BookingCompleted":
     case "BookingReminder":
+    case "WorkDelivered":
       return {
         icon: <BookOpen className="w-3.5 h-3.5" />,
-        color: "text-primary bg-primary/15",
+        color:
+          "text-primary bg-primary/15 dark:text-primary dark:bg-primary/15",
       };
     case "PaymentReceipt":
       return {
         icon: <CreditCard className="w-3.5 h-3.5" />,
-        color: "text-emerald-400 bg-emerald-500/15",
+        color:
+          "text-emerald-600 bg-emerald-500/15 dark:text-emerald-400 dark:bg-emerald-500/15",
       };
     case "CourseEnrolled":
     case "CourseCompleted":
       return {
         icon: <GraduationCap className="w-3.5 h-3.5" />,
-        color: "text-purple-400 bg-purple-500/15",
+        color:
+          "text-purple-600 bg-purple-500/15 dark:text-purple-400 dark:bg-purple-500/15",
       };
     default:
       return {
         icon: <Info className="w-3.5 h-3.5" />,
-        color: "text-muted-foreground bg-muted/30",
+        color: "text-foreground/70 bg-muted/50",
       };
   }
 }
-
-// ─── Fallback notifications ───────────────────────────────────────────────────
-const FALLBACK_NOTIFS = [
-  {
-    id: BigInt(1),
-    userId: {} as never,
-    notificationType: "BookingConfirmed" as never,
-    createdAt: BigInt(Date.now() - 600000) * BigInt(1_000_000),
-    read: false,
-    message: "New booking confirmed: Pre-Wedding Shoot by Priya Sharma",
-  },
-  {
-    id: BigInt(2),
-    userId: {} as never,
-    notificationType: "PaymentReceipt" as never,
-    createdAt: BigInt(Date.now() - 3600000) * BigInt(1_000_000),
-    read: false,
-    message: "₹200 deposit received for booking BK041",
-  },
-  {
-    id: BigInt(3),
-    userId: {} as never,
-    notificationType: "CourseEnrolled" as never,
-    createdAt: BigInt(Date.now() - 7200000) * BigInt(1_000_000),
-    read: true,
-    message: "Arjun Kumar enrolled in Photography Fundamentals",
-  },
-  {
-    id: BigInt(4),
-    userId: {} as never,
-    notificationType: "BookingReminder" as never,
-    createdAt: BigInt(Date.now() - 86400000) * BigInt(1_000_000),
-    read: true,
-    message: "Wedding Shoot scheduled for 28 Apr — Client: Priya Sharma",
-  },
-];
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export function NotificationBell() {
@@ -125,8 +96,7 @@ export function NotificationBell() {
   const { data: backendNotifs = [], isLoading } = useAdminNotifications();
   const { actor } = useActor(createActor);
 
-  const notifications =
-    backendNotifs.length > 0 ? backendNotifs : FALLBACK_NOTIFS;
+  const notifications = backendNotifs;
   const unread = notifications.filter(
     (n) => !n.read && !readIds.has(String(n.id)),
   ).length;
@@ -168,7 +138,7 @@ export function NotificationBell() {
         aria-label={`Notifications${unread > 0 ? ` (${unread} unread)` : ""}`}
         data-ocid="notification-bell"
       >
-        <Bell className="w-5 h-5" />
+        <Bell className="w-5 h-5 text-foreground" />
         <AnimatePresence>
           {unread > 0 && (
             <motion.span
@@ -176,7 +146,7 @@ export function NotificationBell() {
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0 }}
-              className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center shadow-glow-gold"
+              className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center"
             >
               {unread > 9 ? "9+" : unread}
             </motion.span>
@@ -191,20 +161,26 @@ export function NotificationBell() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -8 }}
             transition={{ duration: 0.18 }}
-            className="absolute right-0 top-full mt-2 w-84 rounded-2xl glass-effect shadow-elevated z-50 overflow-hidden"
+            className="absolute right-0 top-full mt-2 rounded-2xl bg-card border border-border shadow-elevated z-50 overflow-hidden"
             style={{ width: "22rem" }}
             data-ocid="notification-dropdown"
           >
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border/40">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
               <h3 className="font-semibold font-display text-sm text-foreground">
                 Notifications
               </h3>
-              {unread > 0 && (
-                <Badge className="text-[10px] bg-primary/20 text-primary border-primary/30">
-                  {unread} new
-                </Badge>
-              )}
+              <div className="flex items-center gap-2">
+                {unread > 0 && (
+                  <Badge className="text-[10px] bg-primary/20 text-primary border-primary/30 dark:text-primary">
+                    {unread} new
+                  </Badge>
+                )}
+                <span className="text-[9px] text-muted-foreground/70 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  5s
+                </span>
+              </div>
             </div>
 
             {/* List */}
@@ -214,56 +190,65 @@ export function NotificationBell() {
                   <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
                 </div>
               ) : notifications.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-muted-foreground gap-2">
+                <div
+                  className="flex flex-col items-center justify-center py-8 text-muted-foreground gap-2"
+                  data-ocid="notifications-empty_state"
+                >
                   <Bell className="w-8 h-8 opacity-40" />
-                  <p className="text-sm">No notifications yet</p>
+                  <p className="text-sm font-medium">No notifications yet</p>
+                  <p className="text-xs text-muted-foreground/60">
+                    New activity will appear here
+                  </p>
                 </div>
               ) : (
-                notifications.map((n, i) => {
-                  const isRead = n.read || readIds.has(String(n.id));
-                  const { icon, color } = notifTypeConfig(
-                    String(n.notificationType),
-                  );
-                  return (
-                    <motion.div
-                      key={String(n.id)}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.04 }}
-                      className={`px-4 py-3 border-b border-border/20 last:border-b-0 hover:bg-muted/10 transition-colors ${!isRead ? "bg-primary/5" : ""}`}
-                    >
-                      <div className="flex items-start gap-3">
-                        <div
-                          className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${color}`}
-                        >
-                          {icon}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2">
-                            <p className="text-xs font-semibold text-foreground truncate">
-                              {n.message.slice(0, 50)}
-                            </p>
-                            {!isRead && (
-                              <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                            )}
+                <AnimatePresence initial={false}>
+                  {notifications.map((n, i) => {
+                    const isRead = n.read || readIds.has(String(n.id));
+                    const { icon, color } = notifTypeConfig(
+                      String(n.notificationType),
+                    );
+                    return (
+                      <motion.div
+                        key={String(n.id)}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ delay: i * 0.04 }}
+                        className={`px-4 py-3 border-b border-border/40 last:border-b-0 hover:bg-muted/20 transition-colors ${!isRead ? "bg-primary/5" : ""}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div
+                            className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 ${color}`}
+                          >
+                            {icon}
                           </div>
-                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
-                            {n.message}
-                          </p>
-                          <p className="text-[10px] text-muted-foreground/50 mt-1">
-                            {formatRelTs(n.createdAt)}
-                          </p>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <p className="text-xs font-semibold text-foreground truncate">
+                                {(n.message ?? "").slice(0, 50)}
+                              </p>
+                              {!isRead && (
+                                <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
+                              )}
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                              {n.message ?? ""}
+                            </p>
+                            <p className="text-[10px] text-muted-foreground/60 mt-1">
+                              {formatRelTs(n.createdAt)}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  );
-                })
+                      </motion.div>
+                    );
+                  })}
+                </AnimatePresence>
               )}
             </div>
 
             {/* Footer */}
             {notifications.length > 0 && (
-              <div className="px-4 py-2.5 border-t border-border/40">
+              <div className="px-4 py-2.5 border-t border-border bg-muted/10">
                 <Button
                   type="button"
                   variant="ghost"

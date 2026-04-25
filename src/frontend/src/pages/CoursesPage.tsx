@@ -47,7 +47,6 @@ const BENEFITS = [
 
 export function CoursesPage() {
   const [activeTab, setActiveTab] = useState<TabFilter>("all");
-
   const filteredCourses =
     activeTab === "all"
       ? COURSES
@@ -56,12 +55,26 @@ export function CoursesPage() {
   return (
     <Layout>
       {/* Hero */}
-      <section className="relative min-h-[52vh] flex items-center justify-center overflow-hidden bg-gradient-to-b from-card via-background to-background">
+      <section className="relative min-h-[52vh] flex items-center justify-center overflow-hidden">
+        {/* Background */}
         <div
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[350px] opacity-25 pointer-events-none"
+          className="absolute inset-0"
+          style={{
+            backgroundImage:
+              "url('https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=1400&q=60')",
+            backgroundSize: "cover",
+            backgroundPosition: "center",
+            filter: "brightness(0.15) saturate(0.5)",
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-card/80 via-background/70 to-background" />
+
+        {/* Gold glow */}
+        <div
+          className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[350px] opacity-20 pointer-events-none"
           style={{
             background:
-              "radial-gradient(ellipse at center, oklch(0.7 0.22 70 / 0.45), transparent 70%)",
+              "radial-gradient(ellipse at center, oklch(0.72 0.14 82 / 0.5), transparent 70%)",
           }}
         />
         <motion.div
@@ -85,7 +98,7 @@ export function CoursesPage() {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <Badge className="bg-primary/15 text-primary border border-primary/30 mb-6 px-4 py-1.5 text-sm font-semibold">
+            <Badge className="bg-primary/15 text-primary border border-primary/30 mb-6 px-5 py-1.5 text-sm font-semibold shadow-glow-gold">
               50 Professional Courses
             </Badge>
           </motion.div>
@@ -94,7 +107,7 @@ export function CoursesPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.1 }}
-            className="section-heading text-foreground mb-4 leading-tight"
+            className="section-heading text-foreground mb-5 leading-tight"
           >
             Master the Art of{" "}
             <span className="relative inline-block">
@@ -115,7 +128,7 @@ export function CoursesPage() {
           </motion.h1>
 
           <motion.p
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 18 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.25 }}
             className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8 leading-relaxed"
@@ -128,7 +141,7 @@ export function CoursesPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="flex items-center justify-center gap-8 text-sm text-muted-foreground"
+            className="flex items-center justify-center gap-10 text-sm text-muted-foreground"
           >
             <span className="flex items-center gap-1.5">
               <GraduationCap className="w-4 h-4 text-primary" />
@@ -147,10 +160,10 @@ export function CoursesPage() {
       </section>
 
       {/* Category filter tabs */}
-      <section className="sticky top-16 z-30 bg-background/95 backdrop-blur-sm border-b border-border/30">
+      <section className="sticky top-16 z-30 bg-background/95 backdrop-blur-md border-b border-border/25">
         <div className="container mx-auto px-4">
           <div
-            className="flex gap-1 overflow-x-auto py-3"
+            className="flex gap-1.5 overflow-x-auto py-3"
             style={{ scrollbarWidth: "none" }}
           >
             {TABS.map((tab) => {
@@ -163,7 +176,7 @@ export function CoursesPage() {
                   onClick={() => setActiveTab(tab.id)}
                   className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
                     isActive
-                      ? "text-background"
+                      ? "text-primary-foreground shadow-glow-gold"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
                   }`}
                   style={
@@ -192,7 +205,7 @@ export function CoursesPage() {
             key={activeTab}
             initial={{ opacity: 0, scale: 0.97 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.4 }}
+            transition={{ duration: 0.35 }}
           >
             <div className="text-center mb-8">
               <p className="text-muted-foreground text-sm">
@@ -210,19 +223,21 @@ export function CoursesPage() {
         </div>
       </section>
 
-      {/* Benefits section */}
-      <section className="py-16 bg-muted/20 border-t border-border/20">
+      {/* Benefits */}
+      <section className="py-16 bg-muted/15 border-t border-border/15">
         <div className="container mx-auto px-4">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
             className="text-center mb-10"
           >
-            <p className="section-label mb-3">Why Learn with Us</p>
+            <p className="section-label mb-3 tracking-[2px]">
+              Why Learn with Us
+            </p>
             <h2 className="section-subheading text-foreground">
-              Why Learn with <span className="text-primary">RAP Studio?</span>
+              Why Learn with{" "}
+              <span className="text-primary text-glow-gold">RAP Studio?</span>
             </h2>
             <p className="text-muted-foreground mt-2 max-w-md mx-auto">
               Studio-quality education at an accessible price point
@@ -235,13 +250,13 @@ export function CoursesPage() {
               return (
                 <motion.div
                   key={b.title}
-                  initial={{ opacity: 0, y: 20 }}
+                  initial={{ opacity: 0, y: 24 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  transition={{ delay: i * 0.1, duration: 0.4 }}
-                  className="rounded-2xl p-6 glass-effect border border-border/30 text-center hover:border-primary/30 transition-smooth hover:-translate-y-1"
+                  transition={{ delay: i * 0.1 }}
+                  className="rounded-2xl p-6 glass-card border text-center hover:border-primary/30 transition-smooth hover:-translate-y-1 service-card-hover"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center mx-auto mb-4 shadow-glow-gold">
+                  <div className="w-12 h-12 rounded-xl bg-primary/12 flex items-center justify-center mx-auto mb-4 shadow-glow-gold">
                     <Icon className="w-6 h-6 text-primary" />
                   </div>
                   <h3 className="font-display font-semibold text-foreground mb-2">

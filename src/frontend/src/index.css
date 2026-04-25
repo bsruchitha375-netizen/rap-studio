@@ -1,3 +1,6 @@
+/* ── Google Fonts fallback (web-safe CDN load) ──────────────────── */
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800;900&family=Inter:wght@300;400;500;600;700&display=swap");
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -23,28 +26,31 @@
 
 @layer base {
   :root {
-    --font-display: "Playfair Display";
-    --font-body: "General Sans";
-    --font-mono: "JetBrains Mono";
+    --font-display: "Playfair Display", "Playfair Display", serif;
+    --font-body: "Inter", "General Sans", sans-serif;
+    --font-mono: "JetBrains Mono", monospace;
     --radius: 0.875rem;
     --transition-base: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     --transition-smooth: all 0.4s cubic-bezier(0.23, 1, 0.32, 1);
 
-    --background: 0.12 0.015 280;
+    /* ── Deep cinematic dark ── */
+    --background: 0.07 0.01 270;
     --foreground: 0.94 0.008 280;
-    --card: 0.165 0.018 280;
+    --card: 0.12 0.014 275;
     --card-foreground: 0.93 0.01 280;
-    --popover: 0.165 0.018 280;
+    --popover: 0.12 0.014 275;
     --popover-foreground: 0.93 0.01 280;
 
-    --primary: 0.7 0.22 70;
-    --primary-foreground: 0.99 0.002 70;
+    /* Rich saturated gold primary */
+    --primary: 0.72 0.14 82;
+    --primary-foreground: 0.08 0.01 280;
 
-    --secondary: 0.22 0.025 280;
+    --secondary: 0.18 0.022 275;
     --secondary-foreground: 0.88 0.008 280;
-    --muted: 0.22 0.025 280;
-    --muted-foreground: 0.58 0.01 280;
+    --muted: 0.18 0.022 275;
+    --muted-foreground: 0.55 0.01 280;
 
+    /* Vibrant violet accent */
     --accent: 0.68 0.2 290;
     --accent-foreground: 0.99 0.002 290;
 
@@ -53,66 +59,161 @@
     --destructive: 0.58 0.22 25;
     --destructive-foreground: 0.99 0.002 25;
 
-    --border: 0.3 0.02 280;
-    --input: 0.3 0.02 280;
-    --ring: 0.7 0.22 70;
-    --divider-accent: 0.7 0.22 70;
+    --border: 0.22 0.018 275;
+    --input: 0.22 0.018 275;
+    --ring: 0.72 0.14 82;
+    --divider-accent: 0.72 0.14 82;
 
-    --chart-1: 0.68 0.2 70;
+    --chart-1: 0.72 0.14 82;
     --chart-2: 0.65 0.2 290;
     --chart-3: 0.72 0.18 30;
     --chart-4: 0.66 0.18 190;
     --chart-5: 0.62 0.16 155;
 
-    --sidebar: 0.165 0.018 280;
+    --sidebar: 0.12 0.014 275;
     --sidebar-foreground: 0.93 0.01 280;
-    --sidebar-primary: 0.7 0.22 70;
-    --sidebar-primary-foreground: 0.99 0.002 70;
-    --sidebar-accent: 0.25 0.025 280;
+    --sidebar-primary: 0.72 0.14 82;
+    --sidebar-primary-foreground: 0.08 0.01 280;
+    --sidebar-accent: 0.18 0.022 275;
     --sidebar-accent-foreground: 0.85 0.008 280;
-    --sidebar-border: 0.3 0.02 280;
-    --sidebar-ring: 0.7 0.22 70;
+    --sidebar-border: 0.22 0.018 275;
+    --sidebar-ring: 0.72 0.14 82;
+
+    /* ── Course Learning Progression ── */
+    --progress-track: 0.22 0.018 275;
+    --progress-fill: 0.72 0.14 82;
+    --step-pending: 0.22 0.018 275;
+    --step-active: 0.68 0.2 290;
+    --step-completed: 0.65 0.18 150;
+    --video-frame: 0.15 0.016 275;
+    --quiz-section: 0.12 0.014 275;
+    --cert-milestone: 0.72 0.14 82;
 
     --gradient-gold: linear-gradient(
       135deg,
-      oklch(0.75 0.24 75) 0%,
-      oklch(0.7 0.22 70) 50%,
-      oklch(0.62 0.18 65) 100%
+      oklch(var(--primary) / 1) 0%,
+      oklch(var(--primary) / 0.88) 50%,
+      oklch(var(--primary) / 0.75) 100%
     );
     --gradient-purple: linear-gradient(
       135deg,
-      oklch(0.72 0.22 295) 0%,
-      oklch(0.68 0.2 290) 50%,
-      oklch(0.58 0.18 280) 100%
+      oklch(var(--accent) / 1) 0%,
+      oklch(var(--accent) / 0.88) 50%,
+      oklch(var(--accent) / 0.75) 100%
     );
     --gradient-subtle: linear-gradient(
       135deg,
-      oklch(0.165 0.018 280) 0%,
-      oklch(0.22 0.025 280) 100%
+      oklch(var(--card) / 1) 0%,
+      oklch(var(--secondary) / 1) 100%
     );
     --gradient-hero: linear-gradient(
       180deg,
-      oklch(0.12 0.015 280 / 0.8) 0%,
-      oklch(0.165 0.018 280 / 0.4) 50%,
-      oklch(0.12 0.015 280 / 0.8) 100%
+      oklch(var(--background) / 0.9) 0%,
+      oklch(var(--background) / 0.5) 50%,
+      oklch(var(--background) / 0.9) 100%
     );
   }
 
+  /* ── Light mode (premium warm cream with high contrast) ────────────── */
+  .light {
+    /* Warm white background, very dark foreground for WCAG AA+ contrast */
+    --background: 0.975 0.006 80;
+    --foreground: 0.12 0.018 270;
+    --card: 0.995 0.003 80;
+    --card-foreground: 0.1 0.02 270;
+    --popover: 0.995 0.003 80;
+    --popover-foreground: 0.1 0.02 270;
+
+    /* Rich saturated gold — deeper and more saturated for high-contrast on cream */
+    --primary: 0.54 0.18 82;
+    --primary-foreground: 0.99 0.002 80;
+
+    --secondary: 0.92 0.012 80;
+    --secondary-foreground: 0.12 0.018 270;
+    --muted: 0.92 0.01 85;
+    --muted-foreground: 0.38 0.015 270;
+
+    /* Richer violet accent for light mode */
+    --accent: 0.52 0.2 290;
+    --accent-foreground: 0.99 0.002 290;
+
+    --success: 0.5 0.19 150;
+    --success-foreground: 0.99 0.002 150;
+    --destructive: 0.5 0.22 25;
+    --destructive-foreground: 0.99 0.002 25;
+
+    /* Visible border on white with stronger definition */
+    --border: 0.82 0.016 280;
+    --input: 0.82 0.016 280;
+    --ring: 0.54 0.18 82;
+    --divider-accent: 0.54 0.18 82;
+
+    --chart-1: 0.54 0.18 82;
+    --chart-2: 0.52 0.2 290;
+    --chart-3: 0.5 0.19 30;
+    --chart-4: 0.48 0.18 190;
+    --chart-5: 0.5 0.17 155;
+
+    --sidebar: 0.97 0.006 80;
+    --sidebar-foreground: 0.12 0.018 270;
+    --sidebar-primary: 0.54 0.18 82;
+    --sidebar-primary-foreground: 0.99 0.002 80;
+    --sidebar-accent: 0.92 0.012 80;
+    --sidebar-accent-foreground: 0.12 0.018 270;
+    --sidebar-border: 0.82 0.016 280;
+    --sidebar-ring: 0.54 0.18 82;
+
+    /* ── Course Learning Progression (light mode) ── */
+    --progress-track: 0.82 0.016 280;
+    --progress-fill: 0.54 0.18 82;
+    --step-pending: 0.82 0.016 280;
+    --step-active: 0.52 0.2 290;
+    --step-completed: 0.5 0.19 150;
+    --video-frame: 0.88 0.01 85;
+    --quiz-section: 0.95 0.003 80;
+    --cert-milestone: 0.54 0.18 82;
+
+    --gradient-gold: linear-gradient(
+      135deg,
+      oklch(var(--primary) / 1) 0%,
+      oklch(var(--primary) / 0.88) 50%,
+      oklch(var(--primary) / 0.75) 100%
+    );
+    --gradient-purple: linear-gradient(
+      135deg,
+      oklch(var(--accent) / 1) 0%,
+      oklch(var(--accent) / 0.88) 50%,
+      oklch(var(--accent) / 0.75) 100%
+    );
+    --gradient-subtle: linear-gradient(
+      135deg,
+      oklch(var(--card) / 1) 0%,
+      oklch(var(--secondary) / 1) 100%
+    );
+    --gradient-hero: linear-gradient(
+      180deg,
+      oklch(var(--background) / 0.92) 0%,
+      oklch(var(--background) / 0.6) 50%,
+      oklch(var(--background) / 0.92) 100%
+    );
+  }
+
+  /* ── Dark mode (explicit) ────────────────────────────────────────── */
   .dark {
-    --background: 0.12 0.015 280;
+    --background: 0.07 0.01 270;
     --foreground: 0.94 0.008 280;
-    --card: 0.165 0.018 280;
+    --card: 0.12 0.014 275;
     --card-foreground: 0.93 0.01 280;
-    --popover: 0.165 0.018 280;
+    --popover: 0.12 0.014 275;
     --popover-foreground: 0.93 0.01 280;
 
-    --primary: 0.7 0.22 70;
-    --primary-foreground: 0.99 0.002 70;
+    --primary: 0.72 0.14 82;
+    --primary-foreground: 0.08 0.01 280;
 
-    --secondary: 0.22 0.025 280;
+    --secondary: 0.18 0.022 275;
     --secondary-foreground: 0.88 0.008 280;
-    --muted: 0.22 0.025 280;
-    --muted-foreground: 0.58 0.01 280;
+    --muted: 0.18 0.022 275;
+    --muted-foreground: 0.55 0.01 280;
 
     --accent: 0.68 0.2 290;
     --accent-foreground: 0.99 0.002 290;
@@ -122,56 +223,76 @@
     --destructive: 0.58 0.22 25;
     --destructive-foreground: 0.99 0.002 25;
 
-    --border: 0.3 0.02 280;
-    --input: 0.3 0.02 280;
-    --ring: 0.7 0.22 70;
-    --divider-accent: 0.7 0.22 70;
+    --border: 0.22 0.018 275;
+    --input: 0.22 0.018 275;
+    --ring: 0.72 0.14 82;
+    --divider-accent: 0.72 0.14 82;
 
-    --chart-1: 0.68 0.2 70;
+    --chart-1: 0.72 0.14 82;
     --chart-2: 0.65 0.2 290;
     --chart-3: 0.72 0.18 30;
     --chart-4: 0.66 0.18 190;
     --chart-5: 0.62 0.16 155;
 
-    --sidebar: 0.165 0.018 280;
+    --sidebar: 0.12 0.014 275;
     --sidebar-foreground: 0.93 0.01 280;
-    --sidebar-primary: 0.7 0.22 70;
-    --sidebar-primary-foreground: 0.99 0.002 70;
-    --sidebar-accent: 0.25 0.025 280;
+    --sidebar-primary: 0.72 0.14 82;
+    --sidebar-primary-foreground: 0.08 0.01 280;
+    --sidebar-accent: 0.18 0.022 275;
     --sidebar-accent-foreground: 0.85 0.008 280;
-    --sidebar-border: 0.3 0.02 280;
-    --sidebar-ring: 0.7 0.22 70;
+    --sidebar-border: 0.22 0.018 275;
+    --sidebar-ring: 0.72 0.14 82;
+
+    /* ── Course Learning Progression (dark mode) ── */
+    --progress-track: 0.22 0.018 275;
+    --progress-fill: 0.72 0.14 82;
+    --step-pending: 0.22 0.018 275;
+    --step-active: 0.68 0.2 290;
+    --step-completed: 0.65 0.18 150;
+    --video-frame: 0.15 0.016 275;
+    --quiz-section: 0.12 0.014 275;
+    --cert-milestone: 0.72 0.14 82;
 
     --gradient-gold: linear-gradient(
       135deg,
-      oklch(0.75 0.24 75) 0%,
-      oklch(0.7 0.22 70) 50%,
-      oklch(0.62 0.18 65) 100%
+      oklch(var(--primary) / 1) 0%,
+      oklch(var(--primary) / 0.88) 50%,
+      oklch(var(--primary) / 0.75) 100%
     );
     --gradient-purple: linear-gradient(
       135deg,
-      oklch(0.72 0.22 295) 0%,
-      oklch(0.68 0.2 290) 50%,
-      oklch(0.58 0.18 280) 100%
+      oklch(var(--accent) / 1) 0%,
+      oklch(var(--accent) / 0.88) 50%,
+      oklch(var(--accent) / 0.75) 100%
     );
     --gradient-subtle: linear-gradient(
       135deg,
-      oklch(0.165 0.018 280) 0%,
-      oklch(0.22 0.025 280) 100%
+      oklch(var(--card) / 1) 0%,
+      oklch(var(--secondary) / 1) 100%
     );
     --gradient-hero: linear-gradient(
       180deg,
-      oklch(0.12 0.015 280 / 0.8) 0%,
-      oklch(0.165 0.018 280 / 0.4) 50%,
-      oklch(0.12 0.015 280 / 0.8) 100%
+      oklch(var(--background) / 0.9) 0%,
+      oklch(var(--background) / 0.5) 50%,
+      oklch(var(--background) / 0.9) 100%
     );
   }
 
   html {
     scroll-behavior: smooth;
+    color-scheme: dark;
   }
 
-  /* Smooth scrolling on all overflow containers */
+  .light,
+  html.light {
+    color-scheme: light;
+  }
+
+  .dark,
+  html.dark {
+    color-scheme: dark;
+  }
+
   .overflow-y-auto,
   .overflow-x-auto,
   .overflow-y-scroll,
@@ -185,14 +306,14 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground font-body antialiased;
     letter-spacing: -0.3px;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
-  /* ── Input text visibility fix ──────────────────────────────────────
-     Force ALL typed text to be clearly visible (black on light bg inputs).
-     Overrides any dark-mode colour inheritance that makes text invisible. */
+  /* ── Input text: theme-aware — blends with glassmorphism panels in dark, clean white in light ── */
   input,
   input[type="text"],
   input[type="email"],
@@ -207,39 +328,70 @@
   textarea,
   select,
   [contenteditable] {
-    color: #000000 !important;
-    background-color: #ffffff !important;
-    border: 1px solid rgba(0, 0, 0, 0.2) !important;
-    -webkit-text-fill-color: #000000 !important;
+    color: oklch(var(--foreground));
+    background-color: oklch(var(--card) / 0.9);
+    border-color: oklch(var(--border));
+    -webkit-text-fill-color: oklch(var(--foreground));
+  }
+
+  /* Light mode: solid white for maximum clarity */
+  .light input,
+  .light input[type="text"],
+  .light input[type="email"],
+  .light input[type="password"],
+  .light input[type="number"],
+  .light input[type="tel"],
+  .light input[type="url"],
+  .light input[type="search"],
+  .light input[type="date"],
+  .light input[type="time"],
+  .light input[type="datetime-local"],
+  .light textarea,
+  .light select,
+  .light [contenteditable] {
+    color: oklch(var(--foreground));
+    background-color: oklch(var(--card));
+    border-color: oklch(var(--border));
+    -webkit-text-fill-color: oklch(var(--foreground));
   }
 
   input::placeholder,
   textarea::placeholder {
-    color: #6b7280 !important;
-    -webkit-text-fill-color: #6b7280 !important;
-    opacity: 1 !important;
+    color: oklch(var(--muted-foreground));
+    -webkit-text-fill-color: oklch(var(--muted-foreground));
+    opacity: 1;
   }
 
-  /* Select option text */
   select option {
-    color: #000000 !important;
-    background-color: #ffffff !important;
+    color: oklch(var(--foreground));
+    background-color: oklch(var(--card));
   }
 
-  /* Autofill override — browsers inject blue/yellow bg on autofill */
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
   input:-webkit-autofill:focus,
   textarea:-webkit-autofill,
   select:-webkit-autofill {
-    -webkit-text-fill-color: #000000 !important;
+    -webkit-text-fill-color: oklch(var(--foreground)) !important;
+    -webkit-box-shadow: 0 0 0px 1000px oklch(var(--card) / 0.95) inset !important;
+    box-shadow: 0 0 0px 1000px oklch(var(--card) / 0.95) inset !important;
+    border: 1px solid oklch(var(--border)) !important;
+  }
+
+  .light input:-webkit-autofill,
+  .light input:-webkit-autofill:hover,
+  .light input:-webkit-autofill:focus,
+  .light textarea:-webkit-autofill,
+  .light select:-webkit-autofill {
+    -webkit-text-fill-color: oklch(var(--foreground)) !important;
     -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
     box-shadow: 0 0 0px 1000px #ffffff inset !important;
-    border: 1px solid rgba(0, 0, 0, 0.2) !important;
+    border: 1px solid oklch(var(--border)) !important;
   }
 }
 
 @layer utilities {
+  /* ── Transitions ────────────────────────────────────────────────── */
   .transition-smooth {
     transition: var(--transition-smooth);
   }
@@ -248,6 +400,7 @@
     transition: var(--transition-base);
   }
 
+  /* ── Gradients ──────────────────────────────────────────────────── */
   .gradient-gold {
     background: var(--gradient-gold);
   }
@@ -264,38 +417,122 @@
     background: var(--gradient-hero);
   }
 
-  .shadow-luxury {
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), 0 16px 48px rgba(0, 0, 0, 0.25);
+  /* ── Gold text gradient ─────────────────────────────────────────── */
+  .gold-text {
+    background: var(--gradient-gold);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
   }
 
-  .shadow-elevated {
-    box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4), 0 24px 64px rgba(0, 0, 0, 0.3);
+  /* ── Glassmorphism ──────────────────────────────────────────────── */
+  .glass-card {
+    background: oklch(var(--card) / 0.72);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border: 1px solid oklch(var(--border) / 0.3);
+    box-shadow: 0 8px 32px oklch(0 0 0 / 0.15), inset 0 1px 0
+      oklch(1 0 0 / 0.06);
   }
 
-  .shadow-subtle {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 4px 12px rgba(0, 0, 0, 0.1);
+  .light .glass-card {
+    background: oklch(var(--card) / 0.88);
+    border: 1px solid oklch(var(--border) / 0.5);
+    box-shadow: 0 4px 24px oklch(0 0 0 / 0.08), inset 0 1px 0 oklch(1 0 0 / 0.5);
   }
 
-  .shadow-glow-gold {
-    box-shadow: 0 0 20px rgba(184, 147, 74, 0.15), 0 8px 24px rgba(0, 0, 0, 0.3);
+  .glass-card:hover {
+    background: oklch(var(--card) / 0.85);
+    border-color: oklch(var(--primary) / 0.3);
   }
 
   .glass-effect {
-    background: rgba(22, 22, 45, 0.45);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
+    background: oklch(var(--card) / 0.88);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
     border: 1px solid oklch(var(--border) / 0.4);
   }
 
-  .glass-effect-subtle {
-    background: rgba(22, 22, 45, 0.35);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    border: 1px solid oklch(var(--border) / 0.25);
+  .light .glass-effect {
+    background: oklch(var(--card) / 0.95);
+    border: 1px solid oklch(var(--border) / 0.6);
+    box-shadow: 0 4px 20px oklch(0 0 0 / 0.06);
   }
 
+  .glass-effect-subtle {
+    background: oklch(var(--card) / 0.55);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid oklch(var(--border) / 0.3);
+  }
+
+  .light .glass-effect-subtle {
+    background: oklch(var(--card) / 0.8);
+    border: 1px solid oklch(var(--border) / 0.5);
+  }
+
+  /* ── Luxury border (gold glow) ──────────────────────────────────── */
+  .luxury-border {
+    border: 1px solid oklch(var(--primary) / 0.4);
+    box-shadow: 0 0 0 1px oklch(var(--primary) / 0.08), 0 0 24px
+      oklch(var(--primary) / 0.12), inset 0 1px 0 oklch(var(--primary) / 0.06);
+  }
+
+  /* ── Shimmer loading skeleton ────────────────────────────────────── */
+  @keyframes shimmer {
+    0% {
+      background-position: -200% center;
+    }
+    100% {
+      background-position: 200% center;
+    }
+  }
+
+  .shimmer-skeleton {
+    background: linear-gradient(
+      90deg,
+      oklch(var(--muted) / 0.5) 25%,
+      oklch(var(--muted) / 0.8) 50%,
+      oklch(var(--muted) / 0.5) 75%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.8s ease-in-out infinite;
+    border-radius: 0.5rem;
+  }
+
+  /* ── Shadows ────────────────────────────────────────────────────── */
+  .shadow-luxury {
+    box-shadow: 0 8px 24px oklch(0 0 0 / 0.25), 0 16px 48px oklch(0 0 0 / 0.12);
+  }
+
+  .light .shadow-luxury {
+    box-shadow: 0 4px 16px oklch(0 0 0 / 0.1), 0 8px 32px oklch(0 0 0 / 0.06);
+  }
+
+  .shadow-elevated {
+    box-shadow: 0 12px 36px oklch(0 0 0 / 0.3), 0 24px 64px oklch(0 0 0 / 0.18);
+  }
+
+  .light .shadow-elevated {
+    box-shadow: 0 8px 24px oklch(0 0 0 / 0.1), 0 16px 48px oklch(0 0 0 / 0.06);
+  }
+
+  .shadow-subtle {
+    box-shadow: 0 2px 8px oklch(0 0 0 / 0.12), 0 4px 16px oklch(0 0 0 / 0.08);
+  }
+
+  .light .shadow-subtle {
+    box-shadow: 0 1px 4px oklch(0 0 0 / 0.06), 0 2px 8px oklch(0 0 0 / 0.04);
+  }
+
+  .shadow-glow-gold {
+    box-shadow: 0 0 20px oklch(var(--primary) / 0.3), 0 0 48px
+      oklch(var(--primary) / 0.12), 0 8px 24px oklch(0 0 0 / 0.15);
+  }
+
+  /* ── Typography ─────────────────────────────────────────────────── */
   .text-glow-gold {
-    text-shadow: 0 0 20px oklch(var(--primary) / 0.5);
+    text-shadow: 0 0 30px oklch(var(--primary) / 0.45);
   }
 
   .hero-text {
@@ -319,47 +556,126 @@
     letter-spacing: 1.5px;
   }
 
-  .card-luxury {
-    @apply rounded-2xl border border-border backdrop-blur-sm transition-smooth;
-    background: oklch(var(--card) / 0.35);
-  }
-  .card-luxury:hover {
-    background: oklch(var(--card) / 0.55);
-    border-color: oklch(var(--border) / 0.6);
+  .luxury-heading {
+    font-family: var(--font-display);
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    line-height: 1.15;
   }
 
+  /* ── Card styles ─────────────────────────────────────────────────── */
+  .card-luxury {
+    @apply rounded-2xl border border-border backdrop-blur-sm transition-smooth;
+    background: oklch(var(--card) / 0.75);
+  }
+
+  .light .card-luxury {
+    background: oklch(var(--card) / 0.95);
+    border-color: oklch(var(--border) / 0.7);
+    box-shadow: 0 2px 12px oklch(0 0 0 / 0.06);
+  }
+
+  .card-luxury:hover {
+    background: oklch(var(--card) / 0.92);
+    border-color: oklch(var(--primary) / 0.35);
+    box-shadow: 0 0 24px oklch(var(--primary) / 0.1);
+  }
+
+  /* ── Button styles ───────────────────────────────────────────────── */
   .btn-primary-luxury {
-    @apply px-8 py-3 rounded-xl font-semibold bg-primary text-primary-foreground transition-smooth cursor-pointer;
-    box-shadow: 0 4px 12px rgba(184, 147, 74, 0.2);
+    @apply px-8 py-3 rounded-xl font-semibold text-primary-foreground transition-smooth cursor-pointer inline-flex items-center justify-center;
+    background: var(--gradient-gold);
+    box-shadow: 0 4px 16px oklch(var(--primary) / 0.28), 0 1px 0
+      oklch(1 0 0 / 0.1) inset;
   }
+
   .btn-primary-luxury:hover {
-    @apply shadow-luxury scale-105;
+    @apply shadow-glow-gold scale-105;
+    filter: brightness(1.08);
   }
+
   .btn-primary-luxury:active {
     @apply scale-95;
   }
 
   .btn-secondary-luxury {
     @apply px-8 py-3 rounded-xl font-semibold border border-border text-foreground transition-smooth cursor-pointer;
-    background: oklch(var(--card) / 0.35);
+    background: oklch(var(--card) / 0.7);
+    backdrop-filter: blur(8px);
   }
+
+  .light .btn-secondary-luxury {
+    background: oklch(var(--card) / 0.9);
+    border-color: oklch(var(--border) / 0.7);
+  }
+
   .btn-secondary-luxury:hover {
-    background: oklch(var(--card) / 0.6);
-    border-color: oklch(var(--primary) / 0.6);
+    background: oklch(var(--card) / 0.9);
+    border-color: oklch(var(--primary) / 0.5);
+    box-shadow: 0 0 16px oklch(var(--primary) / 0.12);
   }
 
   .btn-tertiary-luxury {
     @apply px-6 py-2 rounded-lg font-medium text-primary transition-base cursor-pointer;
     text-decoration: none;
   }
+
   .btn-tertiary-luxury:hover {
     opacity: 0.8;
   }
 
-  /* Login split panel styles */
+  /* ── Input field (theme-aware bg + foreground text) ──────────────── */
+  .input-field {
+    @apply w-full rounded-lg border px-4 py-3 text-sm transition-base focus:outline-none focus:ring-2 focus:ring-primary;
+    color: oklch(var(--foreground));
+    background: oklch(var(--card) / 0.9);
+    border-color: oklch(var(--border));
+    -webkit-text-fill-color: oklch(var(--foreground));
+  }
+
+  .light .input-field {
+    background: oklch(var(--card));
+  }
+
+  .input-field:focus {
+    border-color: oklch(var(--primary) / 0.6);
+    box-shadow: 0 0 0 3px oklch(var(--primary) / 0.12);
+  }
+
+  .input-luxury {
+    @apply pl-12 pr-4 py-3 rounded-lg border transition-base focus:outline-none focus:ring-2 focus:ring-primary;
+    color: oklch(var(--foreground));
+    background: oklch(var(--card) / 0.9);
+    border-color: oklch(var(--border));
+    -webkit-text-fill-color: oklch(var(--foreground));
+    font-family: var(--font-body);
+    box-shadow: 0 2px 4px oklch(0 0 0 / 0.05);
+  }
+
+  .light .input-luxury {
+    background: oklch(var(--card));
+  }
+
+  .input-luxury:focus {
+    box-shadow: 0 2px 8px oklch(var(--primary) / 0.15), 0 0 0 3px
+      oklch(var(--primary) / 0.1);
+  }
+
+  .checkbox-luxury {
+    @apply w-5 h-5 rounded border border-border bg-card cursor-pointer transition-smooth;
+    accent-color: oklch(var(--primary));
+  }
+
+  /* ── Login split panel ───────────────────────────────────────────── */
   .login-panel {
     @apply rounded-2xl border border-border backdrop-blur-md transition-smooth;
-    background: oklch(var(--card) / 0.45);
+    background: oklch(var(--card) / 0.82);
+  }
+
+  .light .login-panel {
+    background: oklch(var(--card) / 0.96);
+    border-color: oklch(var(--border) / 0.6);
+    box-shadow: 0 8px 32px oklch(0 0 0 / 0.08);
   }
 
   .login-divider {
@@ -377,20 +693,52 @@
     @apply absolute left-4 top-1/2 transform -translate-y-1/2 text-primary opacity-70;
   }
 
-  .input-luxury {
-    @apply pl-12 pr-4 py-3 bg-white text-black rounded-lg border border-gray-300 transition-base focus:outline-none focus:ring-2 focus:ring-primary;
-    font-family: var(--font-body);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  }
-  .input-luxury:focus {
-    box-shadow: 0 2px 8px rgba(184, 147, 74, 0.15);
+  /* ── Role badge ──────────────────────────────────────────────────── */
+  .role-badge {
+    @apply inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-smooth cursor-pointer;
+    background: oklch(var(--card) / 0.6);
+    border: 1px solid oklch(var(--border) / 0.4);
   }
 
-  .checkbox-luxury {
-    @apply w-5 h-5 rounded border border-gray-300 bg-white cursor-pointer transition-smooth accent-primary;
+  .role-badge:hover {
+    background: oklch(var(--card) / 0.85);
+    border-color: oklch(var(--primary) / 0.5);
   }
 
-  /* ── Login Page Premium Animations ──────────────────────────────────── */
+  .role-badge.active {
+    background: oklch(var(--primary) / 0.18);
+    border-color: oklch(var(--primary) / 0.6);
+    color: oklch(var(--primary));
+  }
+
+  /* ── Login card glow ─────────────────────────────────────────────── */
+  .login-card-glow {
+    position: relative;
+    border-radius: inherit;
+  }
+
+  .login-card-glow::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(
+      135deg,
+      oklch(var(--primary) / 0.45),
+      oklch(var(--accent) / 0.2),
+      oklch(var(--primary) / 0.25)
+    );
+    -webkit-mask: linear-gradient(#fff 0 0) content-box,
+      linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
+  /* ── Bokeh animations ────────────────────────────────────────────── */
   @keyframes bokeh-float-1 {
     0%,
     100% {
@@ -420,148 +768,91 @@
   .bokeh-orb {
     position: absolute;
     border-radius: 50%;
-    filter: blur(60px);
-    opacity: 0.1;
+    filter: blur(70px);
+    opacity: 0.12;
+  }
+
+  .light .bokeh-orb {
+    opacity: 0.06;
   }
 
   .bokeh-orb-1 {
-    width: 400px;
-    height: 400px;
-    top: -100px;
-    right: -100px;
-    background: oklch(var(--primary) / 0.3);
-    animation: bokeh-float-1 25s ease-in-out infinite;
+    width: 450px;
+    height: 450px;
+    top: -120px;
+    right: -120px;
+    background: oklch(var(--primary) / 0.4);
+    animation: bokeh-float-1 28s ease-in-out infinite;
   }
 
   .bokeh-orb-2 {
-    width: 300px;
-    height: 300px;
-    bottom: -80px;
-    left: -80px;
-    background: oklch(var(--accent) / 0.3);
-    animation: bokeh-float-2 30s ease-in-out infinite;
+    width: 350px;
+    height: 350px;
+    bottom: -100px;
+    left: -100px;
+    background: oklch(var(--accent) / 0.4);
+    animation: bokeh-float-2 33s ease-in-out infinite;
   }
 
   .bokeh-orb-3 {
-    width: 350px;
-    height: 350px;
+    width: 380px;
+    height: 380px;
     top: 50%;
-    left: -150px;
-    background: oklch(var(--primary) / 0.2);
-    animation: bokeh-float-2 35s ease-in-out infinite reverse;
+    left: -180px;
+    background: oklch(var(--primary) / 0.25);
+    animation: bokeh-float-2 38s ease-in-out infinite reverse;
   }
 
-  /* ── Role Badge Styling ──────────────────────────────────────────────── */
-  .role-badge {
-    @apply inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-semibold transition-smooth cursor-pointer;
-    background: oklch(var(--card) / 0.6);
-    border: 1px solid oklch(var(--border) / 0.4);
-  }
-
-  .role-badge:hover {
-    background: oklch(var(--card) / 0.8);
-    border-color: oklch(var(--border) / 0.8);
-  }
-
-  .role-badge.active {
-    background: oklch(var(--primary) / 0.2);
-    border-color: oklch(var(--primary) / 0.6);
-    color: oklch(var(--primary));
-  }
-
-  .role-badge.admin {
-    --role-color: oklch(0.68 0.2 290);
-  }
-  .role-badge.client {
-    --role-color: oklch(0.7 0.22 70);
-  }
-  .role-badge.staff {
-    --role-color: oklch(0.66 0.18 190);
-  }
-  .role-badge.student {
-    --role-color: oklch(0.65 0.2 290);
-  }
-
-  /* ── Login Card Glow Effect ──────────────────────────────────────────── */
-  .login-card-glow {
-    position: relative;
-    border-radius: inherit;
-  }
-
-  .login-card-glow::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    border-radius: inherit;
-    padding: 1px;
-    background: linear-gradient(
-      135deg,
-      oklch(var(--primary) / 0.4),
-      oklch(var(--accent) / 0.2),
-      oklch(var(--primary) / 0.2)
-    );
-    -webkit-mask: linear-gradient(#fff 0 0) content-box,
-      linear-gradient(#fff 0 0);
-    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-    -webkit-mask-composite: xor;
-    mask-composite: exclude;
-    opacity: 0.6;
-    pointer-events: none;
-  }
-
-  /* ── Password Strength Indicator ──────────────────────────────────────── */
+  /* ── Password strength ───────────────────────────────────────────── */
   .password-strength {
     @apply flex gap-1 mt-2;
   }
 
   .strength-bar {
-    @apply h-1 flex-1 rounded-full bg-gray-300 transition-colors;
+    @apply h-1 flex-1 rounded-full bg-muted transition-colors duration-300;
   }
 
   .strength-bar.weak {
-    @apply bg-red-500;
+    background: oklch(0.58 0.22 25);
   }
   .strength-bar.fair {
-    @apply bg-yellow-500;
+    background: oklch(0.72 0.18 85);
   }
   .strength-bar.good {
-    @apply bg-blue-500;
+    background: oklch(0.65 0.18 250);
   }
   .strength-bar.strong {
-    @apply bg-green-500;
+    background: oklch(0.65 0.18 150);
   }
   .strength-bar.empty {
-    @apply bg-gray-300;
+    @apply bg-muted;
   }
 
-  /* ── Staggered Animation for Form Fields ──────────────────────────────── */
+  /* ── Form field stagger ──────────────────────────────────────────── */
   .form-field {
-    animation: slide-up 0.6s ease-out backwards;
+    animation: slide-up 0.5s ease-out backwards;
   }
 
   .form-field:nth-child(1) {
-    animation-delay: 100ms;
+    animation-delay: 80ms;
   }
   .form-field:nth-child(2) {
-    animation-delay: 150ms;
+    animation-delay: 130ms;
   }
   .form-field:nth-child(3) {
-    animation-delay: 200ms;
+    animation-delay: 180ms;
   }
   .form-field:nth-child(4) {
-    animation-delay: 250ms;
+    animation-delay: 230ms;
   }
   .form-field:nth-child(5) {
-    animation-delay: 300ms;
+    animation-delay: 280ms;
   }
   .form-field:nth-child(6) {
-    animation-delay: 350ms;
+    animation-delay: 330ms;
   }
 
-  /* ── Loading Spinner ──────────────────────────────────────────────────── */
+  /* ── Spinner ─────────────────────────────────────────────────────── */
   .spinner {
     @apply inline-block w-5 h-5 border-2 border-transparent rounded-full;
     border-top-color: currentColor;
@@ -574,11 +865,78 @@
     }
   }
 
-  .btn-stripe {
-    @apply w-full px-6 py-3 rounded-lg font-semibold bg-blue-600 text-white transition-smooth hover:shadow-luxury hover:scale-105 active:scale-95;
+  /* ── Slide-up entrance ───────────────────────────────────────────── */
+  @keyframes slide-up {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 
-  /* Toast notification styles */
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+
+  .animate-slide-up {
+    animation: slide-up 0.5s ease-out both;
+  }
+
+  .animate-fade-in {
+    animation: fade-in 0.4s ease-out both;
+  }
+
+  /* ── Service card hover glow ──────────────────────────────────────── */
+  .service-card-hover {
+    @apply transition-smooth;
+  }
+
+  .service-card-hover:hover {
+    box-shadow: 0 0 24px oklch(var(--primary) / 0.18), 0 12px 32px
+      oklch(0 0 0 / 0.18);
+    border-color: oklch(var(--primary) / 0.4) !important;
+    transform: translateY(-2px);
+  }
+
+  .light .service-card-hover:hover {
+    box-shadow: 0 0 20px oklch(var(--primary) / 0.15), 0 8px 24px
+      oklch(0 0 0 / 0.08);
+  }
+
+  /* ── Gallery masonry ────────────────────────────────────────────── */
+  .gallery-item-hover {
+    @apply transition-smooth overflow-hidden;
+  }
+
+  .gallery-item-hover:hover .gallery-img {
+    transform: scale(1.06);
+    filter: brightness(1.08);
+  }
+
+  .gallery-img {
+    @apply w-full h-full object-cover transition-smooth;
+  }
+
+  /* ── Stripe button ──────────────────────────────────────────────── */
+  .btn-stripe {
+    @apply w-full px-6 py-3 rounded-lg font-semibold text-white transition-smooth;
+    background: linear-gradient(135deg, #4f46e5, #6d28d9);
+  }
+
+  .btn-stripe:hover {
+    @apply shadow-luxury scale-105;
+    filter: brightness(1.1);
+  }
+
+  /* ── Toast notifications ─────────────────────────────────────────── */
   .toast-success {
     @apply bg-green-600 text-white;
   }
@@ -589,5 +947,229 @@
 
   .toast-notification {
     @apply fixed bottom-4 right-4 px-6 py-3 rounded-lg shadow-luxury animate-slide-up;
+  }
+
+  /* ── Section zone separators ─────────────────────────────────────── */
+  .section-divider {
+    @apply relative my-0;
+  }
+
+  .section-divider::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    left: 10%;
+    right: 10%;
+    height: 1px;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      oklch(var(--primary) / 0.2) 30%,
+      oklch(var(--primary) / 0.35) 50%,
+      oklch(var(--primary) / 0.2) 70%,
+      transparent
+    );
+  }
+
+  /* ── Focus visible rings ─────────────────────────────────────────── */
+  :focus-visible {
+    outline: 2px solid oklch(var(--primary) / 0.7);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* ── Course progression bar ────────────────────────────────────────── */
+  .progress-track {
+    background-color: oklch(var(--progress-track));
+    border-radius: 0.5rem;
+    height: 8px;
+    overflow: hidden;
+  }
+
+  .progress-fill {
+    background: var(--gradient-gold);
+    height: 100%;
+    border-radius: 0.5rem;
+    transition: width 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+    box-shadow: 0 0 12px oklch(var(--progress-fill) / 0.4);
+  }
+
+  /* ── Course step indicator ──────────────────────────────────────────── */
+  .step-marker {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    font-weight: 600;
+    transition: var(--transition-smooth);
+    border: 2px solid oklch(var(--step-pending));
+    background-color: oklch(var(--step-pending) / 0.3);
+    color: oklch(var(--muted-foreground));
+  }
+
+  .step-marker.active {
+    background: oklch(var(--step-active) / 0.2);
+    border-color: oklch(var(--step-active));
+    color: oklch(var(--step-active));
+    box-shadow: 0 0 16px oklch(var(--step-active) / 0.3);
+  }
+
+  .step-marker.completed {
+    background: oklch(var(--step-completed) / 0.2);
+    border-color: oklch(var(--step-completed));
+    color: oklch(var(--step-completed));
+    box-shadow: 0 0 12px oklch(var(--step-completed) / 0.25);
+  }
+
+  /* ── Video lesson frame ────────────────────────────────────────────── */
+  .video-frame {
+    background-color: oklch(var(--video-frame));
+    border: 1px solid oklch(var(--border) / 0.4);
+    border-radius: 1rem;
+    overflow: hidden;
+    aspect-ratio: 16 / 9;
+    box-shadow: 0 8px 32px oklch(0 0 0 / 0.25);
+  }
+
+  .light .video-frame {
+    background-color: oklch(var(--video-frame) / 0.95);
+    border-color: oklch(var(--border) / 0.5);
+    box-shadow: 0 4px 16px oklch(0 0 0 / 0.08);
+  }
+
+  .video-frame iframe {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* ── Quiz section container ────────────────────────────────────────── */
+  .quiz-section {
+    background-color: oklch(var(--quiz-section));
+    border: 1px solid oklch(var(--border) / 0.3);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    transition: var(--transition-smooth);
+  }
+
+  .light .quiz-section {
+    background-color: oklch(var(--quiz-section) / 0.96);
+    border-color: oklch(var(--border) / 0.4);
+  }
+
+  .quiz-section:hover {
+    border-color: oklch(var(--primary) / 0.3);
+    box-shadow: 0 0 16px oklch(var(--primary) / 0.08);
+  }
+
+  /* ── Quiz question card ────────────────────────────────────────────── */
+  .quiz-question {
+    background: oklch(var(--card) / 0.6);
+    border: 1px solid oklch(var(--border) / 0.25);
+    border-radius: 0.875rem;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1rem;
+    transition: var(--transition-base);
+    cursor: pointer;
+  }
+
+  .light .quiz-question {
+    background: oklch(var(--card) / 0.92);
+    border-color: oklch(var(--border) / 0.35);
+  }
+
+  .quiz-question:hover {
+    background: oklch(var(--card) / 0.75);
+    border-color: oklch(var(--primary) / 0.25);
+  }
+
+  .quiz-question.selected {
+    background: oklch(var(--primary) / 0.15);
+    border-color: oklch(var(--primary) / 0.5);
+    box-shadow: 0 0 12px oklch(var(--primary) / 0.15);
+  }
+
+  /* ── Certificate milestone card ────────────────────────────────────── */
+  .cert-milestone {
+    background: oklch(var(--cert-milestone) / 0.08);
+    border: 2px solid oklch(var(--cert-milestone) / 0.3);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    text-align: center;
+    transition: var(--transition-smooth);
+  }
+
+  .cert-milestone.earned {
+    background: oklch(var(--cert-milestone) / 0.12);
+    border-color: oklch(var(--cert-milestone) / 0.6);
+    box-shadow: 0 0 24px oklch(var(--cert-milestone) / 0.2);
+  }
+
+  .light .cert-milestone {
+    background: oklch(var(--cert-milestone) / 0.06);
+    border-color: oklch(var(--cert-milestone) / 0.25);
+  }
+
+  .light .cert-milestone.earned {
+    background: oklch(var(--cert-milestone) / 0.1);
+    border-color: oklch(var(--cert-milestone) / 0.5);
+  }
+
+  /* ── Lesson sidebar ────────────────────────────────────────────────── */
+  .lesson-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
+    margin-bottom: 0.5rem;
+    border-left: 3px solid oklch(var(--border) / 0.2);
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: var(--transition-base);
+  }
+
+  .lesson-item:hover {
+    background: oklch(var(--card) / 0.7);
+    border-left-color: oklch(var(--primary) / 0.4);
+  }
+
+  .lesson-item.active {
+    background: oklch(var(--accent) / 0.1);
+    border-left-color: oklch(var(--accent) / 0.8);
+    color: oklch(var(--accent));
+  }
+
+  .lesson-item.completed {
+    border-left-color: oklch(var(--success) / 0.6);
+    opacity: 0.8;
+  }
+
+  /* ── Quiz result state ────────────────────────────────────────────── */
+  .quiz-result-pass {
+    background: oklch(var(--success) / 0.1);
+    border: 1px solid oklch(var(--success) / 0.3);
+    border-radius: 0.875rem;
+    padding: 1rem;
+    color: oklch(var(--success));
+  }
+
+  .quiz-result-fail {
+    background: oklch(var(--destructive) / 0.1);
+    border: 1px solid oklch(var(--destructive) / 0.3);
+    border-radius: 0.875rem;
+    padding: 1rem;
+    color: oklch(var(--destructive));
+  }
+
+  /* ── Reduced motion ──────────────────────────────────────────────── */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
 }

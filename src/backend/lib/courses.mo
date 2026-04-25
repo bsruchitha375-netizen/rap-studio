@@ -1,10 +1,17 @@
 import List "mo:core/List";
+import Nat "mo:core/Nat";
+import Array "mo:core/Array";
+import Set "mo:core/Set";
 import Time "mo:core/Time";
 import Runtime "mo:core/Runtime";
+import Blob "mo:core/Blob";
+import Int "mo:core/Int";
 import Common "../types/common";
 import CourseTypes "../types/courses";
 
 module {
+  // ── Existing helpers (unchanged) ──────────────────────────────────────────
+
   public func getAllCourses() : [CourseTypes.Course] {
     [
       // Photography (15)
@@ -70,25 +77,123 @@ module {
     ];
   };
 
-  public func getCourseById(
-    courseId : Common.CourseId,
-  ) : ?CourseTypes.Course {
+  public func getCourseById(courseId : Common.CourseId) : ?CourseTypes.Course {
     let courses = getAllCourses();
     courses.find(func(c) { c.id == courseId });
   };
 
+  public func getMergedCourses(adminCourses : List.List<CourseTypes.AdminCourse>) : [CourseTypes.Course] {
+    let staticCourses = getAllCourses();
+    let adminConverted = List.empty<CourseTypes.Course>();
+    for (ac in adminCourses.values()) {
+      adminConverted.add({
+        id = ac.id;
+        title = ac.title;
+        category = ac.category;
+        mode = ac.mode;
+        price = ac.price;
+        description = ac.description;
+        duration = ac.duration;
+        prerequisites = ac.prerequisites;
+        imageUrl = "";
+        status = ac.status;
+      });
+    };
+    staticCourses.concat(adminConverted.toArray());
+  };
+
+  public func getAdminCourseById(
+    adminCourses : List.List<CourseTypes.AdminCourse>,
+    courseId : Common.CourseId,
+  ) : ?CourseTypes.AdminCourse {
+    adminCourses.find(func(ac) { ac.id == courseId });
+  };
+
+  public func adminAddCourse(
+    adminCourses : List.List<CourseTypes.AdminCourse>,
+    nextId : Nat,
+    input : CourseTypes.AdminCourseInput,
+  ) : CourseTypes.AdminCourse {
+    let imageBlob : ?Blob = if (input.imageData.size() == 0) {
+      null;
+    } else {
+      ?Blob.fromArray(input.imageData);
+    };
+    let course : CourseTypes.AdminCourse = {
+      id = nextId;
+      title = input.title;
+      category = input.category;
+      mode = input.mode;
+      price = input.price;
+      description = input.description;
+      duration = input.duration;
+      prerequisites = input.prerequisites;
+      imageBlob = imageBlob;
+      status = input.status;
+      createdAt = Time.now();
+    };
+    adminCourses.add(course);
+    course;
+  };
+
+  public func adminUpdateCourse(
+    adminCourses : List.List<CourseTypes.AdminCourse>,
+    courseId : Common.CourseId,
+    input : CourseTypes.AdminCourseInput,
+  ) : Bool {
+    var found = false;
+    adminCourses.mapInPlace(func(ac) {
+      if (ac.id == courseId) {
+        found := true;
+        let newBlob : ?Blob = if (input.imageData.size() == 0) {
+          ac.imageBlob;
+        } else {
+          ?Blob.fromArray(input.imageData);
+        };
+        {
+          ac with
+          title = input.title;
+          category = input.category;
+          mode = input.mode;
+          price = input.price;
+          description = input.description;
+          duration = input.duration;
+          prerequisites = input.prerequisites;
+          imageBlob = newBlob;
+          status = input.status;
+        };
+      } else { ac };
+    });
+    found;
+  };
+
+  public func adminDeleteCourse(
+    adminCourses : List.List<CourseTypes.AdminCourse>,
+    courseId : Common.CourseId,
+  ) : Bool {
+    let before = adminCourses.size();
+    let filtered = adminCourses.filter(func(ac) { ac.id != courseId });
+    adminCourses.clear();
+    adminCourses.append(filtered);
+    adminCourses.size() < before;
+  };
+
+  public func getAllAdminCourses(adminCourses : List.List<CourseTypes.AdminCourse>) : [CourseTypes.AdminCourse] {
+    adminCourses.toArray();
+  };
+
   public func enrollCourse(
     enrollments : List.List<CourseTypes.CourseEnrollment>,
+    adminCourses : List.List<CourseTypes.AdminCourse>,
     nextId : Nat,
     caller : Common.UserId,
     courseId : Common.CourseId,
   ) : CourseTypes.CourseEnrollment {
-    // Validate course exists
-    switch (getCourseById(courseId)) {
-      case null { Runtime.trap("Course not found") };
-      case (?_) {};
+    let existsStatic = getCourseById(courseId) != null;
+    let existsAdmin = getAdminCourseById(adminCourses, courseId) != null;
+    if (not existsStatic and not existsAdmin) {
+      Runtime.trap("Course not found");
     };
-    // Check not already enrolled
     switch (enrollments.find(func(e) { e.userId == caller and e.courseId == courseId })) {
       case (?_) { Runtime.trap("Already enrolled in this course") };
       case null {};
@@ -114,9 +219,7 @@ module {
     enrollments.filter(func(e) { e.userId == caller }).toArray();
   };
 
-  public func getAllEnrollments(
-    enrollments : List.List<CourseTypes.CourseEnrollment>,
-  ) : [CourseTypes.CourseEnrollment] {
+  public func getAllEnrollments(enrollments : List.List<CourseTypes.CourseEnrollment>) : [CourseTypes.CourseEnrollment] {
     enrollments.toArray();
   };
 
@@ -158,5 +261,466 @@ module {
       } else { e };
     });
     found;
+  };
+
+  func generateCertCode(enrollmentId : Nat, now : Int) : Text {
+    let t = Int.abs(now) % 999999999;
+    "RAP-CERT-" # enrollmentId.toText() # "-" # t.toText();
+  };
+
+  public func markCourseComplete(
+    enrollments : List.List<CourseTypes.CourseEnrollment>,
+    lessonProgress : List.List<CourseTypes.LessonProgress>,
+    lessons : List.List<CourseTypes.Lesson>,
+    caller : Common.UserId,
+    enrollmentId : Common.EnrollmentId,
+  ) : { #ok : Text; #err : Text } {
+    switch (enrollments.find(func(e) { e.id == enrollmentId })) {
+      case null { #err("Enrollment not found") };
+      case (?e) {
+        if (e.userId != caller) { return #err("Not your enrollment") };
+        switch (e.paymentStatus) {
+          case (#FullyPaid) {};
+          case _ { return #err("Payment not complete — certificate blocked until full payment") };
+        };
+        // Verify all lessons are completed (video watched + quiz passed)
+        let courseLessons = getLessonsByCourse(lessons, e.courseId);
+        if (courseLessons.size() > 0) {
+          let allDone = courseLessons.all(func(l : CourseTypes.Lesson) : Bool {
+            switch (lessonProgress.find(func(lp) { lp.studentId == caller and lp.lessonId == l.id })) {
+              case null { false };
+              case (?lp) { lp.videoWatched and lp.quizPassed };
+            };
+          });
+          if (not allDone) {
+            return #err("Not all lessons completed — watch all videos and pass all quizzes first");
+          };
+        };
+        switch (e.certificateCode) {
+          case (?code) { #ok(code) };
+          case null {
+            let now = Time.now();
+            let code = generateCertCode(enrollmentId, now);
+            var updated = false;
+            enrollments.mapInPlace(func(en) {
+              if (en.id == enrollmentId) {
+                updated := true;
+                { en with progress = 100; completedAt = ?now; certificateCode = ?code };
+              } else { en };
+            });
+            if (updated) { #ok(code) } else { #err("Failed to update enrollment") };
+          };
+        };
+      };
+    };
+  };
+
+  public func verifyCertificate(
+    enrollments : List.List<CourseTypes.CourseEnrollment>,
+    code : Text,
+  ) : ?CourseTypes.CourseEnrollment {
+    enrollments.find(func(e) {
+      switch (e.certificateCode) {
+        case (?c) { c == code };
+        case null { false };
+      };
+    });
+  };
+
+  // ── Lesson management ─────────────────────────────────────────────────────
+
+  /// Add a new lesson to a course. Returns the created lesson.
+  public func addLesson(
+    lessons : List.List<CourseTypes.Lesson>,
+    nextId : Nat,
+    input : CourseTypes.LessonInput,
+  ) : CourseTypes.Lesson {
+    let lesson : CourseTypes.Lesson = {
+      id = nextId;
+      courseId = input.courseId;
+      title = input.title;
+      description = input.description;
+      youtubeUrl = input.youtubeUrl;
+      order = input.order;
+      quizQuestions = [];
+    };
+    lessons.add(lesson);
+    lesson;
+  };
+
+  /// Update an existing lesson's metadata (not its quiz questions).
+  public func editLesson(
+    lessons : List.List<CourseTypes.Lesson>,
+    lessonId : Nat,
+    input : CourseTypes.LessonInput,
+  ) : Bool {
+    var found = false;
+    lessons.mapInPlace(func(l) {
+      if (l.id == lessonId) {
+        found := true;
+        {
+          l with
+          courseId = input.courseId;
+          title = input.title;
+          description = input.description;
+          youtubeUrl = input.youtubeUrl;
+          order = input.order;
+        };
+      } else { l };
+    });
+    found;
+  };
+
+  /// Remove a lesson and all its progress records.
+  public func removeLesson(
+    lessons : List.List<CourseTypes.Lesson>,
+    lessonId : Nat,
+  ) : Bool {
+    let before = lessons.size();
+    let filtered = lessons.filter(func(l) { l.id != lessonId });
+    lessons.clear();
+    lessons.append(filtered);
+    lessons.size() < before;
+  };
+
+  /// Return all lessons for a course, ordered by Lesson.order.
+  public func getLessonsByCourse(
+    lessons : List.List<CourseTypes.Lesson>,
+    courseId : Common.CourseId,
+  ) : [CourseTypes.Lesson] {
+    let filtered = lessons.filter(func(l) { l.courseId == courseId });
+    let arr = filtered.toArray();
+    arr.sort(func(a, b) { Nat.compare(a.order, b.order) });
+  };
+
+  // ── Quiz question management ───────────────────────────────────────────────
+
+  /// Add a quiz question to a lesson. Returns the updated lesson.
+  public func addQuizQuestion(
+    lessons : List.List<CourseTypes.Lesson>,
+    nextQuizId : Nat,
+    input : CourseTypes.QuizQuestionInput,
+  ) : CourseTypes.Lesson {
+    var result : ?CourseTypes.Lesson = null;
+    lessons.mapInPlace(func(l) {
+      if (l.id == input.lessonId) {
+        let newQuestion : CourseTypes.QuizQuestion = {
+          id = nextQuizId;
+          lessonId = input.lessonId;
+          question = input.question;
+          options = input.options;
+          correctOptionIndex = input.correctOptionIndex;
+        };
+        let updated : CourseTypes.Lesson = {
+          l with
+          quizQuestions = l.quizQuestions.concat([newQuestion]);
+        };
+        result := ?updated;
+        updated;
+      } else { l };
+    });
+    switch (result) {
+      case (?lesson) { lesson };
+      case null { Runtime.trap("Lesson not found") };
+    };
+  };
+
+  /// Update an existing quiz question.
+  public func editQuizQuestion(
+    lessons : List.List<CourseTypes.Lesson>,
+    questionId : Nat,
+    input : CourseTypes.QuizQuestionInput,
+  ) : Bool {
+    var found = false;
+    lessons.mapInPlace(func(l) {
+      let updatedQuestions = l.quizQuestions.map(
+        func(q : CourseTypes.QuizQuestion) : CourseTypes.QuizQuestion {
+          if (q.id == questionId) {
+            found := true;
+            {
+              q with
+              question = input.question;
+              options = input.options;
+              correctOptionIndex = input.correctOptionIndex;
+            };
+          } else { q };
+        },
+      );
+      { l with quizQuestions = updatedQuestions };
+    });
+    found;
+  };
+
+  /// Remove a quiz question from its lesson.
+  public func removeQuizQuestion(
+    lessons : List.List<CourseTypes.Lesson>,
+    questionId : Nat,
+  ) : Bool {
+    var found = false;
+    lessons.mapInPlace(func(l) {
+      let before = l.quizQuestions.size();
+      let filtered = l.quizQuestions.filter(func(q) {
+        if (q.id == questionId) { found := true; false } else { true };
+      });
+      if (filtered.size() < before) {
+        { l with quizQuestions = filtered };
+      } else { l };
+    });
+    found;
+  };
+
+  // ── Student progress ──────────────────────────────────────────────────────
+
+  /// Mark that a student has finished watching a lesson video.
+  /// Returns updated LessonProgress.
+  public func markVideoWatched(
+    lessonProgress : List.List<CourseTypes.LessonProgress>,
+    courseProgress : List.List<CourseTypes.CourseLessonProgress>,
+    lessons : List.List<CourseTypes.Lesson>,
+    enrollments : List.List<CourseTypes.CourseEnrollment>,
+    student : Common.UserId,
+    lessonId : Nat,
+  ) : CourseTypes.LessonProgress {
+    // Find the lesson to get the courseId
+    let lesson = switch (lessons.find(func(l) { l.id == lessonId })) {
+      case null { Runtime.trap("Lesson not found") };
+      case (?l) { l };
+    };
+    // Verify student is enrolled in this course
+    switch (enrollments.find(func(e) { e.userId == student and e.courseId == lesson.courseId })) {
+      case null { Runtime.trap("Not enrolled in this course") };
+      case (?_) {};
+    };
+    // Create or update LessonProgress
+    let updatedLp : CourseTypes.LessonProgress = switch (lessonProgress.find(func(lp) { lp.studentId == student and lp.lessonId == lessonId })) {
+      case (?lp) {
+        { lp with videoWatched = true };
+      };
+      case null {
+        {
+          studentId = student;
+          lessonId = lessonId;
+          videoWatched = true;
+          quizScore = null;
+          quizPassed = false;
+          completedAt = null;
+        };
+      };
+    };
+    // Upsert into lessonProgress list
+    switch (lessonProgress.findIndex(func(lp) { lp.studentId == student and lp.lessonId == lessonId })) {
+      case (?idx) {
+        lessonProgress.put(idx, updatedLp);
+      };
+      case null {
+        lessonProgress.add(updatedLp);
+      };
+    };
+    // Recalc course-level progress
+    ignore recalcCourseProgress(lessonProgress, courseProgress, enrollments, lessons, student, lesson.courseId);
+    updatedLp;
+  };
+
+  /// Submit quiz answers for a lesson. Returns a QuizResult with score and
+  /// updated course progress. Also triggers certificate generation if all
+  /// lessons are done and enrollment is FullyPaid.
+  public func submitQuiz(
+    lessonProgress : List.List<CourseTypes.LessonProgress>,
+    courseProgress : List.List<CourseTypes.CourseLessonProgress>,
+    enrollments : List.List<CourseTypes.CourseEnrollment>,
+    lessons : List.List<CourseTypes.Lesson>,
+    student : Common.UserId,
+    lessonId : Nat,
+    answers : [Nat],  // one index per question, ordered
+  ) : { #ok : CourseTypes.QuizResult; #err : Text } {
+    // Find lesson
+    let lesson = switch (lessons.find(func(l) { l.id == lessonId })) {
+      case null { return #err("Lesson not found") };
+      case (?l) { l };
+    };
+    // Verify enrollment
+    switch (enrollments.find(func(e) { e.userId == student and e.courseId == lesson.courseId })) {
+      case null { return #err("Not enrolled in this course") };
+      case (?_) {};
+    };
+    let questions = lesson.quizQuestions;
+    let totalQuestions = questions.size();
+    if (totalQuestions == 0) {
+      return #err("No quiz questions for this lesson");
+    };
+    if (totalQuestions < 10) {
+      return #err("Quiz must have at least 10 questions before it can be submitted");
+    };
+    if (answers.size() != totalQuestions) {
+      return #err("Answer count does not match question count");
+    };
+    // Score the quiz
+    var correct = 0;
+    var i = 0;
+    for (q in questions.values()) {
+      if (i < answers.size() and answers[i] == q.correctOptionIndex) {
+        correct += 1;
+      };
+      i += 1;
+    };
+    let passed = correct * 100 >= totalQuestions * 60; // >= 60%
+    let now = Time.now();
+    // Upsert LessonProgress
+    let updatedLp : CourseTypes.LessonProgress = switch (lessonProgress.find(func(lp) { lp.studentId == student and lp.lessonId == lessonId })) {
+      case (?lp) {
+        {
+          lp with
+          quizScore = ?correct;
+          quizPassed = passed;
+          completedAt = if (lp.videoWatched and passed) { ?now } else { lp.completedAt };
+        };
+      };
+      case null {
+        {
+          studentId = student;
+          lessonId = lessonId;
+          videoWatched = false;
+          quizScore = ?correct;
+          quizPassed = passed;
+          completedAt = null;
+        };
+      };
+    };
+    switch (lessonProgress.findIndex(func(lp) { lp.studentId == student and lp.lessonId == lessonId })) {
+      case (?idx) { lessonProgress.put(idx, updatedLp) };
+      case null { lessonProgress.add(updatedLp) };
+    };
+    // Recalc and return progress
+    let cp = recalcCourseProgress(lessonProgress, courseProgress, enrollments, lessons, student, lesson.courseId);
+    #ok({
+      lessonId = lessonId;
+      score = correct;
+      totalQuestions = totalQuestions;
+      passed = passed;
+      courseProgress = cp;
+    });
+  };
+
+  /// Return the aggregated course-level progress for a student.
+  public func getCourseProgress(
+    courseProgress : List.List<CourseTypes.CourseLessonProgress>,
+    student : Common.UserId,
+    courseId : Common.CourseId,
+  ) : ?CourseTypes.CourseLessonProgress {
+    courseProgress.find(func(cp) { cp.studentId == student and cp.courseId == courseId });
+  };
+
+  /// Return all per-lesson progress records for a student within a course.
+  public func getLessonProgressForCourse(
+    lessonProgress : List.List<CourseTypes.LessonProgress>,
+    lessons : List.List<CourseTypes.Lesson>,
+    student : Common.UserId,
+    courseId : Common.CourseId,
+  ) : [CourseTypes.LessonProgress] {
+    // Collect all lessonIds for this course as a Set for O(log n) lookup
+    let courseLessonIds = Set.empty<Nat>();
+    lessons.forEach(func(l) {
+      if (l.courseId == courseId) {
+        courseLessonIds.add(l.id);
+      };
+    });
+    lessonProgress
+      .filter(func(lp) {
+        lp.studentId == student and courseLessonIds.contains(lp.lessonId)
+      })
+      .toArray();
+  };
+
+  /// Recalculate and persist CourseLessonProgress from individual LessonProgress
+  /// records. Called internally after markVideoWatched / submitQuiz.
+  public func recalcCourseProgress(
+    lessonProgress : List.List<CourseTypes.LessonProgress>,
+    courseProgress : List.List<CourseTypes.CourseLessonProgress>,
+    enrollments : List.List<CourseTypes.CourseEnrollment>,
+    lessons : List.List<CourseTypes.Lesson>,
+    student : Common.UserId,
+    courseId : Common.CourseId,
+  ) : CourseTypes.CourseLessonProgress {
+    // All lessons for this course, sorted by order
+    let courseLessons = getLessonsByCourse(lessons, courseId);
+    let totalLessons = courseLessons.size();
+
+    // Collect completed lesson IDs (videoWatched=true AND quizPassed=true)
+    let completedLessons = courseLessons.filter(
+      func(l : CourseTypes.Lesson) : Bool {
+        switch (lessonProgress.find(func(lp) { lp.studentId == student and lp.lessonId == l.id })) {
+          case null { false };
+          case (?lp) { lp.videoWatched and lp.quizPassed };
+        };
+      },
+    );
+    let completedIds = completedLessons.map(func(l : CourseTypes.Lesson) : Nat { l.id });
+
+    let completedCount = completedIds.size();
+    let overallPercent : Nat = if (totalLessons == 0) { 0 } else {
+      completedCount * 100 / totalLessons
+    };
+
+    // Find first incomplete lesson (video not watched OR quiz not passed)
+    let currentLessonId : ?Nat = switch (courseLessons.find(
+      func(l : CourseTypes.Lesson) : Bool {
+        switch (lessonProgress.find(func(lp) { lp.studentId == student and lp.lessonId == l.id })) {
+          case null { true };
+          case (?lp) { not (lp.videoWatched and lp.quizPassed) };
+        };
+      },
+    )) {
+      case null { null };
+      case (?l) { ?l.id };
+    };
+
+    // Check if enrollment is FullyPaid
+    let isFullyPaid = switch (enrollments.find(func(e) { e.userId == student and e.courseId == courseId })) {
+      case null { false };
+      case (?e) {
+        switch (e.paymentStatus) {
+          case (#FullyPaid) { true };
+          case _ { false };
+        };
+      };
+    };
+
+    let certificateEarned = overallPercent == 100 and isFullyPaid;
+
+    // Auto-generate certificate code on enrollment if newly earned
+    if (certificateEarned) {
+      switch (enrollments.find(func(e) { e.userId == student and e.courseId == courseId })) {
+        case null {};
+        case (?e) {
+          if (e.certificateCode == null) {
+            let now = Time.now();
+            let code = generateCertCode(e.id, now);
+            ignore markCertificateIssued(enrollments, e.id, code);
+            // Also update progress to 100 on enrollment
+            enrollments.mapInPlace(func(en) {
+              if (en.id == e.id) {
+                { en with progress = 100; completedAt = ?now };
+              } else { en };
+            });
+          };
+        };
+      };
+    };
+
+    let cp : CourseTypes.CourseLessonProgress = {
+      studentId = student;
+      courseId = courseId;
+      completedLessonIds = completedIds;
+      currentLessonId = currentLessonId;
+      overallPercent = overallPercent;
+      certificateEarned = certificateEarned;
+    };
+
+    // Upsert into courseProgress list
+    switch (courseProgress.findIndex(func(c) { c.studentId == student and c.courseId == courseId })) {
+      case (?idx) { courseProgress.put(idx, cp) };
+      case null { courseProgress.add(cp) };
+    };
+    cp;
   };
 };

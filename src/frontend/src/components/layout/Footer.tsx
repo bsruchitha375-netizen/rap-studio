@@ -48,16 +48,9 @@ const WHATSAPP_SVG = (
 
 export function Footer() {
   return (
-    <footer
-      className="border-t border-border/30"
-      style={{ background: "oklch(0.11 0.015 280)" }}
-      aria-label="Footer"
-    >
+    <footer className="border-t border-border/40 bg-card" aria-label="Footer">
       {/* Founders Section */}
-      <div
-        className="border-b border-border/20"
-        style={{ background: "oklch(0.13 0.018 280)" }}
-      >
+      <div className="border-b border-border/30 bg-muted/30">
         <div className="container mx-auto px-4 py-14">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -136,12 +129,7 @@ export function Footer() {
                 href="https://wa.me/917338501228"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 rounded-lg flex items-center justify-center transition-smooth hover:scale-110"
-                style={{
-                  background: "oklch(0.6 0.18 155 / 0.1)",
-                  border: "1px solid oklch(0.6 0.18 155 / 0.3)",
-                  color: "oklch(0.65 0.18 155)",
-                }}
+                className="w-9 h-9 rounded-lg flex items-center justify-center transition-smooth hover:scale-110 bg-green-500/10 border border-green-500/30 text-green-500"
                 aria-label="WhatsApp"
                 data-ocid="footer.whatsapp.link"
               >
@@ -152,11 +140,7 @@ export function Footer() {
                 href="https://instagram.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-primary transition-smooth hover:scale-110"
-                style={{
-                  background: "oklch(var(--card) / 0.4)",
-                  border: "1px solid oklch(var(--border) / 0.4)",
-                }}
+                className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-primary transition-smooth hover:scale-110 bg-muted/50 border border-border/50"
                 aria-label="Instagram"
               >
                 <Instagram className="w-4 h-4" />
@@ -165,11 +149,7 @@ export function Footer() {
                 href="https://youtube.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-primary transition-smooth hover:scale-110"
-                style={{
-                  background: "oklch(var(--card) / 0.4)",
-                  border: "1px solid oklch(var(--border) / 0.4)",
-                }}
+                className="w-9 h-9 rounded-lg flex items-center justify-center text-muted-foreground hover:text-primary transition-smooth hover:scale-110 bg-muted/50 border border-border/50"
                 aria-label="YouTube"
               >
                 <Youtube className="w-4 h-4" />
@@ -189,7 +169,7 @@ export function Footer() {
                     to={link.href}
                     className="text-sm text-muted-foreground hover:text-primary transition-smooth flex items-center gap-1.5 group"
                   >
-                    <span className="w-1 h-1 rounded-full bg-primary/30 group-hover:bg-primary transition-smooth" />
+                    <span className="w-1 h-1 rounded-full bg-primary/40 group-hover:bg-primary transition-smooth" />
                     {link.label}
                   </Link>
                 </li>
@@ -200,7 +180,7 @@ export function Footer() {
                   params={{ code: "sample" }}
                   className="text-sm text-muted-foreground hover:text-primary transition-smooth flex items-center gap-1.5 group"
                 >
-                  <span className="w-1 h-1 rounded-full bg-primary/30 group-hover:bg-primary transition-smooth" />
+                  <span className="w-1 h-1 rounded-full bg-primary/40 group-hover:bg-primary transition-smooth" />
                   Verify Certificate
                 </Link>
               </li>
@@ -219,7 +199,7 @@ export function Footer() {
                     to="/services"
                     className="text-sm text-muted-foreground hover:text-primary transition-smooth flex items-center gap-1.5 group"
                   >
-                    <span className="w-1 h-1 rounded-full bg-primary/30 group-hover:bg-primary transition-smooth" />
+                    <span className="w-1 h-1 rounded-full bg-primary/40 group-hover:bg-primary transition-smooth" />
                     {service}
                   </Link>
                 </li>
@@ -237,13 +217,7 @@ export function Footer() {
                 href="mailto:ruchithabs550@gmail.com"
                 className="flex items-start gap-3 group"
               >
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center mt-0.5 flex-shrink-0"
-                  style={{
-                    background: "oklch(0.7 0.22 70 / 0.1)",
-                    border: "1px solid oklch(0.7 0.22 70 / 0.25)",
-                  }}
-                >
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center mt-0.5 flex-shrink-0 bg-primary/10 border border-primary/25">
                   <svg
                     viewBox="0 0 24 24"
                     className="w-4 h-4 fill-current text-primary"
@@ -268,33 +242,16 @@ export function Footer() {
                 aria-label="Chat on WhatsApp"
                 data-ocid="footer.whatsapp.button"
               >
-                <div
-                  className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{
-                    background: "oklch(0.6 0.18 155 / 0.1)",
-                    border: "1px solid oklch(0.6 0.18 155 / 0.25)",
-                  }}
-                >
-                  <span style={{ color: "oklch(0.65 0.18 155)" }}>
-                    {WHATSAPP_SVG}
-                  </span>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 bg-green-500/10 border border-green-500/25">
+                  <span className="text-green-500">{WHATSAPP_SVG}</span>
                 </div>
                 <p className="text-sm text-foreground group-hover:text-primary transition-smooth">
                   Chat on WhatsApp
                 </p>
               </a>
 
-              <div
-                className="p-3 rounded-lg"
-                style={{
-                  background: "oklch(0.7 0.22 70 / 0.06)",
-                  border: "1px solid oklch(0.7 0.22 70 / 0.2)",
-                }}
-              >
-                <p
-                  className="text-xs font-semibold mb-1"
-                  style={{ color: "oklch(0.7 0.22 70)" }}
-                >
+              <div className="p-3 rounded-lg bg-primary/8 border border-primary/20">
+                <p className="text-xs font-semibold mb-1 text-primary">
                   Book a Session
                 </p>
                 <p className="text-sm text-muted-foreground">
@@ -307,7 +264,7 @@ export function Footer() {
 
         {/* Divider */}
         <div className="my-8 relative">
-          <Separator className="bg-border/20" />
+          <Separator className="bg-border/40" />
           <div className="absolute left-1/2 -translate-x-1/2 -top-2 w-4 h-4 rounded-full gradient-gold shadow-glow-gold" />
         </div>
 

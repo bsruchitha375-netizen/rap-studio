@@ -3,10 +3,6 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import ReactDOM from "react-dom/client";
 import App from "./App";
 import "./index.css";
-import { warmupInternetIdentity } from "./hooks/useAuth";
-
-// Kick off II warmup as early as possible — before any route renders
-warmupInternetIdentity();
 
 BigInt.prototype.toJSON = function () {
   return this.toString();

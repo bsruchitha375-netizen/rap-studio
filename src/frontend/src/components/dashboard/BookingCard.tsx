@@ -129,11 +129,11 @@ export function BookingCard({
             <div className="flex items-center gap-2 mb-0.5">
               <Camera className="w-4 h-4 text-primary flex-shrink-0" />
               <span className="font-semibold font-display text-foreground text-sm truncate capitalize">
-                {booking.serviceCategoryId.replace(/_/g, " ")}
+                {booking.serviceCategoryId?.replace(/_/g, " ") || "—"}
               </span>
             </div>
             <p className="text-xs text-muted-foreground capitalize ml-6">
-              {booking.subServiceId.replace(/_/g, " ")}
+              {booking.subServiceId?.replace(/_/g, " ") || "—"}
             </p>
             {booking.clientName && (
               <p className="text-xs text-muted-foreground ml-6 mt-0.5">

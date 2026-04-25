@@ -23,6 +23,7 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "../../hooks/useAuth";
+import { useEnrollCourse, useMyEnrollments } from "../../hooks/useBackend";
 import { useStripe } from "../../hooks/useStripe";
 import type { Course, CourseMode } from "../../types";
 
@@ -55,7 +56,7 @@ const WHAT_YOU_GET = [
   "Community forum access",
 ];
 
-type EnrollStep = "details" | "paying" | "success" | "error";
+type EnrollStep = "details" | "enrolling" | "paying" | "success" | "error";
 
 export function EnrollmentModal({
   course,
@@ -64,9 +65,16 @@ export function EnrollmentModal({
 }: EnrollmentModalProps) {
   const { initiatePayment, isLoading } = useStripe();
   const { isAuthenticated } = useAuth();
+  const enrollCourseMutation = useEnrollCourse();
+  const { data: existingEnrollments = [] } = useMyEnrollments();
   const [step, setStep] = useState<EnrollStep>("details");
   const [errorMessage, setErrorMessage] = useState<string>("");
-  const modeStyle = MODE_STYLES[course.mode];
+  const modeStyle = MODE_STYLES[course.mode] ?? MODE_STYLES.online;
+
+  // Check if already enrolled — used to skip enrollCourse call
+  const alreadyEnrolled = existingEnrollments.some(
+    (e) => String(e.courseId) === String(course.id),
+  );
 
   const handleEnroll = async () => {
     if (!isAuthenticated) {
@@ -75,13 +83,46 @@ export function EnrollmentModal({
     }
 
     setErrorMessage("");
+
+    // ── STEP 1: Enroll in backend FIRST (unless already enrolled) ──
+    if (!alreadyEnrolled) {
+      setStep("enrolling");
+      try {
+        const courseIdNum = Number.parseInt(String(course.id), 10);
+        if (Number.isNaN(courseIdNum) || courseIdNum <= 0) {
+          throw new Error("Invalid course ID");
+        }
+        await enrollCourseMutation.mutateAsync(courseIdNum);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err ?? "");
+        // If it's an "already enrolled" error, continue to payment
+        const isAlreadyEnrolledError =
+          msg.toLowerCase().includes("already") ||
+          msg.toLowerCase().includes("exists") ||
+          msg.toLowerCase().includes("duplicate");
+
+        if (!isAlreadyEnrolledError) {
+          // Real error — stop here, show error
+          setErrorMessage(
+            msg || "Could not enroll in course. Please try again.",
+          );
+          setStep("error");
+          toast.error("Enrollment failed. Please try again.");
+          return;
+        }
+        // Otherwise fall through to payment
+        console.warn("[EnrollmentModal] enrollCourse (already enrolled):", msg);
+      }
+    }
+
+    // ── STEP 2: Initiate payment ──
     setStep("paying");
 
     await initiatePayment({
-      amount: 5,
-      name: course.title,
-      description: `Course enrollment — ${course.title}`,
-      referenceId: course.id,
+      amount: course.price > 0 ? course.price : 5,
+      name: course.title ?? "Course",
+      description: `Course enrollment — ${course.title ?? "Course"}`,
+      referenceId: String(course.id),
       paymentType: "course_enrollment",
       onRedirecting: () => {
         setStep("paying");
@@ -96,7 +137,7 @@ export function EnrollmentModal({
       },
     });
 
-    // If we get here, payment completed without redirect (demo mode)
+    // Reached here = demo mode (no Stripe redirect)
     setStep("success");
     toast.success("Enrollment confirmed! Check your dashboard.");
   };
@@ -112,6 +153,12 @@ export function EnrollmentModal({
     setErrorMessage("");
     onClose();
   };
+
+  const isProcessing =
+    isLoading ||
+    enrollCourseMutation.isPending ||
+    step === "enrolling" ||
+    step === "paying";
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
@@ -134,7 +181,7 @@ export function EnrollmentModal({
                   </div>
                   <div>
                     <DialogTitle className="text-foreground font-display text-lg leading-tight">
-                      {course.title}
+                      {course.title ?? "Course"}
                     </DialogTitle>
                     <div className="flex items-center gap-2 mt-1.5">
                       <Badge className={`text-xs border ${modeStyle.class}`}>
@@ -142,7 +189,7 @@ export function EnrollmentModal({
                       </Badge>
                       <span className="flex items-center gap-1 text-muted-foreground text-xs">
                         <Clock className="w-3 h-3" />
-                        {course.duration}
+                        {course.duration ?? "Flexible"}
                       </span>
                     </div>
                   </div>
@@ -151,9 +198,29 @@ export function EnrollmentModal({
             </div>
 
             <div className="px-6 py-4 space-y-4">
+              {/* Already enrolled indicator */}
+              {alreadyEnrolled && (
+                <div
+                  className="flex items-center gap-2 rounded-xl border px-3 py-2.5"
+                  style={{
+                    background: "oklch(0.65 0.18 150 / 0.06)",
+                    borderColor: "oklch(0.65 0.18 150 / 0.3)",
+                  }}
+                  data-ocid="enrollment-already-enrolled"
+                >
+                  <CheckCircle2
+                    className="w-4 h-4 flex-shrink-0"
+                    style={{ color: "oklch(0.65 0.18 150)" }}
+                  />
+                  <p className="text-xs font-medium text-foreground">
+                    You are already enrolled. Complete your payment below.
+                  </p>
+                </div>
+              )}
+
               <div>
                 <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
-                  What's included
+                  What&apos;s included
                 </p>
                 <ul className="space-y-1.5">
                   {WHAT_YOU_GET.map((item) => (
@@ -170,12 +237,11 @@ export function EnrollmentModal({
 
               <Separator className="bg-border/40" />
 
-              {/* No price shown — pricing revealed only at payment */}
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-muted-foreground">Instructor</p>
                   <p className="text-sm font-semibold text-foreground">
-                    {course.instructor}
+                    {course.instructor ?? "RAP Studio"}
                   </p>
                 </div>
                 <div className="text-right">
@@ -254,10 +320,10 @@ export function EnrollmentModal({
                     color: "oklch(0.99 0.002 70)",
                   }}
                   onClick={() => void handleEnroll()}
-                  disabled={isLoading}
+                  disabled={isProcessing}
                   data-ocid="confirm-enrollment-btn"
                 >
-                  {isLoading ? (
+                  {isProcessing ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                       Processing…
@@ -265,7 +331,9 @@ export function EnrollmentModal({
                   ) : (
                     <>
                       <CreditCard className="w-4 h-4 mr-2" />
-                      Enroll & Pay with Stripe
+                      {alreadyEnrolled
+                        ? "Complete Payment"
+                        : "Enroll & Pay with Stripe"}
                     </>
                   )}
                 </Button>
@@ -273,6 +341,33 @@ export function EnrollmentModal({
 
               <p className="text-center text-xs text-muted-foreground">
                 By enrolling you agree to our terms of service
+              </p>
+            </div>
+          </motion.div>
+        )}
+
+        {/* ── Enrolling step ── */}
+        {step === "enrolling" && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3 }}
+            className="flex flex-col items-center text-center px-8 py-12 gap-5"
+            data-ocid="enrollment-enrolling-state"
+          >
+            <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center">
+              <Loader2 className="w-10 h-10 text-primary animate-spin" />
+            </div>
+            <div>
+              <h3 className="text-xl font-display text-foreground font-bold">
+                Enrolling You…
+              </h3>
+              <p className="text-muted-foreground text-sm mt-1 max-w-xs">
+                Securing your spot in{" "}
+                <span className="text-foreground font-semibold">
+                  {course.title ?? "this course"}
+                </span>
+                .
               </p>
             </div>
           </motion.div>
@@ -295,7 +390,7 @@ export function EnrollmentModal({
                 Preparing Checkout…
               </h3>
               <p className="text-muted-foreground text-sm mt-1 max-w-xs">
-                You'll be redirected to Stripe's secure payment page.
+                You&apos;ll be redirected to Stripe&apos;s secure payment page.
               </p>
             </div>
             <div className="flex items-center gap-2 text-xs text-primary/80">
@@ -319,10 +414,10 @@ export function EnrollmentModal({
             </div>
             <div>
               <h3 className="text-xl font-display text-foreground font-bold">
-                Payment Failed
+                Something Went Wrong
               </h3>
               <p className="text-muted-foreground text-sm mt-1 max-w-xs">
-                {errorMessage || "Payment failed. Please try again."}
+                {errorMessage || "An error occurred. Please try again."}
               </p>
             </div>
             <div className="flex gap-3 w-full mt-2">
@@ -332,7 +427,7 @@ export function EnrollmentModal({
                 onClick={() => setStep("details")}
                 data-ocid="enrollment-cancel-btn"
               >
-                Cancel
+                Back
               </Button>
               <Button
                 className="flex-1 bg-primary text-primary-foreground hover:bg-primary/90 font-semibold"
@@ -340,7 +435,7 @@ export function EnrollmentModal({
                 data-ocid="retry-payment-btn"
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
-                Retry Payment
+                Try Again
               </Button>
             </div>
           </motion.div>
@@ -360,10 +455,10 @@ export function EnrollmentModal({
             </div>
             <div>
               <h3 className="text-2xl font-display text-foreground font-bold">
-                You're Enrolled!
+                You&apos;re Enrolled!
               </h3>
               <p className="text-muted-foreground text-sm mt-1">
-                {course.title}
+                {course.title ?? "Course"}
               </p>
             </div>
             <p className="text-sm text-muted-foreground max-w-xs">

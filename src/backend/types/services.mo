@@ -14,6 +14,26 @@ module {
     subServices : [SubService];
   };
 
+  // Admin-created service category stored in canister state
+  public type AdminServiceCategory = {
+    id : Common.ServiceId;
+    name : Text;
+    icon : Text;
+    description : Text;
+    subServices : [SubService];
+    imageBlob : ?Blob;    // optional cover image blob
+    createdAt : Common.Timestamp;
+  };
+
+  // Input for admin add/update service
+  public type AdminServiceInput = {
+    name : Text;
+    icon : Text;
+    description : Text;
+    subServices : [SubService];
+    imageData : [Nat8];   // raw bytes — empty means no image / keep existing
+  };
+
   public type SlotStatus = {
     #Available;
     #Taken;
@@ -49,6 +69,7 @@ module {
     #WorkDelivered;
     #Completed;
     #Cancelled;
+    #Rejected;
   };
 
   public type BookingRequest = {
@@ -63,6 +84,9 @@ module {
     status : BookingStatus;
     createdAt : Common.Timestamp;
     notes : ?Text;
+    rejectedReason : ?Text;
+    rescheduledDate : ?Text;
+    rescheduledTime : ?Text;
   };
 
   public type BookingInput = {

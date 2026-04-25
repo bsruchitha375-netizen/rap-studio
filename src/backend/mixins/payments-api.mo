@@ -1,6 +1,7 @@
 import List "mo:core/List";
 import Map "mo:core/Map";
 import Time "mo:core/Time";
+import Text "mo:core/Text";
 import Principal "mo:core/Principal";
 import Runtime "mo:core/Runtime";
 import AccessControl "mo:caffeineai-authorization/access-control";
@@ -26,6 +27,7 @@ mixin (
   nextWhatsAppLogId : Common.Counter,
   notifications : List.List<NotifTypes.NotificationRecord>,
   nextNotifId : Common.Counter,
+  stripeConfig : PaymentTypes.StripeConfig,
 ) {
   // Required transform function for HTTP outcalls — strips non-deterministic headers.
   public query func transform(
@@ -46,7 +48,11 @@ mixin (
       case (?_) {};
     };
 
-    let stripeSecretKey = "sk_test_placeholder"; // Set via admin config / environment
+    let stripeSecretKey = stripeConfig.secretKey;
+    if (stripeSecretKey == "") {
+      Runtime.trap("Stripe keys not configured. Please set them in admin Settings.");
+    };
+
     let successUrl = "https://rap-studio.icp0.io/booking?payment=success&session_id={CHECKOUT_SESSION_ID}";
     let cancelUrl = "https://rap-studio.icp0.io/booking?payment=cancelled";
     let metadata : [(Text, Text)] = [
@@ -102,7 +108,7 @@ mixin (
       };
     };
 
-    let stripeSecretKey = "sk_test_placeholder";
+    let stripeSecretKey = stripeConfig.secretKey;
     let sessionJson = await StripeLib.retrieveCheckoutSession(
       transform,
       stripeSecretKey,
@@ -213,8 +219,19 @@ mixin (
     PaymentLib.getMyPayments(paymentOrders, caller);
   };
 
+  // Alias — frontend polls this name for live updates.
+  public query ({ caller }) func getMyPayments() : async [PaymentTypes.PaymentOrder] {
+    PaymentLib.getMyPayments(paymentOrders, caller);
+  };
+
   // Admin only — returns all payment orders across all users.
   public query ({ caller }) func adminGetAllPayments() : async [PaymentTypes.PaymentOrder] {
+    UserLib.requireRole(profiles, caller, #Admin);
+    paymentOrders.toArray();
+  };
+
+  // Alias — admin polls this name for live dashboard updates.
+  public query ({ caller }) func getAllPayments() : async [PaymentTypes.PaymentOrder] {
     UserLib.requireRole(profiles, caller, #Admin);
     paymentOrders.toArray();
   };
@@ -326,6 +343,60 @@ mixin (
     };
   };
 
+  // ── Stripe key management (admin only) ───────────────────────────────────
+
+  /// Store live Stripe publishable and secret keys in canister state.
+  /// Both must be non-empty. Replaces any previously stored keys.
+  public shared ({ caller }) func setStripeKeys(publishableKey : Text, secretKey : Text) : async Bool {
+    UserLib.requireRole(profiles, caller, #Admin);
+    if (publishableKey == "" or secretKey == "") {
+      Runtime.trap("Both publishableKey and secretKey must be non-empty");
+    };
+    stripeConfig.publishableKey := publishableKey;
+    stripeConfig.secretKey := secretKey;
+    true;
+  };
+
+  /// Returns masked keys for admin display: first 8 chars + *** + last 4.
+  /// Returns null fields when keys have not been set yet.
+  public query ({ caller }) func getStripeConfig() : async { publishableKey : Text; secretKey : Text; configured : Bool } {
+    UserLib.requireRole(profiles, caller, #Admin);
+    let pk = stripeConfig.publishableKey;
+    let sk = stripeConfig.secretKey;
+    let configured = pk != "" and sk != "";
+    {
+      publishableKey = if (pk == "") { "" } else { maskKey(pk) };
+      secretKey = if (sk == "") { "" } else { maskKey(sk) };
+      configured = configured;
+    };
+  };
+
+  /// Makes a lightweight GET /v1/products?limit=1 call to verify the configured secret key.
+  /// Returns #ok("connected") if the key is valid, #err with message otherwise.
+  public shared ({ caller }) func testStripeConnection() : async { #ok : Text; #err : Text } {
+    UserLib.requireRole(profiles, caller, #Admin);
+    let sk = stripeConfig.secretKey;
+    if (sk == "") {
+      return #err("Stripe keys not configured. Please set them in admin Settings.");
+    };
+    let auth = StripeLib.basicAuthHeader(sk);
+    let responseJson = await OutCall.httpGetRequest(
+      "https://api.stripe.com/v1/products?limit=1",
+      [{ name = "Authorization"; value = "Basic " # auth }],
+      transform,
+    );
+    // A successful response contains "object":"list". An auth failure contains "error".
+    if (responseJson.contains(#text "\"error\"")) {
+      let msg = switch (StripeLib.extractJsonField(responseJson, "message")) {
+        case (?m) { m };
+        case null { "Stripe API returned an error. Check your secret key." };
+      };
+      #err(msg);
+    } else {
+      #ok("connected");
+    };
+  };
+
   // ── Private helpers ──────────────────────────────────────────────────────
   func paymentTypeToText(pt : PaymentTypes.PaymentType) : Text {
     switch (pt) {
@@ -333,5 +404,26 @@ mixin (
       case (#BookingBalance)    { "BookingBalance" };
       case (#CourseEnrollment)  { "CourseEnrollment" };
     };
+  };
+
+  // Returns "first8***last4" for display, or the full key if too short.
+  func maskKey(key : Text) : Text {
+    let size = key.size();
+    if (size <= 12) { return "***" };
+    let prefix = key.chars().toArray();
+    var p = "";
+    var i = 0;
+    for (c in prefix.vals()) {
+      if (i < 8) { p #= Text.fromChar(c) };
+      i += 1;
+    };
+    let suffix = key.chars().toArray();
+    var s = "";
+    var j = 0;
+    for (c in suffix.vals()) {
+      if (j >= size - 4) { s #= Text.fromChar(c) };
+      j += 1;
+    };
+    p # "***" # s;
   };
 };

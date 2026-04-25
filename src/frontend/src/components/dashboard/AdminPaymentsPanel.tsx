@@ -14,6 +14,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertTriangle,
   CheckCircle,
+  Clock,
   Edit3,
   IndianRupee,
   RefreshCw,
@@ -21,22 +22,21 @@ import {
   XCircle,
 } from "lucide-react";
 import { motion } from "motion/react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { createActor } from "../../backend";
 import type { PaymentOrderExtended } from "../../backend.d";
-import { useAuth } from "../../hooks/useAuth";
+import { LiveIndicator } from "./LiveIndicator";
 
-// ─── Enriched type ────────────────────────────────────────────────────────────
+// ─── Enriched type ─────────────────────────────────────────────────────────────
 interface AdminPaymentEntry extends PaymentOrderExtended {
   clientName?: string;
   serviceNames?: string[];
 }
 
-// ─── Data hook — getAdminPaymentDashboard or fallback ────────────────────────
+// ─── Data hook — 5s polling ────────────────────────────────────────────────────
 function useAdminPaymentDashboard() {
-  const { actor, isFetching } = useActor(createActor);
-  const { isAuthenticated } = useAuth();
+  const { actor } = useActor(createActor);
 
   return useQuery<AdminPaymentEntry[]>({
     queryKey: ["adminPaymentDashboard"],
@@ -49,107 +49,32 @@ function useAdminPaymentDashboard() {
         return [];
       }
     },
-    enabled: isAuthenticated && !!actor && !isFetching,
-    refetchInterval: 30_000,
-    staleTime: 25_000,
+    enabled: !!actor,
+    refetchInterval: 5_000,
+    refetchIntervalInBackground: true,
+    staleTime: 0,
     initialData: [],
   });
 }
 
-// ─── Fallback data ────────────────────────────────────────────────────────────
-const FALLBACK: AdminPaymentEntry[] = [
-  {
-    id: BigInt(1),
-    orderId: "order_XA1",
-    razorpayOrderId: "order_XA1",
-    referenceId: "BK041",
-    paymentType: "booking_initial",
-    amount: BigInt(200),
-    status: "Paid",
-    currency: "INR",
-    userId: {} as never,
-    createdAt: BigInt(Date.now() - 86400000) * BigInt(1_000_000),
-    paidAt: BigInt(Date.now() - 86400000) * BigInt(1_000_000),
-    razorpayPaymentId: "pay_VERIFIED_1",
-    selectedServices: [],
-    clientName: "Priya Sharma",
-    serviceNames: ["Wedding Shoot"],
-  },
-  {
-    id: BigInt(2),
-    orderId: "order_XA2",
-    razorpayOrderId: "order_XA2",
-    referenceId: "ENR021",
-    paymentType: "course_enrollment",
-    amount: BigInt(500),
-    status: "Paid",
-    currency: "INR",
-    userId: {} as never,
-    createdAt: BigInt(Date.now() - 172800000) * BigInt(1_000_000),
-    paidAt: BigInt(Date.now() - 172800000) * BigInt(1_000_000),
-    razorpayPaymentId: "pay_VERIFIED_2",
-    selectedServices: [],
-    clientName: "Arjun Kumar",
-    serviceNames: ["Photography Fundamentals"],
-  },
-  {
-    id: BigInt(3),
-    orderId: "order_XA3",
-    razorpayOrderId: "order_XA3",
-    referenceId: "BK040",
-    paymentType: "booking_final",
-    amount: BigInt(300),
-    status: "Created",
-    currency: "INR",
-    userId: {} as never,
-    createdAt: BigInt(Date.now() - 259200000) * BigInt(1_000_000),
-    selectedServices: [],
-    clientName: "Meera Nair",
-    serviceNames: ["Fashion Editorial"],
-  },
-  {
-    id: BigInt(4),
-    orderId: "order_XA4",
-    razorpayOrderId: "order_XA4",
-    referenceId: "ENR019",
-    paymentType: "course_enrollment",
-    amount: BigInt(500),
-    status: "Failed",
-    currency: "INR",
-    userId: {} as never,
-    createdAt: BigInt(Date.now() - 345600000) * BigInt(1_000_000),
-    selectedServices: [],
-    clientName: "Deepa Iyer",
-    serviceNames: ["Wedding Cinematography"],
-  },
-  {
-    id: BigInt(5),
-    orderId: "order_XA5",
-    razorpayOrderId: "order_XA5",
-    referenceId: "BK039",
-    paymentType: "booking_initial",
-    amount: BigInt(200),
-    status: "Refunded",
-    currency: "INR",
-    userId: {} as never,
-    createdAt: BigInt(Date.now() - 432000000) * BigInt(1_000_000),
-    selectedServices: [],
-    clientName: "Sanya Kapoor",
-    serviceNames: ["Corporate Headshots"],
-  },
-];
-
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────────
 const STATUS_COLORS: Record<string, string> = {
-  Paid: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
-  paid: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
-  Created: "bg-blue-500/20 text-blue-300 border-blue-500/30",
-  pending: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
-  Failed: "bg-red-500/20 text-red-300 border-red-500/30",
-  failed: "bg-red-500/20 text-red-300 border-red-500/30",
-  Refunded: "bg-purple-500/20 text-purple-300 border-purple-500/30",
-  refunded: "bg-purple-500/20 text-purple-300 border-purple-500/30",
-  initiated: "bg-blue-400/20 text-blue-300 border-blue-400/30",
+  Paid: "bg-emerald-500/20 text-emerald-700 border-emerald-500/40 dark:text-emerald-300 dark:border-emerald-500/30",
+  paid: "bg-emerald-500/20 text-emerald-700 border-emerald-500/40 dark:text-emerald-300 dark:border-emerald-500/30",
+  Created:
+    "bg-blue-500/20 text-blue-700 border-blue-500/40 dark:text-blue-300 dark:border-blue-500/30",
+  pending:
+    "bg-yellow-500/20 text-yellow-700 border-yellow-500/40 dark:text-yellow-300 dark:border-yellow-500/30",
+  Failed:
+    "bg-red-500/20 text-red-700 border-red-500/40 dark:text-red-300 dark:border-red-500/30",
+  failed:
+    "bg-red-500/20 text-red-700 border-red-500/40 dark:text-red-300 dark:border-red-500/30",
+  Refunded:
+    "bg-purple-500/20 text-purple-700 border-purple-500/40 dark:text-purple-300 dark:border-purple-500/30",
+  refunded:
+    "bg-purple-500/20 text-purple-700 border-purple-500/40 dark:text-purple-300 dark:border-purple-500/30",
+  initiated:
+    "bg-blue-400/20 text-blue-700 border-blue-400/30 dark:text-blue-300",
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -185,7 +110,7 @@ function isRefunded(s: string) {
   return s === "refunded" || s === "Refunded";
 }
 
-// ─── Confirmation dialog ──────────────────────────────────────────────────────
+// ─── Confirmation dialog ────────────────────────────────────────────────────────
 type ActionType = "confirm" | "refund" | "adjust";
 
 interface ActionDialogProps {
@@ -223,15 +148,15 @@ function ActionDialog({
     adjust: `Set a new amount for payment #${paymentId}. The client will be notified.`,
   };
   const icons: Record<ActionType, React.ReactNode> = {
-    confirm: <CheckCircle className="w-5 h-5 text-emerald-400" />,
-    refund: <AlertTriangle className="w-5 h-5 text-red-400" />,
-    adjust: <Edit3 className="w-5 h-5 text-yellow-400" />,
+    confirm: <CheckCircle className="w-5 h-5 text-emerald-500" />,
+    refund: <AlertTriangle className="w-5 h-5 text-red-500" />,
+    adjust: <Edit3 className="w-5 h-5 text-yellow-500" />,
   };
 
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent
-        className="glass-effect border-border/50 shadow-elevated max-w-md"
+        className="bg-card border-border shadow-elevated max-w-md"
         data-ocid="payment-action-dialog"
       >
         <DialogHeader>
@@ -245,7 +170,6 @@ function ActionDialog({
             {descs[type]}
           </DialogDescription>
         </DialogHeader>
-
         <div className="space-y-4 pt-2">
           {type === "adjust" && (
             <div>
@@ -257,7 +181,7 @@ function ActionDialog({
                 placeholder="Enter new amount in rupees"
                 value={amount}
                 onChange={(e) => setAmount(e.target.value)}
-                className="text-sm"
+                className="text-sm text-foreground bg-background"
                 data-ocid="payment-adjust-amount-input"
               />
             </div>
@@ -276,7 +200,7 @@ function ActionDialog({
               }
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              className="text-sm"
+              className="text-sm text-foreground bg-background"
               data-ocid="payment-action-note-input"
             />
           </div>
@@ -284,7 +208,7 @@ function ActionDialog({
             <Button
               type="button"
               variant="outline"
-              className="flex-1 border-border/50 text-sm"
+              className="flex-1 text-sm border-border text-foreground"
               onClick={onClose}
               data-ocid="payment-action-cancel-btn"
             >
@@ -311,9 +235,14 @@ function ActionDialog({
   );
 }
 
-// ─── Main Panel ───────────────────────────────────────────────────────────────
+// ─── Main Panel ─────────────────────────────────────────────────────────────────
 export function AdminPaymentsPanel() {
-  const { data: raw = [], refetch, isFetching } = useAdminPaymentDashboard();
+  const {
+    data: payments = [],
+    refetch,
+    isFetching,
+    dataUpdatedAt,
+  } = useAdminPaymentDashboard();
   const queryClient = useQueryClient();
   const { actor } = useActor(createActor);
   const [filter, setFilter] = useState("all");
@@ -321,16 +250,16 @@ export function AdminPaymentsPanel() {
     open: boolean;
     type: ActionType;
     payment: AdminPaymentEntry | null;
-  }>({
-    open: false,
-    type: "confirm",
-    payment: null,
-  });
+  }>({ open: false, type: "confirm", payment: null });
   const [localStatuses, setLocalStatuses] = useState<Record<string, string>>(
     {},
   );
+  const [lastUpdated, setLastUpdated] = useState(Date.now());
 
-  const payments = raw.length > 0 ? raw : FALLBACK;
+  useEffect(() => {
+    if (dataUpdatedAt) setLastUpdated(dataUpdatedAt);
+  }, [dataUpdatedAt]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const filtered = payments.filter((p) => {
     if (filter === "all") return true;
     const s = localStatuses[String(p.id)] ?? p.status;
@@ -386,11 +315,10 @@ export function AdminPaymentsPanel() {
     } catch {
       toast.error("Action failed. Please try again.");
     }
-
     closeDialog();
   }
 
-  // Summary
+  // Summary stats
   const paidCount = payments.filter((p) =>
     isPaid(localStatuses[String(p.id)] ?? p.status),
   ).length;
@@ -409,19 +337,17 @@ export function AdminPaymentsPanel() {
   return (
     <div className="space-y-5 w-full">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-display text-xl font-bold text-foreground">
             Payment Transactions
           </h2>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Auto-refreshes every 30 seconds
-          </p>
+          <LiveIndicator dataUpdatedAt={lastUpdated} pollMs={5000} />
         </div>
         <Button
           variant="outline"
           size="sm"
-          className="h-8 text-xs gap-1.5 border-border/50"
+          className="h-8 text-xs gap-1.5 border-border text-foreground hover:bg-muted/50"
           onClick={() => refetch()}
           disabled={isFetching}
           data-ocid="admin-payments-refresh-btn"
@@ -436,26 +362,45 @@ export function AdminPaymentsPanel() {
       {/* Summary cards */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[
-          { label: "Total", value: payments.length, color: "text-foreground" },
-          { label: "Paid", value: paidCount, color: "text-emerald-400" },
-          { label: "Pending", value: pendingCount, color: "text-yellow-400" },
           {
-            label: "Revenue",
-            value: totalRevenue >= 100 ? totalRevenue / 100 : totalRevenue,
+            label: "Total Transactions",
+            value: payments.length,
+            color: "text-foreground",
+            bg: "bg-muted/30",
+          },
+          {
+            label: "Paid",
+            value: paidCount,
+            color: "text-emerald-600 dark:text-emerald-300",
+            bg: "bg-emerald-500/10",
+          },
+          {
+            label: "Pending",
+            value: pendingCount,
+            color: "text-yellow-600 dark:text-yellow-300",
+            bg: "bg-yellow-500/10",
+          },
+          {
+            label: "Total Revenue",
+            value:
+              totalRevenue >= 100
+                ? Math.round(totalRevenue / 100)
+                : totalRevenue,
             prefix: "₹",
             color: "text-primary",
+            bg: "bg-primary/10",
           },
         ].map((s) => (
           <div
             key={s.label}
-            className="rounded-xl glass-effect p-3 text-center"
+            className={`rounded-xl border border-border/50 ${s.bg} p-4 text-center shadow-subtle`}
             data-ocid="admin-payment-summary-card"
           >
             <p className={`text-2xl font-bold font-display ${s.color}`}>
-              {s.prefix ?? ""}
+              {(s as { prefix?: string }).prefix ?? ""}
               {s.value.toLocaleString("en-IN")}
             </p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">
+            <p className="text-xs text-muted-foreground mt-0.5 font-medium">
               {s.label}
             </p>
           </div>
@@ -469,10 +414,10 @@ export function AdminPaymentsPanel() {
             key={f}
             type="button"
             onClick={() => setFilter(f)}
-            className={`text-xs px-3 py-1.5 rounded-full border transition-smooth capitalize ${
+            className={`text-xs px-3 py-1.5 rounded-full border transition-smooth capitalize font-medium ${
               filter === f
                 ? "bg-primary text-primary-foreground border-primary"
-                : "border-border/50 text-muted-foreground hover:border-primary/40"
+                : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground bg-card"
             }`}
             data-ocid={`admin-payment-filter.${f.toLowerCase()}`}
           >
@@ -480,7 +425,7 @@ export function AdminPaymentsPanel() {
           </button>
         ))}
         {failedCount > 0 && (
-          <span className="flex items-center gap-1 text-xs text-red-400 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/30">
+          <span className="flex items-center gap-1 text-xs text-red-600 dark:text-red-400 px-3 py-1.5 rounded-full bg-red-500/10 border border-red-500/30 font-medium">
             <AlertTriangle className="w-3 h-3" />
             {failedCount} failed
           </span>
@@ -488,7 +433,7 @@ export function AdminPaymentsPanel() {
       </div>
 
       {/* Table header (desktop) */}
-      <div className="hidden lg:grid grid-cols-[60px_1fr_140px_120px_100px_110px_auto] gap-3 px-4 py-2.5 rounded-xl bg-muted/20 border border-border/30 text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+      <div className="hidden lg:grid grid-cols-[60px_1fr_140px_120px_100px_110px_auto] gap-3 px-4 py-2.5 rounded-xl bg-muted/40 border border-border text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
         <span>ID</span>
         <span>Client / Service</span>
         <span>Order Ref</span>
@@ -500,120 +445,123 @@ export function AdminPaymentsPanel() {
 
       {/* Rows */}
       <div className="space-y-2 w-full">
-        {filtered.map((payment, i) => {
-          const pid = String(payment.id);
-          const status = localStatuses[pid] ?? payment.status;
-          const verified = !!payment.razorpayPaymentId;
-
-          return (
-            <motion.div
-              key={pid}
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.04 }}
-              className="rounded-xl glass-effect hover:border-primary/30 shadow-subtle p-4 w-full transition-smooth"
-              data-ocid={`admin-payment-row.${i + 1}`}
-            >
-              {/* Mobile layout — stacked */}
-              <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <span className="font-mono text-xs text-muted-foreground/70">
-                      #{pid}
-                    </span>
-                    <Badge
-                      className={`text-[10px] border ${STATUS_COLORS[status] ?? "bg-muted/40 text-foreground border-border/30"}`}
-                    >
-                      {status}
-                    </Badge>
-                    {verified && (
-                      <span className="flex items-center gap-1 text-[10px] text-emerald-400 border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 rounded-full">
-                        <ShieldCheck className="w-3 h-3" />
-                        Verified
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Client + Service */}
-                  {payment.clientName && (
-                    <p className="text-sm font-semibold text-foreground">
-                      {payment.clientName}
-                      {payment.serviceNames?.length
-                        ? ` — ${payment.serviceNames[0]}`
-                        : ""}
-                    </p>
-                  )}
-
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    {TYPE_LABELS[payment.paymentType] ?? payment.paymentType}
-                    {" • "}
-                    <span className="font-mono">{payment.referenceId}</span>
-                  </p>
-
-                  <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                    <span className="text-lg font-bold font-display text-primary">
-                      {formatAmount(payment.amount)}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground/60 font-mono">
-                      Created: {formatTs(payment.createdAt)}
-                      {payment.paidAt
-                        ? ` · Paid: ${formatTs(payment.paidAt)}`
-                        : ""}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex flex-wrap gap-2">
-                {isPending(status) && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-                    onClick={() => openDialog("confirm", payment)}
-                    data-ocid={`admin-payment-confirm-btn.${i + 1}`}
-                  >
-                    <CheckCircle className="w-3 h-3 mr-1" />
-                    Confirm
-                  </Button>
-                )}
-                {isPaid(status) && !isRefunded(status) && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="h-7 text-xs bg-red-600 hover:bg-red-700 text-white"
-                    onClick={() => openDialog("refund", payment)}
-                    data-ocid={`admin-payment-refund-btn.${i + 1}`}
-                  >
-                    <XCircle className="w-3 h-3 mr-1" />
-                    Refund
-                  </Button>
-                )}
-                {!isRefunded(status) && !isPaid(status) && (
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="h-7 text-xs bg-yellow-600 hover:bg-yellow-700 text-white"
-                    onClick={() => openDialog("adjust", payment)}
-                    data-ocid={`admin-payment-adjust-btn.${i + 1}`}
-                  >
-                    <IndianRupee className="w-3 h-3 mr-1" />
-                    Adjust
-                  </Button>
-                )}
-              </div>
-            </motion.div>
-          );
-        })}
-
-        {filtered.length === 0 && (
+        {filtered.length === 0 ? (
           <div
-            className="text-center py-12 text-muted-foreground text-sm rounded-xl border border-border/30 bg-card"
+            className="text-center py-12 text-muted-foreground text-sm rounded-xl border border-border bg-card font-medium"
             data-ocid="admin-payments-empty_state"
           >
-            No payments match this filter.
+            {payments.length === 0
+              ? "No payment transactions yet."
+              : "No payments match this filter."}
           </div>
+        ) : (
+          filtered.map((payment, i) => {
+            const pid = String(payment.id);
+            const status = localStatuses[pid] ?? payment.status;
+            const verified = !!payment.razorpayPaymentId;
+
+            return (
+              <motion.div
+                key={pid}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.04 }}
+                className="rounded-xl bg-card border border-border hover:border-primary/40 shadow-subtle p-4 w-full transition-smooth"
+                data-ocid={`admin-payment-row.${i + 1}`}
+              >
+                <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap mb-1">
+                      <span className="font-mono text-xs text-muted-foreground/80">
+                        #{pid}
+                      </span>
+                      <Badge
+                        className={`text-[10px] border font-medium ${STATUS_COLORS[status] ?? "bg-muted/40 text-foreground border-border"}`}
+                      >
+                        {status}
+                      </Badge>
+                      {verified && (
+                        <span className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 rounded-full font-medium">
+                          <ShieldCheck className="w-3 h-3" />
+                          Verified
+                        </span>
+                      )}
+                    </div>
+
+                    {payment.clientName && (
+                      <p className="text-sm font-semibold text-foreground">
+                        {payment.clientName}
+                        {payment.serviceNames?.length
+                          ? ` — ${payment.serviceNames[0]}`
+                          : ""}
+                      </p>
+                    )}
+
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {TYPE_LABELS[payment.paymentType] ?? payment.paymentType}
+                      {" • "}
+                      <span className="font-mono text-foreground/70">
+                        {payment.referenceId}
+                      </span>
+                    </p>
+
+                    <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                      <span className="text-lg font-bold font-display text-primary">
+                        {formatAmount(payment.amount)}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground font-mono flex items-center gap-1">
+                        <Clock className="w-3 h-3" />
+                        {formatTs(payment.createdAt)}
+                        {payment.paidAt
+                          ? ` · Paid: ${formatTs(payment.paidAt)}`
+                          : ""}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-wrap gap-2">
+                  {isPending(status) && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold"
+                      onClick={() => openDialog("confirm", payment)}
+                      data-ocid={`admin-payment-confirm-btn.${i + 1}`}
+                    >
+                      <CheckCircle className="w-3 h-3 mr-1" />
+                      Confirm Payment
+                    </Button>
+                  )}
+                  {isPaid(status) && !isRefunded(status) && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-7 text-xs bg-red-600 hover:bg-red-700 text-white font-semibold"
+                      onClick={() => openDialog("refund", payment)}
+                      data-ocid={`admin-payment-refund-btn.${i + 1}`}
+                    >
+                      <XCircle className="w-3 h-3 mr-1" />
+                      Refund
+                    </Button>
+                  )}
+                  {!isRefunded(status) && !isPaid(status) && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-7 text-xs bg-yellow-600 hover:bg-yellow-700 text-white font-semibold"
+                      onClick={() => openDialog("adjust", payment)}
+                      data-ocid={`admin-payment-adjust-btn.${i + 1}`}
+                    >
+                      <IndianRupee className="w-3 h-3 mr-1" />
+                      Adjust Amount
+                    </Button>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })
         )}
       </div>
 

@@ -56,7 +56,7 @@ export function LoginForm({ prefilledRole, onComplete }: LoginFormProps) {
   const [nameFocused, setNameFocused] = useState(false);
   const [phoneFocused, setPhoneFocused] = useState(false);
   const { actor } = useActor(createActor);
-  const { setProfile } = useUserProfile();
+  void useUserProfile(); // deprecated, kept for session read
 
   const validate = () => {
     const newErrors: { name?: string; phone?: string } = {};
@@ -91,13 +91,22 @@ export function LoginForm({ prefilledRole, onComplete }: LoginFormProps) {
       createdAt: BigInt(Date.now()),
       isActive: true,
     };
-    setProfile(optimisticProfile);
-    saveUserSession(trimmedName, formattedPhone, prefilledRole, true);
+    void optimisticProfile; // used for session optimism
+    saveUserSession(trimmedName, "", formattedPhone, prefilledRole, true);
     onComplete(trimmedName, formattedPhone, prefilledRole);
 
     if (actor) {
       actor
-        .register(trimmedName, formattedPhone, ROLE_TO_BACKEND[prefilledRole])
+        .register(
+          "",
+          trimmedName,
+          formattedPhone,
+          "",
+          ROLE_TO_BACKEND[prefilledRole],
+          null,
+          null,
+          null,
+        )
         .catch(() => {});
     }
     setIsSubmitting(false);

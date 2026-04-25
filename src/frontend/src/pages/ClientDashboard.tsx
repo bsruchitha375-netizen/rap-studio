@@ -2,12 +2,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Bell, Calendar, Camera, CreditCard, Star } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
+import {
+  Bell,
+  Calendar,
+  Camera,
+  CreditCard,
+  LogOut,
+  Star,
+  User,
+} from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useState } from "react";
 import { BookingCard } from "../components/dashboard/BookingCard";
 import { FeedbackForm } from "../components/dashboard/FeedbackForm";
-
+import { LiveIndicator } from "../components/dashboard/LiveIndicator";
+import { PaymentCard } from "../components/dashboard/PaymentCard";
 import { Layout } from "../components/layout/Layout";
 import { useAuth, useUserProfile } from "../hooks/useAuth";
 import {
@@ -15,11 +25,7 @@ import {
   useMyNotifications,
   useMyPayments,
 } from "../hooks/useBackend";
-import type {
-  FeedbackRecord,
-  NotificationRecord,
-  PaymentOrder,
-} from "../types";
+import type { FeedbackRecord } from "../types";
 
 function formatRelativeTime(ts: bigint): string {
   const ms = Number(ts) / 1_000_000;
@@ -57,121 +63,35 @@ async function addFeedback(
   return { ok: true };
 }
 
-const STATUS_GLASS: Record<
-  string,
-  { bg: string; text: string; border: string }
-> = {
-  confirmed: {
-    bg: "oklch(0.7 0.22 70 / 0.15)",
-    text: "oklch(0.85 0.2 70)",
-    border: "oklch(0.7 0.22 70 / 0.4)",
-  },
-  pending: {
-    bg: "oklch(0.75 0.18 85 / 0.15)",
-    text: "oklch(0.85 0.15 85)",
-    border: "oklch(0.75 0.18 85 / 0.4)",
-  },
-  completed: {
-    bg: "oklch(0.65 0.18 150 / 0.15)",
-    text: "oklch(0.75 0.18 150)",
-    border: "oklch(0.65 0.18 150 / 0.4)",
-  },
-  cancelled: {
-    bg: "oklch(0.58 0.22 25 / 0.15)",
-    text: "oklch(0.72 0.2 25)",
-    border: "oklch(0.58 0.22 25 / 0.4)",
-  },
-};
-
-const PAYMENT_STATUS_COLORS: Record<string, string> = {
-  paid: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
-  pending: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
-  initiated: "bg-blue-500/20 text-blue-300 border-blue-500/30",
-  failed: "bg-red-500/20 text-red-300 border-red-500/30",
-  refunded: "bg-purple-500/20 text-purple-300 border-purple-500/30",
-};
-
-function PaymentHistoryCard({
-  payment,
-  index,
-}: { payment: PaymentOrder; index: number }) {
-  const date = payment.paidAt
-    ? new Date(Number(payment.paidAt) / 1_000_000).toLocaleDateString("en-IN", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-      })
-    : new Date(Number(payment.createdAt) / 1_000_000).toLocaleDateString(
-        "en-IN",
-        { day: "numeric", month: "short", year: "numeric" },
-      );
-
-  const typeLabel: Record<string, string> = {
-    booking_initial: "Booking Deposit",
-    booking_final: "Final Payment",
-    course_enrollment: "Course Enrollment",
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 12 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.07 }}
-      className="rounded-xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:border-primary/30 transition-smooth"
-      style={{
-        background: "oklch(var(--card) / 0.45)",
-        backdropFilter: "blur(12px)",
-        border: "1px solid oklch(var(--border) / 0.4)",
-      }}
-      data-ocid={`payment.item.${index + 1}`}
-    >
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1 flex-wrap">
-          <span className="text-xs font-mono text-muted-foreground/60 truncate max-w-[180px]">
-            {payment.razorpayOrderId}
-          </span>
-          <Badge
-            className={`text-xs border capitalize ${PAYMENT_STATUS_COLORS[payment.status] ?? ""}`}
-          >
-            {payment.status}
-          </Badge>
-        </div>
-        <p className="text-sm font-medium text-foreground">
-          {typeLabel[payment.paymentType] ?? payment.paymentType}
-        </p>
-        {payment.referenceId && (
-          <p className="text-xs text-muted-foreground mt-0.5 truncate">
-            Ref: {payment.referenceId}
-          </p>
-        )}
-      </div>
-      <div className="text-right flex-shrink-0">
-        <p
-          className="text-lg font-bold"
-          style={{ color: "oklch(0.7 0.22 70)" }}
-        >
-          ₹{payment.amount}
-        </p>
-        <p className="text-xs text-muted-foreground">{date}</p>
-      </div>
-    </motion.div>
-  );
-}
-
 export function ClientDashboard() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user, logout } = useAuth();
   const { data: profile } = useUserProfile();
-  const { data: bookings = [], isLoading: bookingsLoading } = useMyBookings();
-  const { data: payments = [], isLoading: paymentsLoading } = useMyPayments();
+  const {
+    data: bookings = [],
+    isLoading: bookingsLoading,
+    dataUpdatedAt: bookingsUpdatedAt,
+  } = useMyBookings();
+  const {
+    data: payments = [],
+    isLoading: paymentsLoading,
+    dataUpdatedAt: paymentsUpdatedAt,
+  } = useMyPayments();
   const { data: notifications = [] } = useMyNotifications();
   const [activeTab, setActiveTab] = useState("bookings");
   const [submittedFeedback, setSubmittedFeedback] = useState<
     Record<string, FeedbackRecord>
   >({});
   const [feedbackOpen, setFeedbackOpen] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   const unreadCount = notifications.filter((n) => !n.isRead).length;
-  const name = profile?.name ?? "there";
+  const name = profile?.name ?? user?.name ?? "there";
+  const initials = name
+    .split(" ")
+    .map((w: string) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   async function handleFeedbackSubmit(
     bookingId: string,
@@ -190,6 +110,11 @@ export function ClientDashboard() {
     setFeedbackOpen(null);
   }
 
+  function handleLogout() {
+    logout();
+    void navigate({ to: "/login" });
+  }
+
   if (!isAuthenticated) {
     return (
       <Layout>
@@ -202,82 +127,146 @@ export function ClientDashboard() {
 
   return (
     <Layout>
-      {/* Dashboard banner */}
+      {/* Dashboard Header */}
       <div
         className="border-b border-border/20"
         style={{
           background:
-            "linear-gradient(135deg, oklch(0.14 0.02 280), oklch(0.18 0.025 285))",
+            "linear-gradient(135deg, oklch(0.14 0.02 280), oklch(0.19 0.03 285))",
         }}
       >
-        <div className="container mx-auto px-4 py-10 max-w-4xl">
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
           <motion.div
             initial={{ opacity: 0, y: -16 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5 }}
+            transition={{ duration: 0.45 }}
+            className="flex items-center justify-between gap-4 flex-wrap"
           >
-            <p className="section-label mb-1">Client Portal</p>
-            <h1 className="text-3xl font-display font-bold text-foreground">
-              Welcome back,{" "}
-              <span style={{ color: "oklch(0.82 0.2 70)" }}>{name}</span> ✨
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Manage your bookings and track your sessions with RAP Studio.
-            </p>
+            <div className="flex items-center gap-4">
+              {/* Avatar */}
+              <div
+                className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold font-display flex-shrink-0"
+                style={{
+                  background:
+                    "linear-gradient(135deg, oklch(0.7 0.22 70 / 0.25), oklch(0.7 0.22 70 / 0.1))",
+                  border: "2px solid oklch(0.7 0.22 70 / 0.5)",
+                  color: "oklch(0.82 0.2 70)",
+                }}
+                aria-label="User avatar"
+              >
+                {initials || <User className="w-6 h-6" />}
+              </div>
+              <div>
+                <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                  <p
+                    className="text-xs uppercase tracking-widest"
+                    style={{ color: "oklch(0.7 0.22 70 / 0.7)" }}
+                  >
+                    Client Portal
+                  </p>
+                  <Badge
+                    className="text-[10px] border"
+                    style={{
+                      background: "oklch(0.7 0.22 70 / 0.15)",
+                      color: "oklch(0.82 0.2 70)",
+                      borderColor: "oklch(0.7 0.22 70 / 0.35)",
+                    }}
+                  >
+                    Client
+                  </Badge>
+                </div>
+                <h1 className="text-2xl font-display font-bold text-foreground">
+                  Welcome back,{" "}
+                  <span style={{ color: "oklch(0.82 0.2 70)" }}>{name}</span>
+                </h1>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Manage your bookings and sessions with RAP Studio
+                </p>
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="gap-2 text-xs border-border/40 hover:border-destructive/40 hover:text-destructive"
+              onClick={handleLogout}
+              data-ocid="client-dashboard.logout_button"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              Sign Out
+            </Button>
           </motion.div>
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-10 max-w-4xl">
+      <div className="container mx-auto px-4 py-8 max-w-4xl">
         <Tabs
           value={activeTab}
           onValueChange={setActiveTab}
           data-ocid="client-dashboard.tab"
         >
-          <TabsList
-            className="border border-border/50 mb-6"
-            style={{ background: "oklch(var(--card) / 0.5)" }}
-          >
-            <TabsTrigger
-              value="bookings"
-              className="gap-2"
-              data-ocid="client-dashboard.bookings.tab"
+          <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+            <TabsList
+              className="border border-border/50"
+              style={{ background: "oklch(var(--card) / 0.5)" }}
             >
-              <Camera className="w-4 h-4" />
-              My Bookings
-              {bookings.length > 0 && (
-                <Badge className="ml-1 text-xs bg-primary/20 text-primary border-0 h-4 px-1">
-                  {bookings.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger
-              value="payments"
-              className="gap-2"
-              data-ocid="client-dashboard.payments.tab"
-            >
-              <CreditCard className="w-4 h-4" />
-              Payments
-              {payments.length > 0 && (
-                <Badge className="ml-1 text-xs bg-primary/20 text-primary border-0 h-4 px-1">
-                  {payments.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-            <TabsTrigger
-              value="notifications"
-              className="gap-2"
-              data-ocid="client-dashboard.notifications.tab"
-            >
-              <Bell className="w-4 h-4" />
-              Alerts
-              {unreadCount > 0 && (
-                <Badge className="ml-1 text-xs bg-destructive/80 text-white border-0 h-4 px-1">
-                  {unreadCount}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
+              <TabsTrigger
+                value="bookings"
+                className="gap-2"
+                data-ocid="client-dashboard.bookings.tab"
+              >
+                <Camera className="w-4 h-4" />
+                My Bookings
+                {bookings.length > 0 && (
+                  <Badge className="ml-1 text-xs bg-primary/20 text-primary border-0 h-4 px-1">
+                    {bookings.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger
+                value="payments"
+                className="gap-2"
+                data-ocid="client-dashboard.payments.tab"
+              >
+                <CreditCard className="w-4 h-4" />
+                Payments
+                {payments.length > 0 && (
+                  <Badge className="ml-1 text-xs bg-primary/20 text-primary border-0 h-4 px-1">
+                    {payments.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger
+                value="notifications"
+                className="gap-2"
+                data-ocid="client-dashboard.notifications.tab"
+              >
+                <Bell className="w-4 h-4" />
+                Alerts
+                {unreadCount > 0 && (
+                  <Badge className="ml-1 text-xs bg-destructive/80 text-white border-0 h-4 px-1">
+                    {unreadCount}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Live indicator */}
+            {activeTab === "bookings" && (
+              <LiveIndicator
+                updatedAt={bookingsUpdatedAt}
+                pollMs={5000}
+                label="bookings"
+              />
+            )}
+            {activeTab === "payments" && (
+              <LiveIndicator
+                updatedAt={paymentsUpdatedAt}
+                pollMs={5000}
+                label="payments"
+              />
+            )}
+          </div>
 
           {/* Bookings Tab */}
           <TabsContent value="bookings">
@@ -292,7 +281,7 @@ export function ClientDashboard() {
                 {bookingsLoading ? (
                   <div className="space-y-3">
                     {[1, 2].map((i) => (
-                      <Skeleton key={i} className="h-40 rounded-xl" />
+                      <Skeleton key={i} className="h-48 rounded-xl" />
                     ))}
                   </div>
                 ) : bookings.length === 0 ? (
@@ -335,50 +324,30 @@ export function ClientDashboard() {
                 ) : (
                   <div className="space-y-4">
                     {bookings.map((booking, i) => {
-                      const fb = submittedFeedback[booking.id];
-                      const isCompleted = booking.status === "completed";
-                      const statusStyle =
-                        STATUS_GLASS[booking.status] ?? STATUS_GLASS.pending;
+                      const bookingKey = String(booking.id);
+                      const fb = submittedFeedback[bookingKey];
+                      const isCompleted =
+                        String(booking.status).toLowerCase() === "completed";
                       return (
                         <div
-                          key={booking.id}
+                          key={bookingKey}
                           data-ocid={`booking.item.${i + 1}`}
                         >
-                          <motion.div
-                            initial={{ opacity: 0, y: 8 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: i * 0.06 }}
-                            className="rounded-xl overflow-hidden"
-                            style={{
-                              background: "oklch(var(--card) / 0.45)",
-                              backdropFilter: "blur(12px)",
-                              border: "1px solid oklch(var(--border) / 0.4)",
-                            }}
-                          >
-                            {/* Status indicator stripe */}
-                            <div
-                              className="h-1"
-                              style={{
-                                background: `linear-gradient(90deg, ${statusStyle.text}, transparent)`,
-                                opacity: 0.6,
-                              }}
-                            />
-                            <BookingCard
-                              booking={booking}
-                              showPayButton={true}
-                              index={i}
-                            />
-                          </motion.div>
+                          <BookingCard
+                            booking={booking}
+                            showPayButton
+                            index={i}
+                          />
                           {isCompleted && (
                             <motion.div
                               initial={{ opacity: 0, y: 6 }}
                               animate={{ opacity: 1, y: 0 }}
                               transition={{ delay: i * 0.08 + 0.2 }}
-                              className="mt-2 ml-1 flex items-center gap-3 flex-wrap"
+                              className="mt-2 ml-1"
                             >
                               {fb ? (
                                 <div
-                                  className="flex items-center gap-2 text-sm glass-effect border border-border/40 rounded-lg px-3 py-1.5"
+                                  className="flex items-center gap-2 text-sm glass-effect border border-border/40 rounded-lg px-3 py-1.5 w-fit"
                                   data-ocid="feedback.success_state"
                                 >
                                   {renderStars(fb.rating)}
@@ -399,7 +368,7 @@ export function ClientDashboard() {
                                     borderColor: "oklch(0.7 0.22 70 / 0.4)",
                                     color: "oklch(0.7 0.22 70)",
                                   }}
-                                  onClick={() => setFeedbackOpen(booking.id)}
+                                  onClick={() => setFeedbackOpen(bookingKey)}
                                   data-ocid="booking.feedback_button"
                                 >
                                   <Star className="w-3 h-3" />
@@ -470,9 +439,9 @@ export function ClientDashboard() {
                   </div>
                 ) : (
                   <div className="space-y-3" data-ocid="payments.list">
-                    {payments.map((payment: PaymentOrder, i: number) => (
-                      <PaymentHistoryCard
-                        key={payment.id}
+                    {payments.map((payment, i) => (
+                      <PaymentCard
+                        key={String(payment.id)}
                         payment={payment}
                         index={i}
                       />
@@ -512,7 +481,7 @@ export function ClientDashboard() {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {notifications.map((n: NotificationRecord, i: number) => (
+                    {notifications.map((n, i) => (
                       <motion.div
                         key={n.id}
                         initial={{ opacity: 0, x: -12 }}

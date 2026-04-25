@@ -6,7 +6,9 @@ import {
   createRoute,
   createRouter,
 } from "@tanstack/react-router";
-import { Suspense, lazy } from "react";
+import { ThemeProvider } from "next-themes";
+import { Suspense, lazy, useEffect } from "react";
+import { getAdminSession, readStoredProfile } from "./hooks/useAuth";
 
 // Lazy-loaded pages
 const HomePage = lazy(() =>
@@ -72,6 +74,11 @@ const CertificateVerifyPage = lazy(() =>
     default: m.CertificateVerifyPage,
   })),
 );
+const CourseLearnPage = lazy(() =>
+  import("./pages/CourseLearnPage").then((m) => ({
+    default: m.CourseLearnPage,
+  })),
+);
 const NotFoundPage = lazy(() =>
   import("./pages/NotFoundPage").then((m) => ({ default: m.NotFoundPage })),
 );
@@ -83,6 +90,52 @@ function PageFallback() {
       <Skeleton className="h-64 rounded-2xl" />
     </div>
   );
+}
+
+// ── Auth guards ────────────────────────────────────────────────────────────────
+
+/** Guards /admin — redirects to /admin/login if no valid admin session */
+function AdminGuard() {
+  const session = getAdminSession();
+  useEffect(() => {
+    if (!session) {
+      window.location.replace("/admin/login");
+    }
+  }, [session]);
+
+  if (!session) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center p-8">
+          <Skeleton className="h-12 w-48 mx-auto mb-4" />
+          <Skeleton className="h-4 w-64 mx-auto" />
+        </div>
+      </div>
+    );
+  }
+  return <AdminDashboard />;
+}
+
+/** Guards /dashboard/* — redirects to /login if no user session */
+function UserGuard({ children }: { children: React.ReactNode }) {
+  const profile = readStoredProfile();
+  useEffect(() => {
+    if (!profile) {
+      window.location.replace("/login");
+    }
+  }, [profile]);
+
+  if (!profile) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center p-8">
+          <Skeleton className="h-12 w-48 mx-auto mb-4" />
+          <Skeleton className="h-4 w-64 mx-auto" />
+        </div>
+      </div>
+    );
+  }
+  return <>{children}</>;
 }
 
 // Root route
@@ -146,37 +199,57 @@ const bookingRoute = createRoute({
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/dashboard",
-  component: () => <DashboardPage />,
+  component: () => (
+    <UserGuard>
+      <DashboardPage />
+    </UserGuard>
+  ),
 });
 
 const clientDashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/dashboard/client",
-  component: () => <ClientDashboard />,
+  component: () => (
+    <UserGuard>
+      <ClientDashboard />
+    </UserGuard>
+  ),
 });
 
 const studentDashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/dashboard/student",
-  component: () => <StudentDashboard />,
+  component: () => (
+    <UserGuard>
+      <StudentDashboard />
+    </UserGuard>
+  ),
 });
 
 const receptionistDashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/dashboard/receptionist",
-  component: () => <ReceptionistDashboard />,
+  component: () => (
+    <UserGuard>
+      <ReceptionistDashboard />
+    </UserGuard>
+  ),
 });
 
 const staffDashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/dashboard/staff",
-  component: () => <StaffDashboard />,
+  component: () => (
+    <UserGuard>
+      <StaffDashboard />
+    </UserGuard>
+  ),
 });
 
 const adminRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/admin",
-  component: () => <AdminDashboard />,
+  component: () => <AdminGuard />,
 });
 
 const galleryRoute = createRoute({
@@ -195,6 +268,16 @@ const certificateVerifyRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/verify/$code",
   component: () => <CertificateVerifyPage />,
+});
+
+const courseLearnRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/course/$courseId/learn",
+  component: () => (
+    <UserGuard>
+      <CourseLearnPage />
+    </UserGuard>
+  ),
 });
 
 const notFoundRoute = createRoute({
@@ -222,6 +305,7 @@ const routeTree = rootRoute.addChildren([
   galleryRoute,
   chatbotRoute,
   certificateVerifyRoute,
+  courseLearnRoute,
   notFoundRoute,
 ]);
 
@@ -234,5 +318,14 @@ declare module "@tanstack/react-router" {
 }
 
 export default function App() {
-  return <RouterProvider router={router} />;
+  return (
+    <ThemeProvider
+      attribute="class"
+      defaultTheme="dark"
+      enableSystem={false}
+      storageKey="rap-studio-theme"
+    >
+      <RouterProvider router={router} />
+    </ThemeProvider>
+  );
 }

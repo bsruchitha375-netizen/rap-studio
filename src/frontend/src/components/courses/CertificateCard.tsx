@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Award, Download, ExternalLink, QrCode, Star } from "lucide-react";
+import { Award, Download, ExternalLink, Star } from "lucide-react";
 import { motion } from "motion/react";
 import type { Certificate } from "../../types";
 
@@ -15,6 +15,21 @@ function formatDate(ts: bigint): string {
     month: "long",
     day: "numeric",
   });
+}
+
+function QRCodeImage({ data }: { data: string }) {
+  const encoded = encodeURIComponent(data);
+  const src = `https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=${encoded}&bgcolor=ffffff&color=1a1a2e&margin=2`;
+  return (
+    <img
+      src={src}
+      alt="QR code — scan to verify certificate"
+      width={80}
+      height={80}
+      className="rounded-lg border border-border/30"
+      loading="lazy"
+    />
+  );
 }
 
 export function CertificateCard({ certificate }: CertificateCardProps) {
@@ -95,15 +110,11 @@ export function CertificateCard({ certificate }: CertificateCardProps) {
 
       {/* QR / Verification */}
       <div className="px-8 py-4 flex items-center gap-4">
-        {/* QR placeholder */}
-        <div
-          className="flex-shrink-0 w-20 h-20 rounded-xl border border-border/40 bg-muted/30
-          flex flex-col items-center justify-center text-muted-foreground"
-        >
-          <QrCode className="w-8 h-8 mb-1" />
-          <span className="text-[9px] text-center leading-tight">
+        <div className="flex-shrink-0">
+          <QRCodeImage data={verifyUrl} />
+          <p className="text-[9px] text-center text-muted-foreground mt-1">
             Scan to verify
-          </span>
+          </p>
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-xs text-muted-foreground mb-1">Verify at:</p>

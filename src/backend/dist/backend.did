@@ -22,6 +22,27 @@ type _ImmutableObjectStorageCreateCertificateResult =
    blob_hash: text;
    method: text;
  };
+type WorkAssignmentInput = 
+ record {
+   bookingId: BookingId;
+   notes: opt text;
+   sessionDate: text;
+   sessionType: text;
+   staffId: UserId;
+ };
+type WorkAssignment = 
+ record {
+   assignedAt: Timestamp;
+   bookingId: BookingId;
+   clientName: text;
+   deliverables: vec Deliverable;
+   id: nat;
+   notes: opt text;
+   sessionDate: text;
+   sessionType: text;
+   staffId: UserId;
+   status: AssignmentStatus;
+ };
 type WhatsAppLog = 
  record {
    createdAt: Timestamp;
@@ -35,6 +56,7 @@ type UserStatus =
  variant {
    Active;
    Pending;
+   Rejected;
    Suspended;
  };
 type UserRole__1 = 
@@ -50,16 +72,6 @@ type UserRole =
    Receptionist;
    Staff;
    Student;
- };
-type UserProfile = 
- record {
-   created: Timestamp;
-   email: opt text;
-   name: text;
-   phone: text;
-   "principal": UserId;
-   role: UserRole;
-   status: UserStatus;
  };
 type UserId = principal;
 type TransformationOutput = 
@@ -88,6 +100,12 @@ type SubService =
    id: text;
    name: text;
  };
+type StudentDetails = 
+ record {
+   courseType: text;
+   learningMode: text;
+   preferredSlot: text;
+ };
 type StripeConfirmation = 
  record {
    stripePaymentIntentId: text;
@@ -105,6 +123,7 @@ type ServiceRevenue =
    serviceId: text;
    serviceName: text;
  };
+type ServiceId = nat;
 type ServiceCategory = 
  record {
    description: text;
@@ -119,6 +138,41 @@ type SelectedServiceItem =
    price: nat;
    serviceId: text;
    subServiceId: text;
+ };
+type QuizResult = 
+ record {
+   courseProgress: CourseLessonProgress;
+   lessonId: nat;
+   passed: bool;
+   score: nat;
+   totalQuestions: nat;
+ };
+type QuizQuestionInput = 
+ record {
+   correctOptionIndex: nat;
+   lessonId: nat;
+   options: vec text;
+   question: text;
+ };
+type QuizQuestion = 
+ record {
+   correctOptionIndex: nat;
+   id: nat;
+   lessonId: nat;
+   options: vec text;
+   question: text;
+ };
+type PublicProfile = 
+ record {
+   address: opt text;
+   email: text;
+   id: UserId;
+   name: text;
+   phone: text;
+   registeredAt: Timestamp;
+   role: UserRole;
+   status: UserStatus;
+   studentDetails: opt StudentDetails;
  };
 type PaymentVerificationStatus = 
  record {
@@ -266,12 +320,48 @@ type MediaInput =
    title: text;
  };
 type MediaId = nat;
+type LoginError = 
+ variant {
+   incorrectPassword;
+   lockedOut;
+   notFound;
+   other: text;
+   pendingApproval;
+   suspended;
+ };
 type LocationType = 
  variant {
    Custom: text;
    Indoor;
    Outdoor;
    Studio;
+ };
+type LessonProgress = 
+ record {
+   completedAt: opt int;
+   lessonId: nat;
+   quizPassed: bool;
+   quizScore: opt nat;
+   studentId: UserId;
+   videoWatched: bool;
+ };
+type LessonInput = 
+ record {
+   courseId: CourseId;
+   description: text;
+   order: nat;
+   title: text;
+   youtubeUrl: text;
+ };
+type Lesson = 
+ record {
+   courseId: CourseId;
+   description: text;
+   id: nat;
+   order: nat;
+   quizQuestions: vec QuizQuestion;
+   title: text;
+   youtubeUrl: text;
  };
 type FileType = 
  variant {
@@ -306,6 +396,12 @@ type EmailLog =
    subject: text;
    to: text;
  };
+type Deliverable = 
+ record {
+   fileName: text;
+   fileUrl: text;
+   submittedAt: Timestamp;
+ };
 type CourseStatus = 
  variant {
    Active;
@@ -317,6 +413,15 @@ type CourseMode =
    Hybrid;
    Offline;
    Online;
+ };
+type CourseLessonProgress = 
+ record {
+   certificateEarned: bool;
+   completedLessonIds: vec nat;
+   courseId: CourseId;
+   currentLessonId: opt nat;
+   overallPercent: nat;
+   studentId: UserId;
  };
 type CourseId = nat;
 type CourseEnrollment = 
@@ -376,24 +481,8 @@ type BookingStatus =
    Confirmed;
    PaymentPending;
    Pending;
+   Rejected;
    WorkDelivered;
- };
-type BookingStats = 
- record {
-   cancelledBookings: nat;
-   completedBookings: nat;
-   confirmedBookings: nat;
-   emailLogCount: nat;
-   pendingBookings: nat;
-   pendingFeedbackCount: nat;
-   revenueByService: vec ServiceRevenue;
-   totalBookings: nat;
-   totalCmsEntries: nat;
-   totalCourseRevenue: nat;
-   totalEnrollments: nat;
-   totalFeedback: nat;
-   totalMultiServiceBookings: nat;
-   totalRevenue: nat;
  };
 type BookingSlot = 
  record {
@@ -409,6 +498,9 @@ type BookingRequest =
    id: BookingId;
    location: LocationType;
    notes: opt text;
+   rejectedReason: opt text;
+   rescheduledDate: opt text;
+   rescheduledTime: opt text;
    serviceId: text;
    status: BookingStatus;
    subService: text;
@@ -437,6 +529,49 @@ type BookingDetails =
    time: text;
    totalAmount: nat;
  };
+type AssignmentStatus = 
+ variant {
+   Approved;
+   Assigned;
+   Delivered;
+   InProgress;
+ };
+type AnalyticsSummary = 
+ record {
+   cancelledBookings: nat;
+   completedBookings: nat;
+   confirmedBookings: nat;
+   emailLogCount: nat;
+   pendingBookings: nat;
+   pendingFeedbackCount: nat;
+   revenueByService: vec ServiceRevenue;
+   totalBookings: nat;
+   totalCmsEntries: nat;
+   totalCourseRevenue: nat;
+   totalEnrollments: nat;
+   totalFeedback: nat;
+   totalMultiServiceBookings: nat;
+   totalRevenue: nat;
+   totalUsers: nat;
+ };
+type AdminServiceInput = 
+ record {
+   description: text;
+   icon: text;
+   imageData: vec nat8;
+   name: text;
+   subServices: vec SubService;
+ };
+type AdminServiceCategory = 
+ record {
+   createdAt: Timestamp;
+   description: text;
+   icon: text;
+   id: ServiceId;
+   imageBlob: opt blob;
+   name: text;
+   subServices: vec SubService;
+ };
 type AdminPaymentEntry = 
  record {
    bookingId: opt BookingId;
@@ -445,6 +580,49 @@ type AdminPaymentEntry =
    enrollmentId: opt EnrollmentId;
    order: PaymentOrder;
    serviceId: opt text;
+ };
+type AdminCourseInput = 
+ record {
+   category: text;
+   description: text;
+   duration: text;
+   imageData: vec nat8;
+   mode: CourseMode;
+   prerequisites: vec text;
+   price: nat;
+   status: CourseStatus;
+   title: text;
+ };
+type AdminCourse = 
+ record {
+   category: text;
+   createdAt: Timestamp;
+   description: text;
+   duration: text;
+   id: CourseId;
+   imageBlob: opt blob;
+   mode: CourseMode;
+   prerequisites: vec text;
+   price: nat;
+   status: CourseStatus;
+   title: text;
+ };
+type ActivityEventKind = 
+ variant {
+   Booking;
+   Enrollment;
+   Login;
+   Payment;
+   Registration;
+ };
+type ActivityEvent = 
+ record {
+   detail: text;
+   id: text;
+   kind: ActivityEventKind;
+   timestamp: Timestamp;
+   title: text;
+   userId: UserId;
  };
 service : {
   _immutableObjectStorageBlobsAreLive: (hashes: vec blob) -> (vec bool) query;
@@ -459,14 +637,35 @@ service : {
   _initializeAccessControl: () -> ();
   addFeedback: (targetId: text, targetType: FeedbackTargetType, rating: 
    nat, comment: text) -> (Feedback);
+  addLesson: (input: LessonInput) -> (Lesson);
+  addQuizQuestion: (input: QuizQuestionInput) -> (Lesson);
+  adminAddCourse: (input: AdminCourseInput) -> (AdminCourse);
+  adminAddService: (input: AdminServiceInput) -> (AdminServiceCategory);
   adminAdjustAmount: (paymentId: PaymentId, newAmount: nat, note: text) ->
    (bool);
   adminConfirmPayment: (paymentId: PaymentId, note: text) -> (bool);
+  adminCreateUser: (email: text, name: text, phone: text, passwordHash: 
+   text, role: UserRole, address: opt text, studentDetails:
+   opt StudentDetails) -> (variant {
+                             err: text;
+                             ok: PublicProfile;
+                           });
+  adminDeleteCourse: (courseId: CourseId) -> (bool);
+  adminDeleteService: (serviceId: ServiceId) -> (bool);
+  adminGetAllCourseProgress: () -> (vec CourseLessonProgress) query;
   adminGetAllPayments: () -> (vec PaymentOrder) query;
   adminRefundPayment: (paymentId: PaymentId, note: text) -> (bool);
+  adminUpdateCourse: (courseId: CourseId, input: AdminCourseInput) -> (bool);
   adminUpdatePayment: (paymentId: PaymentId, action: PaymentAdminAction,
    adminNote: opt text) -> (bool);
+  adminUpdateService: (serviceId: ServiceId, input: AdminServiceInput) ->
+   (bool);
+  approveUser: (userId: UserId) -> (variant {
+                                      err: text;
+                                      ok;
+                                    });
   assignCallerUserRole: (user: principal, role: UserRole__1) -> ();
+  assignWork: (input: WorkAssignmentInput) -> (WorkAssignment);
   confirmBooking: (bookingId: BookingId) -> (bool);
   confirmPayment: (confirmation: StripeConfirmation) -> (bool);
   createBookingRequest: (input: BookingInput) -> (BookingRequest);
@@ -478,51 +677,116 @@ service : {
   deleteCmsContent: (key: text) -> ();
   deleteMedia: (mediaId: MediaId) -> (bool);
   deleteSubServiceImage: (categoryId: text, subServiceId: text) -> ();
+  deleteUser: (userId: UserId) -> (variant {
+                                     err: text;
+                                     ok;
+                                   });
+  editLesson: (lessonId: nat, input: LessonInput) -> (bool);
+  editQuizQuestion: (questionId: nat, input: QuizQuestionInput) -> (bool);
   enrollCourse: (courseId: CourseId) -> (CourseEnrollment);
   generateCertificate: (enrollmentId: EnrollmentId) -> (Certificate);
+  getAdminCourseBlob: (courseId: CourseId) -> (opt blob) query;
   getAdminPaymentDashboard: () -> (vec AdminPaymentEntry) query;
   getAdminPayments: () -> (vec PaymentOrderExtended);
+  getAdminServiceBlob: (serviceId: ServiceId) -> (opt blob) query;
+  getAdminUsers: () -> (vec PublicProfile) query;
+  getAllActivityEvents: () -> (vec ActivityEvent) query;
+  getAllAdminCourses: () -> (vec AdminCourse) query;
+  getAllAdminServices: () -> (vec AdminServiceCategory) query;
   getAllBookings: () -> (vec BookingRequest) query;
   getAllCmsContent: () -> (vec CmsContent) query;
   getAllCourses: () -> (vec Course) query;
   getAllEnrollments: () -> (vec CourseEnrollment) query;
   getAllFeedback: () -> (vec Feedback) query;
+  getAllPayments: () -> (vec PaymentOrder) query;
   getAllSubServiceImages: () -> (vec record {
                                        text;
                                        text;
                                      }) query;
-  getAllUsers: () -> (vec UserProfile) query;
-  getAnalytics: () -> (BookingStats) query;
-  getCallerUserProfile: () -> (opt UserProfile) query;
+  getAllUsers: () -> (vec PublicProfile) query;
+  getAllWorkAssignments: () -> (vec WorkAssignment) query;
+  getAnalytics: () -> (AnalyticsSummary) query;
+  getBookingsByDate: (date: text) -> (vec BookingRequest) query;
+  getCallerUserProfile: () -> (opt PublicProfile) query;
   getCallerUserRole: () -> (UserRole__1) query;
   getCertificate: (code: text) -> (opt Certificate) query;
   getCmsContent: (key: text) -> (opt CmsContent) query;
   getCourse: (courseId: CourseId) -> (opt Course) query;
+  getCourseProgress: (courseId: CourseId) -> (opt CourseLessonProgress) query;
   getEmailLogs: () -> (vec EmailLog) query;
+  getEnrollmentById: (enrollmentId: EnrollmentId) ->
+   (opt CourseEnrollment) query;
   getFeedbackForTarget: (targetId: text) -> (vec Feedback) query;
+  getLessonProgressForCourse: (courseId: CourseId) ->
+   (vec LessonProgress) query;
+  getLessons: (courseId: CourseId) -> (vec Lesson) query;
   getMediaItems: (category: opt text) -> (vec MediaItem) query;
+  getMyAssignedWork: () -> (vec WorkAssignment) query;
   getMyBookings: () -> (vec BookingRequest) query;
   getMyEnrollments: () -> (vec CourseEnrollment) query;
   getMyFeedback: () -> (vec Feedback) query;
   getMyMultiServiceBookings: () -> (vec MultiServiceBooking) query;
   getMyNotifications: () -> (vec NotificationRecord) query;
-  getMyProfile: () -> (opt UserProfile) query;
+  getMyPayments: () -> (vec PaymentOrder) query;
+  getMyProfile: () -> (opt PublicProfile) query;
+  getMyUploadedWork: () -> (vec WorkAssignment) query;
   getPaymentDetails: (paymentId: PaymentId) ->
    (opt PaymentOrderExtended) query;
   getPaymentStatus: (internalPaymentId: nat) ->
    (opt PaymentVerificationStatus) query;
   getPublicCalendar: () -> (vec BookingSlot) query;
+  getPublicProfile: (email: text) -> (opt PublicProfile) query;
+  getRecentActivity: () -> (vec ActivityEvent) query;
   getServiceCategories: () -> (vec ServiceCategory) query;
+  getStripeConfig: () ->
+   (record {
+      configured: bool;
+      publishableKey: text;
+      secretKey: text;
+    }) query;
   getSubServiceImage: (categoryId: text, subServiceId: text) ->
    (opt text) query;
+  getSubServiceImageBlob: (categoryId: text, subServiceId: text) ->
+   (opt blob) query;
   getWhatsAppLogs: () -> (vec WhatsAppLog) query;
   isCallerAdmin: () -> (bool) query;
   listMyPayments: () -> (vec PaymentOrder) query;
+  listPendingUsers: () -> (vec PublicProfile) query;
+  loginByEmail: (email: text, passwordHash: text) ->
+   (variant {
+      err: LoginError;
+      ok: PublicProfile;
+    });
+  loginByIdentifier: (identifier: text, passwordHash: text) ->
+   (variant {
+      err: LoginError;
+      ok: PublicProfile;
+    });
   manageUser: (userId: UserId, action: text) -> (bool);
+  markCourseComplete: (enrollmentId: EnrollmentId) ->
+   (variant {
+      err: text;
+      ok: text;
+    });
   markEnrollmentPaid: (enrollmentId: EnrollmentId) -> (bool);
   markNotificationRead: (notificationId: NotificationId) -> (bool);
+  markVideoWatched: (lessonId: nat) -> (LessonProgress);
   markWorkDelivered: (bookingId: BookingId) -> (bool);
-  register: (name: text, phone: text, role: UserRole) -> (UserProfile);
+  register: (email: text, name: text, phone: text, passwordHash: text, role:
+   UserRole, address: opt text, profilePhoto: opt blob, studentDetails:
+   opt StudentDetails) -> (variant {
+                             err: text;
+                             ok: PublicProfile;
+                           });
+  rejectBooking: (bookingId: BookingId, reason: text) -> (bool);
+  rejectUser: (userId: UserId) -> (variant {
+                                     err: text;
+                                     ok;
+                                   });
+  removeLesson: (lessonId: nat) -> (bool);
+  removeQuizQuestion: (questionId: nat) -> (bool);
+  rescheduleBooking: (bookingId: BookingId, newDate: text, newTime: text) ->
+   (bool);
   respondToFeedback: (feedbackId: nat, responderComment: text) -> (bool);
   saveCallerUserProfile: (name: text, phone: text, role: UserRole) -> ();
   sendBookingConfirmation: (userId: UserId, details: BookingDetails) ->
@@ -534,14 +798,30 @@ service : {
   sendProgressReminder: (userId: UserId, details: BookingDetails) -> (bool);
   setCmsContent: (key: text, value: text, contentType: CmsContentType) -> ();
   setFeatured: (mediaId: MediaId, featured: bool) -> (bool);
+  setStripeKeys: (publishableKey: text, secretKey: text) -> (bool);
   setSubServiceImage: (categoryId: text, subServiceId: text, imageUrl:
    text) -> ();
+  submitDeliverable: (assignmentId: nat, fileUrl: text, fileName: text) ->
+   (bool);
+  submitQuiz: (lessonId: nat, answers: vec nat) ->
+   (variant {
+      err: text;
+      ok: QuizResult;
+    });
+  testStripeConnection: () -> (variant {
+                                 err: text;
+                                 ok: text;
+                               });
   transform: (input: TransformationInput) -> (TransformationOutput) query;
   transformWhatsApp: (input: TransformationInput) ->
    (TransformationOutput) query;
   triggerPaymentRequest: (bookingId: BookingId, paymentType: text) -> (text);
+  updateAssignmentStatus: (assignmentId: nat, status: AssignmentStatus) ->
+   (bool);
   updateCourseProgress: (courseId: CourseId, completed: bool) -> (bool);
-  updateProfile: (name: text, phone: text) -> (bool);
+  updateProfile: (name: text, phone: text, address: opt text) -> (bool);
   uploadMedia: (input: MediaInput) -> (MediaItem);
+  uploadSubServiceImage: (categoryId: text, subServiceId: text, imageData:
+   vec nat8) -> ();
   verifyCertificate: (code: text) -> (bool) query;
 }
