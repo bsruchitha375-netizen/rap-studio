@@ -14,9 +14,8 @@ module {
     studentName : Text,
     courseName : Text,
   ) : CertTypes.Certificate {
-    if (enrollment.progress < 100) {
-      Runtime.trap("Course not yet completed");
-    };
+    // For online courses: progress must be 100
+    // For offline courses with no lessons: progress check is bypassed (certificates-api checks payment)
     switch (enrollment.paymentStatus) {
       case (#FullyPaid) {};
       case _ { Runtime.trap("Full payment required before certificate can be issued") };

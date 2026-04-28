@@ -182,6 +182,59 @@ module {
     adminCourses.toArray();
   };
 
+  /// Toggle a course's mode between Online / Offline / Hybrid.
+  /// Works on admin-added courses only. Static courses cannot be changed.
+  public func updateCourseMode(
+    adminCourses : List.List<CourseTypes.AdminCourse>,
+    courseId : Common.CourseId,
+    mode : CourseTypes.CourseMode,
+  ) : Bool {
+    var found = false;
+    adminCourses.mapInPlace(func(ac) {
+      if (ac.id == courseId) {
+        found := true;
+        { ac with mode = mode };
+      } else { ac };
+    });
+    found;
+  };
+
+  /// Admin query — all students enrolled in a specific course with their per-course progress.
+  public func getEnrollmentsByCourse(
+    enrollments : List.List<CourseTypes.CourseEnrollment>,
+    courseProgress : List.List<CourseTypes.CourseLessonProgress>,
+    courseId : Common.CourseId,
+  ) : [{
+    enrollment : CourseTypes.CourseEnrollment;
+    progress : ?CourseTypes.CourseLessonProgress;
+  }] {
+    let matching = enrollments.filter(func(e) { e.courseId == courseId });
+    matching.map<CourseTypes.CourseEnrollment, {
+      enrollment : CourseTypes.CourseEnrollment;
+      progress : ?CourseTypes.CourseLessonProgress;
+    }>(func(e) {
+      let cp = courseProgress.find(func(p) { p.studentId == e.userId and p.courseId == courseId });
+      { enrollment = e; progress = cp };
+    }).toArray();
+  };
+
+  /// Admin only — remove enrollments for courses that no longer exist (stale cleanup).
+  public func clearStaleEnrollments(
+    enrollments : List.List<CourseTypes.CourseEnrollment>,
+    adminCourses : List.List<CourseTypes.AdminCourse>,
+  ) : Nat {
+    let before = enrollments.size();
+    let valid = enrollments.filter(func(e) {
+      // Keep if it references a static course OR an admin course
+      let staticExists = getCourseById(e.courseId) != null;
+      let adminExists = getAdminCourseById(adminCourses, e.courseId) != null;
+      staticExists or adminExists;
+    });
+    enrollments.clear();
+    enrollments.append(valid);
+    before - enrollments.size();
+  };
+
   public func enrollCourse(
     enrollments : List.List<CourseTypes.CourseEnrollment>,
     adminCourses : List.List<CourseTypes.AdminCourse>,
@@ -194,16 +247,18 @@ module {
     if (not existsStatic and not existsAdmin) {
       Runtime.trap("Course not found");
     };
+    // Idempotent: return existing enrollment if already enrolled
     switch (enrollments.find(func(e) { e.userId == caller and e.courseId == courseId })) {
-      case (?_) { Runtime.trap("Already enrolled in this course") };
+      case (?existing) { return existing };
       case null {};
     };
+    // Enrollment is FREE — no payment required at this step
     let enrollment : CourseTypes.CourseEnrollment = {
       id = nextId;
       userId = caller;
       courseId = courseId;
       enrolledAt = Time.now();
-      paymentStatus = #Pending;
+      paymentStatus = #Pending; // payment only needed for certificate download
       completedAt = null;
       certificateCode = null;
       progress = 0;
@@ -279,10 +334,6 @@ module {
       case null { #err("Enrollment not found") };
       case (?e) {
         if (e.userId != caller) { return #err("Not your enrollment") };
-        switch (e.paymentStatus) {
-          case (#FullyPaid) {};
-          case _ { return #err("Payment not complete — certificate blocked until full payment") };
-        };
         // Verify all lessons are completed (video watched + quiz passed)
         let courseLessons = getLessonsByCourse(lessons, e.courseId);
         if (courseLessons.size() > 0) {
@@ -674,20 +725,12 @@ module {
       case (?l) { ?l.id };
     };
 
-    // Check if enrollment is FullyPaid
-    let isFullyPaid = switch (enrollments.find(func(e) { e.userId == student and e.courseId == courseId })) {
-      case null { false };
-      case (?e) {
-        switch (e.paymentStatus) {
-          case (#FullyPaid) { true };
-          case _ { false };
-        };
-      };
-    };
+    // Certificate is "earnable" when all lessons are complete (100%)
+    // Payment for certificate download is a SEPARATE step — not gated here.
+    // certificateEarned=true means "eligible to pay for and download certificate"
+    let certificateEarned = overallPercent == 100 and totalLessons > 0;
 
-    let certificateEarned = overallPercent == 100 and isFullyPaid;
-
-    // Auto-generate certificate code on enrollment if newly earned
+    // Auto-generate certificate code when all lessons done (code needed for payment reference)
     if (certificateEarned) {
       switch (enrollments.find(func(e) { e.userId == student and e.courseId == courseId })) {
         case null {};

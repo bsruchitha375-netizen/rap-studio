@@ -188,6 +188,7 @@ type PaymentType =
  variant {
    BookingBalance;
    BookingUpfront;
+   CertificateDownload;
    CourseEnrollment;
  };
 type PaymentStatus__1 = 
@@ -666,6 +667,13 @@ service : {
                                     });
   assignCallerUserRole: (user: principal, role: UserRole__1) -> ();
   assignWork: (input: WorkAssignmentInput) -> (WorkAssignment);
+  bootstrapAdminProfile: (name: text, email: text, phone: text, passwordHash:
+   text) -> (variant {
+               err: text;
+               ok: PublicProfile;
+             });
+  bulkGetUserProfiles: (userIds: vec UserId) -> (vec PublicProfile) query;
+  clearStaleEnrollments: () -> (nat);
   confirmBooking: (bookingId: BookingId) -> (bool);
   confirmPayment: (confirmation: StripeConfirmation) -> (bool);
   createBookingRequest: (input: BookingInput) -> (BookingRequest);
@@ -685,7 +693,52 @@ service : {
   editQuizQuestion: (questionId: nat, input: QuizQuestionInput) -> (bool);
   enrollCourse: (courseId: CourseId) -> (CourseEnrollment);
   generateCertificate: (enrollmentId: EnrollmentId) -> (Certificate);
+  getAdminBookings: () ->
+   (vec
+     record {
+       clientEmail: text;
+       clientName: text;
+       createdAt: Timestamp;
+       date: text;
+       duration: text;
+       id: BookingId;
+       location: LocationType;
+       notes: opt text;
+       rejectedReason: opt text;
+       rescheduledDate: opt text;
+       rescheduledTime: opt text;
+       serviceId: text;
+       status: BookingStatus;
+       subService: text;
+       timeSlot: TimeSlot;
+       userId: UserId;
+     }) query;
   getAdminCourseBlob: (courseId: CourseId) -> (opt blob) query;
+  getAdminDashboardData: () ->
+   (record {
+      analytics: AnalyticsSummary;
+      pendingUsers: vec PublicProfile;
+      recentActivity: vec ActivityEvent;
+      totalBookings: nat;
+      totalEnrollments: nat;
+      totalPayments: nat;
+      totalUsers: nat;
+    }) query;
+  getAdminEnrollments: () ->
+   (vec
+     record {
+       certificateCode: opt text;
+       completedAt: opt Timestamp;
+       courseId: CourseId;
+       courseName: text;
+       enrolledAt: Timestamp;
+       id: EnrollmentId;
+       paymentStatus: PaymentStatus__1;
+       progress: nat;
+       studentEmail: text;
+       studentName: text;
+       userId: UserId;
+     }) query;
   getAdminPaymentDashboard: () -> (vec AdminPaymentEntry) query;
   getAdminPayments: () -> (vec PaymentOrderExtended);
   getAdminServiceBlob: (serviceId: ServiceId) -> (opt blob) query;
@@ -713,9 +766,17 @@ service : {
   getCmsContent: (key: text) -> (opt CmsContent) query;
   getCourse: (courseId: CourseId) -> (opt Course) query;
   getCourseProgress: (courseId: CourseId) -> (opt CourseLessonProgress) query;
+  getCourseProgressByEnrollment: (enrollmentId: EnrollmentId) ->
+   (opt CourseLessonProgress) query;
   getEmailLogs: () -> (vec EmailLog) query;
   getEnrollmentById: (enrollmentId: EnrollmentId) ->
    (opt CourseEnrollment) query;
+  getEnrollmentsByCourse: (courseId: CourseId) ->
+   (vec
+     record {
+       enrollment: CourseEnrollment;
+       progress: opt CourseLessonProgress;
+     }) query;
   getFeedbackForTarget: (targetId: text) -> (vec Feedback) query;
   getLessonProgressForCourse: (courseId: CourseId) ->
    (vec LessonProgress) query;
@@ -723,6 +784,7 @@ service : {
   getMediaItems: (category: opt text) -> (vec MediaItem) query;
   getMyAssignedWork: () -> (vec WorkAssignment) query;
   getMyBookings: () -> (vec BookingRequest) query;
+  getMyCertificate: (enrollmentId: EnrollmentId) -> (opt Certificate) query;
   getMyEnrollments: () -> (vec CourseEnrollment) query;
   getMyFeedback: () -> (vec Feedback) query;
   getMyMultiServiceBookings: () -> (vec MultiServiceBooking) query;
@@ -750,6 +812,7 @@ service : {
    (opt blob) query;
   getWhatsAppLogs: () -> (vec WhatsAppLog) query;
   isCallerAdmin: () -> (bool) query;
+  isCertificatePaymentDone: (enrollmentId: EnrollmentId) -> (bool) query;
   listMyPayments: () -> (vec PaymentOrder) query;
   listPendingUsers: () -> (vec PublicProfile) query;
   loginByEmail: (email: text, passwordHash: text) ->
@@ -772,6 +835,13 @@ service : {
   markNotificationRead: (notificationId: NotificationId) -> (bool);
   markVideoWatched: (lessonId: nat) -> (LessonProgress);
   markWorkDelivered: (bookingId: BookingId) -> (bool);
+  ping: () ->
+   (record {
+      bookingCount: nat;
+      enrollmentCount: nat;
+      status: text;
+      userCount: nat;
+    }) query;
   register: (email: text, name: text, phone: text, passwordHash: text, role:
    UserRole, address: opt text, profilePhoto: opt blob, studentDetails:
    opt StudentDetails) -> (variant {
@@ -818,6 +888,7 @@ service : {
   triggerPaymentRequest: (bookingId: BookingId, paymentType: text) -> (text);
   updateAssignmentStatus: (assignmentId: nat, status: AssignmentStatus) ->
    (bool);
+  updateCourseMode: (courseId: CourseId, mode: CourseMode) -> (bool);
   updateCourseProgress: (courseId: CourseId, completed: bool) -> (bool);
   updateProfile: (name: text, phone: text, address: opt text) -> (bool);
   uploadMedia: (input: MediaInput) -> (MediaItem);

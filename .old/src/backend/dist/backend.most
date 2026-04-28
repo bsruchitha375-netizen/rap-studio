@@ -152,6 +152,8 @@ type Lesson__403778655 =
 type LocationType__723490647 = {#Custom : Text; #Indoor; #Outdoor; #Studio};
 type LoginEvent__893672821 =
   {
+    detail : ?Text;
+    eventKind : ?{#Booking; #Enrollment; #Login; #Payment; #Registration};
     loginAt : Timestamp__301639476;
     userId : UserId__158757552;
     userName : Text;
@@ -253,7 +255,7 @@ type PaymentStatus__296016569 = {#Created; #Failed; #Paid; #Refunded};
 type PaymentStatus__692151104 =
   {#FullyPaid; #Overdue; #PartiallyPaid; #Pending};
 type PaymentType__716647387 =
-  {#BookingBalance; #BookingUpfront; #CourseEnrollment};
+  {#BookingBalance; #BookingUpfront; #CertificateDownload; #CourseEnrollment};
 type QuizQuestion__346068541 =
   {
     correctOptionIndex : Nat;

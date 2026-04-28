@@ -17,6 +17,7 @@ import {
   Calendar,
   CalendarDays,
   CheckCircle,
+  CheckCircle2,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -26,12 +27,16 @@ import {
   LogOut,
   MapPin,
   MessageCircle,
+  Moon,
+  Pencil,
   RefreshCw,
   RotateCcw,
+  Sun,
   User,
   XCircle,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { useTheme } from "next-themes";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import type { BookingRequest as BackendBooking } from "../backend.d.ts";
@@ -79,7 +84,7 @@ const TIME_SLOT_LABELS: Record<string, string> = {
   full_day: "Full Day",
 };
 
-type StatusFilter = "all" | "pending" | "confirmed" | "rejected" | "completed";
+type StatusFilter = "all" | "today" | "week" | "pending" | "confirmed";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -131,7 +136,7 @@ function getLocationLabel(location: BackendBooking["location"]): string {
     const kind = (location as { __kind__?: string }).__kind__;
     if (kind === "Custom") {
       const c = location as { __kind__: "Custom"; Custom: string };
-      return `Custom — ${c.Custom}`;
+      return `Custom — ${c.Custom ?? ""}`;
     }
     return kind ?? "Studio";
   }
@@ -159,36 +164,27 @@ function formatTimestamp(ts: BackendBooking["createdAt"]): string {
 
 // ── Reject Modal ──────────────────────────────────────────────────────────────
 
-interface RejectModalProps {
-  bookingId: string;
-  open: boolean;
-  isPending: boolean;
-  onConfirm: (reason: string) => void;
-  onClose: () => void;
-}
-
 function RejectModal({
   bookingId,
   open,
   isPending,
   onConfirm,
   onClose,
-}: RejectModalProps) {
+}: {
+  bookingId: string;
+  open: boolean;
+  isPending: boolean;
+  onConfirm: (reason: string) => void;
+  onClose: () => void;
+}) {
   const [reason, setReason] = useState("");
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent
-        className="max-w-md"
-        style={{
-          background: "oklch(var(--card))",
-          border: "1px solid oklch(var(--border) / 0.5)",
-        }}
-        data-ocid="reject-booking.dialog"
-      >
+      <DialogContent className="max-w-md" data-ocid="reject-booking.dialog">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-foreground">
             <XCircle className="w-5 h-5 text-destructive" />
-            Reject Booking #{String(bookingId).slice(-6)}
+            Reject Booking #{String(bookingId ?? "").slice(-6)}
           </DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground">
@@ -200,7 +196,7 @@ function RejectModal({
           </Label>
           <Textarea
             id="reject-reason"
-            placeholder="e.g. Date not available, team unavailable..."
+            placeholder="e.g. Date not available..."
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             rows={3}
@@ -226,11 +222,7 @@ function RejectModal({
             onClick={() => onConfirm(reason.trim())}
             data-ocid="reject-booking.confirm_button"
           >
-            {isPending ? (
-              <span className="spinner" />
-            ) : (
-              <XCircle className="w-4 h-4" />
-            )}
+            <XCircle className="w-4 h-4" />
             Reject Booking
           </Button>
         </div>
@@ -241,15 +233,6 @@ function RejectModal({
 
 // ── Reschedule Modal ──────────────────────────────────────────────────────────
 
-interface RescheduleModalProps {
-  bookingId: string;
-  currentDate: string;
-  open: boolean;
-  isPending: boolean;
-  onConfirm: (newDate: string, newTime: string) => void;
-  onClose: () => void;
-}
-
 function RescheduleModal({
   bookingId,
   currentDate,
@@ -257,23 +240,23 @@ function RescheduleModal({
   isPending,
   onConfirm,
   onClose,
-}: RescheduleModalProps) {
+}: {
+  bookingId: string;
+  currentDate: string;
+  open: boolean;
+  isPending: boolean;
+  onConfirm: (d: string, t: string) => void;
+  onClose: () => void;
+}) {
   const [newDate, setNewDate] = useState(currentDate);
   const [newTime, setNewTime] = useState("10:00");
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent
-        className="max-w-md"
-        style={{
-          background: "oklch(var(--card))",
-          border: "1px solid oklch(var(--border) / 0.5)",
-        }}
-        data-ocid="reschedule-booking.dialog"
-      >
+      <DialogContent className="max-w-md" data-ocid="reschedule-booking.dialog">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-foreground">
             <RotateCcw className="w-5 h-5 text-primary" />
-            Reschedule Booking #{String(bookingId).slice(-6)}
+            Reschedule Booking #{String(bookingId ?? "").slice(-6)}
           </DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
@@ -320,11 +303,7 @@ function RescheduleModal({
             onClick={() => onConfirm(newDate, newTime)}
             data-ocid="reschedule-booking.confirm_button"
           >
-            {isPending ? (
-              <span className="spinner" />
-            ) : (
-              <RotateCcw className="w-4 h-4" />
-            )}
+            <RotateCcw className="w-4 h-4" />
             Confirm Reschedule
           </Button>
         </div>
@@ -335,27 +314,19 @@ function RescheduleModal({
 
 // ── View Details Modal ────────────────────────────────────────────────────────
 
-interface ViewDetailsModalProps {
-  booking: BackendBooking | null;
-  open: boolean;
-  onClose: () => void;
-}
-
-function ViewDetailsModal({ booking, open, onClose }: ViewDetailsModalProps) {
+function ViewDetailsModal({
+  booking,
+  open,
+  onClose,
+}: { booking: BackendBooking | null; open: boolean; onClose: () => void }) {
   if (!booking) return null;
   const status = getStatusFromBackend(booking.status);
   const timeLabel =
-    TIME_SLOT_LABELS[String(booking.timeSlot)] ?? String(booking.timeSlot);
+    TIME_SLOT_LABELS[String(booking.timeSlot ?? "")] ??
+    String(booking.timeSlot ?? "—");
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
-      <DialogContent
-        className="max-w-lg"
-        style={{
-          background: "oklch(var(--card))",
-          border: "1px solid oklch(var(--border) / 0.5)",
-        }}
-        data-ocid="view-booking.dialog"
-      >
+      <DialogContent className="max-w-lg" data-ocid="view-booking.dialog">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3 text-foreground">
             <CalendarDays className="w-5 h-5 text-primary" />
@@ -369,7 +340,7 @@ function ViewDetailsModal({ booking, open, onClose }: ViewDetailsModalProps) {
               Booking ID
             </p>
             <p className="text-foreground font-mono font-medium">
-              #{String(booking.id).slice(-8)}
+              #{String(booking.id ?? "").slice(-8)}
             </p>
           </div>
           <div className="space-y-0.5">
@@ -377,7 +348,7 @@ function ViewDetailsModal({ booking, open, onClose }: ViewDetailsModalProps) {
               Service
             </p>
             <p className="text-foreground font-medium capitalize">
-              {booking.serviceId?.replace(/_/g, " ") || "—"}
+              {(booking.serviceId ?? "—").replace(/_/g, " ")}
             </p>
           </div>
           <div className="space-y-0.5">
@@ -385,14 +356,14 @@ function ViewDetailsModal({ booking, open, onClose }: ViewDetailsModalProps) {
               Sub-Service
             </p>
             <p className="text-foreground capitalize">
-              {booking.subService?.replace(/_/g, " ") || "—"}
+              {(booking.subService ?? "—").replace(/_/g, " ")}
             </p>
           </div>
           <div className="space-y-0.5">
             <p className="text-muted-foreground text-xs uppercase tracking-wide">
               Date
             </p>
-            <p className="text-foreground">{booking.date}</p>
+            <p className="text-foreground">{booking.date ?? "—"}</p>
           </div>
           <div className="space-y-0.5">
             <p className="text-muted-foreground text-xs uppercase tracking-wide">
@@ -404,7 +375,7 @@ function ViewDetailsModal({ booking, open, onClose }: ViewDetailsModalProps) {
             <p className="text-muted-foreground text-xs uppercase tracking-wide">
               Duration
             </p>
-            <p className="text-foreground">{booking.duration}</p>
+            <p className="text-foreground">{booking.duration ?? "—"}</p>
           </div>
           <div className="col-span-2 space-y-0.5">
             <p className="text-muted-foreground text-xs uppercase tracking-wide">
@@ -454,16 +425,11 @@ function ViewDetailsModal({ booking, open, onClose }: ViewDetailsModalProps) {
 
 // ── Calendar Tab ──────────────────────────────────────────────────────────────
 
-interface CalendarTabProps {
-  bookedDates: Set<string>;
-}
-
-function CalendarTab({ bookedDates }: CalendarTabProps) {
+function CalendarTab({ bookedDates }: { bookedDates: Set<string> }) {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
-
   const { data: dateBookings = [], isLoading: dateLoading } =
     useBookingsByDate(selectedDate);
 
@@ -471,9 +437,7 @@ function CalendarTab({ bookedDates }: CalendarTabProps) {
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
   function dateStr(day: number) {
-    const mm = String(month + 1).padStart(2, "0");
-    const dd = String(day).padStart(2, "0");
-    return `${year}-${mm}-${dd}`;
+    return `${year}-${String(month + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
   }
 
   type CalCell = { key: string; day: number | null };
@@ -503,7 +467,6 @@ function CalendarTab({ bookedDates }: CalendarTabProps) {
 
   return (
     <div className="flex flex-col lg:flex-row gap-6">
-      {/* Calendar grid */}
       <div
         className="rounded-2xl p-5 flex-shrink-0"
         style={{
@@ -513,7 +476,6 @@ function CalendarTab({ bookedDates }: CalendarTabProps) {
           minWidth: "280px",
         }}
       >
-        {/* Month nav */}
         <div className="flex items-center justify-between mb-4">
           <Button
             type="button"
@@ -539,8 +501,6 @@ function CalendarTab({ bookedDates }: CalendarTabProps) {
             <ChevronRight className="w-4 h-4" />
           </Button>
         </div>
-
-        {/* Day headers */}
         <div className="grid grid-cols-7 mb-2">
           {DAYS.map((d) => (
             <div
@@ -551,8 +511,6 @@ function CalendarTab({ bookedDates }: CalendarTabProps) {
             </div>
           ))}
         </div>
-
-        {/* Day cells */}
         <div className="grid grid-cols-7 gap-1">
           {cells.map(({ key, day }) => {
             if (day === null) return <div key={key} aria-hidden="true" />;
@@ -569,9 +527,7 @@ function CalendarTab({ bookedDates }: CalendarTabProps) {
                 key={`day-${ds}`}
                 className={[
                   "aspect-square rounded-lg text-xs flex flex-col items-center justify-center gap-0.5 transition-smooth relative",
-                  isSelected
-                    ? "bg-primary text-primary-foreground shadow-glow-gold"
-                    : "",
+                  isSelected ? "bg-primary text-primary-foreground" : "",
                   !isSelected && isToday
                     ? "ring-1 ring-primary text-primary font-bold"
                     : "",
@@ -594,14 +550,12 @@ function CalendarTab({ bookedDates }: CalendarTabProps) {
             );
           })}
         </div>
-
         <div className="mt-4 flex items-center gap-2 text-[10px] text-muted-foreground">
           <span className="w-2 h-2 rounded-full bg-primary/60 inline-block" />
           <span>= date has bookings · click to view</span>
         </div>
       </div>
 
-      {/* Date detail panel */}
       <div className="flex-1 min-w-0">
         <AnimatePresence mode="wait">
           {!selectedDate ? (
@@ -646,7 +600,6 @@ function CalendarTab({ bookedDates }: CalendarTabProps) {
                   Clear
                 </Button>
               </div>
-
               {dateLoading ? (
                 <div className="space-y-3">
                   {[1, 2].map((i) => (
@@ -665,9 +618,9 @@ function CalendarTab({ bookedDates }: CalendarTabProps) {
               ) : (
                 <div className="space-y-3">
                   {dateBookings.map((b, i) => {
-                    const timeLabel =
-                      TIME_SLOT_LABELS[String(b.timeSlot)] ??
-                      String(b.timeSlot);
+                    const tLabel =
+                      TIME_SLOT_LABELS[String(b.timeSlot ?? "")] ??
+                      String(b.timeSlot ?? "");
                     const status = getStatusFromBackend(b.status);
                     return (
                       <motion.div
@@ -693,12 +646,12 @@ function CalendarTab({ bookedDates }: CalendarTabProps) {
                           </div>
                           <div>
                             <p className="text-sm font-medium text-foreground">
-                              Session booked at{" "}
-                              <span className="text-primary">{timeLabel}</span>
+                              Session at{" "}
+                              <span className="text-primary">{tLabel}</span>
                             </p>
                             <p className="text-xs text-muted-foreground">
-                              #{String(b.id).slice(-6)} ·{" "}
-                              {b.serviceId?.replace(/_/g, " ") || "—"}
+                              #{String(b.id ?? "").slice(-6)} ·{" "}
+                              {(b.serviceId ?? "—").replace(/_/g, " ")}
                             </p>
                           </div>
                         </div>
@@ -708,8 +661,7 @@ function CalendarTab({ bookedDates }: CalendarTabProps) {
                   })}
                   <p className="text-[10px] text-muted-foreground px-1">
                     <AlertCircle className="w-3 h-3 inline mr-1 opacity-60" />
-                    Client details are hidden for privacy. Use Booking ID to
-                    look up full details.
+                    Client details are hidden for privacy.
                   </p>
                 </div>
               )}
@@ -721,41 +673,74 @@ function CalendarTab({ bookedDates }: CalendarTabProps) {
   );
 }
 
-// ── All Bookings Tab ──────────────────────────────────────────────────────────
+// ── Bookings Tab (unified — all + filter + actions) ───────────────────────────
 
-interface AllBookingsTabProps {
-  bookings: BackendBooking[];
-  isLoading: boolean;
-  onReschedule: (b: BackendBooking) => void;
-  onViewDetails: (b: BackendBooking) => void;
-}
-
-function AllBookingsTab({
+function BookingsTab({
   bookings,
   isLoading,
+  onConfirm,
+  onReject,
   onReschedule,
   onViewDetails,
-}: AllBookingsTabProps) {
+}: {
+  bookings: BackendBooking[];
+  isLoading: boolean;
+  onConfirm: (b: BackendBooking) => void;
+  onReject: (b: BackendBooking) => void;
+  onReschedule: (b: BackendBooking) => void;
+  onViewDetails: (b: BackendBooking) => void;
+}) {
   const [filter, setFilter] = useState<StatusFilter>("all");
+  const today = new Date().toISOString().split("T")[0];
+
+  const getWeekEnd = () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 7);
+    return d.toISOString().split("T")[0];
+  };
+
+  const weekEnd = getWeekEnd();
 
   const filtered = useMemo(() => {
     const sorted = [...bookings].sort(
       (a, b) => Number(b.createdAt) - Number(a.createdAt),
     );
-    if (filter === "all") return sorted;
-    return sorted.filter((b) => {
-      const s = getStatusFromBackend(b.status);
-      if (filter === "pending") return s === "pending";
-      if (filter === "confirmed")
-        return s === "confirmed" || s === "workdelivered";
-      if (filter === "rejected") return s === "rejected" || s === "cancelled";
-      if (filter === "completed") return s === "completed";
-      return true;
-    });
-  }, [bookings, filter]);
+    switch (filter) {
+      case "today":
+        return sorted.filter((b) => (b.date ?? "") === today);
+      case "week":
+        return sorted.filter(
+          (b) => (b.date ?? "") >= today && (b.date ?? "") <= weekEnd,
+        );
+      case "pending":
+        return sorted.filter(
+          (b) => getStatusFromBackend(b.status) === "pending",
+        );
+      case "confirmed":
+        return sorted.filter((b) =>
+          ["confirmed", "workdelivered"].includes(
+            getStatusFromBackend(b.status),
+          ),
+        );
+      default:
+        return sorted;
+    }
+  }, [bookings, filter, today, weekEnd]);
 
   const filterChips: { key: StatusFilter; label: string; count?: number }[] = [
     { key: "all", label: "All", count: bookings.length },
+    {
+      key: "today",
+      label: "Today",
+      count: bookings.filter((b) => (b.date ?? "") === today).length,
+    },
+    {
+      key: "week",
+      label: "This Week",
+      count: bookings.filter(
+        (b) => (b.date ?? "") >= today && (b.date ?? "") <= weekEnd,
+      ).length,
+    },
     {
       key: "pending",
       label: "Pending",
@@ -768,20 +753,6 @@ function AllBookingsTab({
       label: "Confirmed",
       count: bookings.filter((b) =>
         ["confirmed", "workdelivered"].includes(getStatusFromBackend(b.status)),
-      ).length,
-    },
-    {
-      key: "rejected",
-      label: "Rejected",
-      count: bookings.filter((b) =>
-        ["rejected", "cancelled"].includes(getStatusFromBackend(b.status)),
-      ).length,
-    },
-    {
-      key: "completed",
-      label: "Completed",
-      count: bookings.filter(
-        (b) => getStatusFromBackend(b.status) === "completed",
       ).length,
     },
   ];
@@ -808,11 +779,11 @@ function AllBookingsTab({
             className={[
               "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium transition-smooth border",
               filter === chip.key
-                ? "bg-primary text-primary-foreground border-primary shadow-glow-gold"
+                ? "bg-primary text-primary-foreground border-primary"
                 : "bg-card/50 text-muted-foreground border-border/40 hover:border-primary/30 hover:text-foreground",
             ].join(" ")}
             onClick={() => setFilter(chip.key)}
-            data-ocid={`all-bookings.filter.${chip.key}`}
+            data-ocid={`bookings.filter.${chip.key}`}
           >
             {chip.label}
             {chip.count !== undefined && chip.count > 0 && (
@@ -830,9 +801,9 @@ function AllBookingsTab({
         <div
           className="flex flex-col items-center py-16 text-muted-foreground rounded-2xl"
           style={{ border: "1px dashed oklch(var(--border) / 0.5)" }}
-          data-ocid="all-bookings.empty_state"
+          data-ocid="bookings.empty_state"
         >
-          <List className="w-10 h-10 mb-3 opacity-30" />
+          <Inbox className="w-10 h-10 mb-3 opacity-30" />
           <p className="text-sm font-medium">No bookings found</p>
           <p className="text-xs opacity-60">Try a different filter</p>
         </div>
@@ -842,8 +813,9 @@ function AllBookingsTab({
             {filtered.map((booking, i) => {
               const status = getStatusFromBackend(booking.status);
               const timeLabel =
-                TIME_SLOT_LABELS[String(booking.timeSlot)] ??
-                String(booking.timeSlot);
+                TIME_SLOT_LABELS[String(booking.timeSlot ?? "")] ??
+                String(booking.timeSlot ?? "");
+              const isPending = status === "pending";
               return (
                 <motion.div
                   key={String(booking.id)}
@@ -851,21 +823,28 @@ function AllBookingsTab({
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.97 }}
                   transition={{ delay: i * 0.04, duration: 0.3 }}
-                  className="glass-card rounded-xl p-4 service-card-hover"
-                  data-ocid={`all-bookings.item.${i + 1}`}
+                  className="rounded-xl p-4 transition-smooth"
+                  style={{
+                    background: isPending
+                      ? "oklch(0.72 0.18 85 / 0.06)"
+                      : "oklch(var(--card) / 0.55)",
+                    backdropFilter: "blur(12px)",
+                    border: `1px solid ${isPending ? "oklch(0.72 0.18 85 / 0.3)" : "oklch(var(--border) / 0.45)"}`,
+                  }}
+                  data-ocid={`bookings.item.${i + 1}`}
                 >
                   <div className="flex items-start justify-between gap-3 mb-2">
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-mono text-xs text-muted-foreground">
-                          #{String(booking.id).slice(-8)}
+                          #{String(booking.id ?? "").slice(-8)}
                         </span>
                         <span className="font-semibold text-foreground text-sm capitalize truncate">
-                          {booking.serviceId?.replace(/_/g, " ") || "—"}
+                          {(booking.serviceId ?? "—").replace(/_/g, " ")}
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground capitalize mt-0.5">
-                        {booking.subService?.replace(/_/g, " ") || "—"}
+                        {(booking.subService ?? "—").replace(/_/g, " ")}
                       </p>
                     </div>
                     <StatusBadge status={status} />
@@ -874,7 +853,7 @@ function AllBookingsTab({
                   <div className="flex items-center gap-4 text-xs text-muted-foreground mb-3 flex-wrap">
                     <span className="flex items-center gap-1">
                       <Calendar className="w-3 h-3 text-primary/70" />
-                      {booking.date}
+                      {booking.date ?? "—"}
                     </span>
                     <span className="flex items-center gap-1">
                       <Clock className="w-3 h-3 text-primary/70" />
@@ -890,13 +869,38 @@ function AllBookingsTab({
                   </div>
 
                   <div className="flex gap-2 flex-wrap">
+                    {isPending && (
+                      <>
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="flex-1 gap-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white"
+                          onClick={() => onConfirm(booking)}
+                          data-ocid={`bookings.confirm_button.${i + 1}`}
+                        >
+                          <CheckCircle className="w-3.5 h-3.5" />
+                          Confirm
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="destructive"
+                          className="flex-1 gap-1 text-xs font-semibold"
+                          onClick={() => onReject(booking)}
+                          data-ocid={`bookings.delete_button.${i + 1}`}
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                          Reject
+                        </Button>
+                      </>
+                    )}
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
                       className="text-xs gap-1 border-primary/20 hover:border-primary/50 hover:text-primary"
                       onClick={() => onViewDetails(booking)}
-                      data-ocid={`all-bookings.view_details.${i + 1}`}
+                      data-ocid={`bookings.view_details.${i + 1}`}
                     >
                       <CalendarDays className="w-3.5 h-3.5" />
                       View Details
@@ -908,12 +912,22 @@ function AllBookingsTab({
                         variant="outline"
                         className="text-xs gap-1 border-amber-500/20 text-amber-400 hover:border-amber-500/50"
                         onClick={() => onReschedule(booking)}
-                        data-ocid={`all-bookings.reschedule.${i + 1}`}
+                        data-ocid={`bookings.reschedule.${i + 1}`}
                       >
                         <RotateCcw className="w-3.5 h-3.5" />
                         Reschedule
                       </Button>
                     )}
+                    <a
+                      href={`https://wa.me/917338501228?text=${encodeURIComponent(`Booking #${String(booking.id ?? "").slice(-6)} — ${(booking.serviceId ?? "—").replace(/_/g, " ")} on ${booking.date ?? ""} at ${timeLabel}`)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 transition-colors px-2"
+                      data-ocid={`bookings.whatsapp.${i + 1}`}
+                    >
+                      <MessageCircle className="w-3.5 h-3.5" />
+                      WhatsApp
+                    </a>
                   </div>
                 </motion.div>
               );
@@ -925,178 +939,176 @@ function AllBookingsTab({
   );
 }
 
-// ── Pending Bookings Tab ──────────────────────────────────────────────────────
+// ── Profile Tab ────────────────────────────────────────────────────────────────
 
-interface PendingTabProps {
-  bookings: BackendBooking[];
-  isLoading: boolean;
-  onConfirm: (b: BackendBooking) => void;
-  onReject: (b: BackendBooking) => void;
-}
+function ReceptionistProfileTab({
+  name,
+  user,
+  profile,
+}: {
+  name: string;
+  user: { email?: string; phone?: string; name?: string } | null;
+  profile:
+    | { email?: string; phone?: string; address?: string; status?: string }
+    | null
+    | undefined;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [displayName, setDisplayName] = useState(name);
+  const initials = displayName
+    .split(" ")
+    .map((w: string) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
-function PendingTab({
-  bookings,
-  isLoading,
-  onConfirm,
-  onReject,
-}: PendingTabProps) {
-  if (isLoading) {
-    return (
-      <div className="space-y-3">
-        {[1, 2].map((i) => (
-          <Skeleton key={i} className="h-48 rounded-xl" />
-        ))}
-      </div>
-    );
-  }
-
-  if (bookings.length === 0) {
-    return (
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        className="flex flex-col items-center justify-center py-20 text-muted-foreground rounded-2xl"
-        style={{ border: "1px dashed oklch(var(--border) / 0.4)" }}
-        data-ocid="pending-bookings.empty_state"
-      >
-        <Inbox className="w-12 h-12 mb-3 opacity-30" />
-        <p className="text-base font-medium">Queue is clear</p>
-        <p className="text-sm opacity-60 mt-1">No pending booking requests</p>
-      </motion.div>
-    );
-  }
+  const fields = [
+    { label: "Full Name", value: displayName, isName: true },
+    { label: "Email", value: profile?.email ?? user?.email ?? "—" },
+    { label: "Phone", value: profile?.phone ?? user?.phone ?? "—" },
+    { label: "Role", value: "Receptionist" },
+    { label: "Status", value: String(profile?.status ?? "Active") },
+    { label: "Address", value: profile?.address ?? "—" },
+  ];
 
   return (
-    <div className="space-y-4" data-ocid="pending-bookings.list">
-      <AnimatePresence mode="popLayout">
-        {bookings.map((booking, i) => {
-          const timeLabel =
-            TIME_SLOT_LABELS[String(booking.timeSlot)] ??
-            String(booking.timeSlot);
-          const locationLabel = getLocationLabel(booking.location);
-          return (
-            <motion.div
-              key={String(booking.id)}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, x: -24, scale: 0.96 }}
-              transition={{ duration: 0.35, delay: i * 0.06 }}
-              className="rounded-xl p-5 service-card-hover"
-              style={{
-                background: "oklch(var(--card) / 0.55)",
-                backdropFilter: "blur(12px)",
-                border: "1px solid oklch(var(--border) / 0.45)",
-              }}
-              data-ocid={`pending-booking.item.${i + 1}`}
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div
+        className="flex flex-col items-center py-8 mb-6 rounded-2xl"
+        style={{
+          background: "oklch(0.12 0.014 275 / 0.6)",
+          border: "1px solid oklch(0.22 0.018 275 / 0.4)",
+          backdropFilter: "blur(12px)",
+        }}
+      >
+        <div
+          className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold font-display mb-3"
+          style={{
+            background:
+              "linear-gradient(135deg, oklch(0.62 0.18 200 / 0.25), oklch(0.62 0.18 200 / 0.08))",
+            border: "2px solid oklch(0.62 0.18 200 / 0.5)",
+            color: "oklch(0.72 0.16 200)",
+          }}
+        >
+          {initials || <User className="w-8 h-8" />}
+        </div>
+        <h2 className="text-xl font-display font-bold text-foreground">
+          {displayName}
+        </h2>
+        <p className="text-xs text-muted-foreground mt-1">
+          RAP Studio · Receptionist
+        </p>
+        <Badge
+          className="mt-2 text-[10px] border"
+          style={{
+            background: "oklch(0.62 0.18 200 / 0.12)",
+            color: "oklch(0.72 0.16 200)",
+            borderColor: "oklch(0.62 0.18 200 / 0.35)",
+          }}
+        >
+          Receptionist
+        </Badge>
+      </div>
+
+      <div
+        className="rounded-2xl overflow-hidden mb-4"
+        style={{
+          background: "oklch(0.12 0.014 275 / 0.5)",
+          border: "1px solid oklch(0.22 0.018 275 / 0.4)",
+          backdropFilter: "blur(10px)",
+        }}
+      >
+        {fields.map((f, i) => (
+          <div
+            key={f.label}
+            className={`flex items-center gap-4 px-5 py-3.5 ${i < fields.length - 1 ? "border-b border-border/20" : ""}`}
+          >
+            <div
+              className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+              style={{ background: "oklch(0.62 0.18 200 / 0.12)" }}
             >
-              {/* Top row */}
-              <div className="flex items-start justify-between gap-3 mb-3">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span
-                      className="text-xs font-bold uppercase tracking-widest px-1.5 py-0.5 rounded"
-                      style={{
-                        background: "oklch(var(--primary) / 0.12)",
-                        color: "oklch(var(--primary))",
-                      }}
-                    >
-                      #{String(booking.id).slice(-6)}
-                    </span>
-                    <span className="font-semibold text-foreground text-sm truncate capitalize">
-                      {booking.serviceId?.replace(/_/g, " ") || "—"}
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground capitalize">
-                    {booking.subService?.replace(/_/g, " ") || "—"}
-                  </p>
-                </div>
-                <Badge className="text-[10px] font-semibold border bg-amber-500/15 text-amber-400 border-amber-500/30 flex-shrink-0">
-                  Pending
-                </Badge>
-              </div>
-
-              {/* Details grid */}
-              <div className="grid grid-cols-2 gap-2 mb-3">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Calendar className="w-3.5 h-3.5 text-primary/70" />
-                  {booking.date}
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Clock className="w-3.5 h-3.5 text-primary/70" />
-                  {timeLabel}
-                </div>
-                <div className="flex items-center gap-2 text-xs text-muted-foreground col-span-2">
-                  <MapPin className="w-3.5 h-3.5 text-primary/70 flex-shrink-0" />
-                  <span className="truncate">{locationLabel}</span>
-                </div>
-                {booking.duration && (
-                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                    <span className="text-primary/70">⏱</span>
-                    {booking.duration}
-                  </div>
-                )}
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <span className="text-primary/70">🕐</span>
-                  {formatTimestamp(booking.createdAt)}
-                </div>
-              </div>
-
-              {booking.notes && (
-                <p className="text-xs text-muted-foreground italic mb-3 line-clamp-2 bg-muted/20 rounded-lg px-3 py-2">
-                  "{booking.notes}"
+              <User
+                className="w-4 h-4"
+                style={{ color: "oklch(0.62 0.18 200)" }}
+              />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                {f.label}
+              </p>
+              {editing && f.isName ? (
+                <Input
+                  value={displayName}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  className="mt-0.5 h-7 text-sm"
+                  data-ocid="profile.name_input"
+                />
+              ) : (
+                <p className="text-sm text-foreground font-medium truncate">
+                  {f.value}
                 </p>
               )}
+            </div>
+          </div>
+        ))}
+      </div>
 
-              {/* Action buttons */}
-              <div className="flex flex-wrap gap-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  className="flex-1 gap-1.5 text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md"
-                  onClick={() => onConfirm(booking)}
-                  data-ocid={`pending-booking.confirm_button.${i + 1}`}
-                >
-                  <CheckCircle className="w-3.5 h-3.5" />
-                  Confirm Booking
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="destructive"
-                  className="flex-1 gap-1.5 text-xs font-semibold"
-                  onClick={() => onReject(booking)}
-                  data-ocid={`pending-booking.delete_button.${i + 1}`}
-                >
-                  <XCircle className="w-3.5 h-3.5" />
-                  Reject
-                </Button>
-                <a
-                  href={`https://wa.me/917338501228?text=${encodeURIComponent(`Booking #${String(booking.id).slice(-6)} — ${(booking.serviceId ?? "—").replace(/_/g, " ")} on ${booking.date} at ${timeLabel}`)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 transition-colors px-2"
-                  data-ocid={`pending-booking.whatsapp.${i + 1}`}
-                >
-                  <MessageCircle className="w-3.5 h-3.5" />
-                  WhatsApp
-                </a>
-              </div>
-            </motion.div>
-          );
-        })}
-      </AnimatePresence>
-    </div>
+      <Button
+        type="button"
+        variant={editing ? "default" : "outline"}
+        className={`w-full gap-2 ${editing ? "btn-primary-luxury" : ""}`}
+        onClick={() => setEditing((v) => !v)}
+        data-ocid="profile.edit_button"
+      >
+        {editing ? (
+          <>
+            <CheckCircle2 className="w-4 h-4" />
+            Save Changes
+          </>
+        ) : (
+          <>
+            <Pencil className="w-4 h-4" />
+            Edit Profile
+          </>
+        )}
+      </Button>
+    </motion.div>
   );
 }
 
 // ── Main Dashboard ────────────────────────────────────────────────────────────
+
+function ReceptionistThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="gap-1.5 text-xs border-border/40"
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      aria-label="Toggle theme"
+      data-ocid="receptionist.theme_toggle"
+    >
+      {theme === "dark" ? (
+        <Sun className="w-3.5 h-3.5" />
+      ) : (
+        <Moon className="w-3.5 h-3.5" />
+      )}
+      {theme === "dark" ? "Light" : "Dark"}
+    </Button>
+  );
+}
 
 export function ReceptionistDashboard() {
   const { isAuthenticated, user, logout } = useAuth();
   const { data: profile } = useUserProfile();
   const navigate = useNavigate();
 
-  // Real backend data with 5s polling
   const {
     data: allBookings = [],
     isLoading: bookingsLoading,
@@ -1104,21 +1116,16 @@ export function ReceptionistDashboard() {
     refetch,
   } = useAllBookings();
 
-  // Mutations
   const confirmMutation = useConfirmBooking();
   const rejectMutation = useRejectBooking();
   const rescheduleMutation = useRescheduleBooking();
 
-  // Tabs
-  const [activeTab, setActiveTab] = useState("pending");
-
-  // Modal state
+  const [activeTab, setActiveTab] = useState("bookings");
   const [rejectTarget, setRejectTarget] = useState<BackendBooking | null>(null);
   const [rescheduleTarget, setRescheduleTarget] =
     useState<BackendBooking | null>(null);
   const [viewTarget, setViewTarget] = useState<BackendBooking | null>(null);
 
-  // Live indicator: "Updated Ns ago"
   const [secsAgo, setSecsAgo] = useState(0);
   const dataUpdatedAtRef = useRef(dataUpdatedAt);
   useEffect(() => {
@@ -1138,10 +1145,10 @@ export function ReceptionistDashboard() {
     .toUpperCase()
     .slice(0, 2);
 
-  // Derived data
-  const pendingBookings = useMemo(
+  const pendingCount = useMemo(
     () =>
-      allBookings.filter((b) => getStatusFromBackend(b.status) === "pending"),
+      allBookings.filter((b) => getStatusFromBackend(b.status) === "pending")
+        .length,
     [allBookings],
   );
   const confirmedCount = useMemo(
@@ -1151,21 +1158,19 @@ export function ReceptionistDashboard() {
       ).length,
     [allBookings],
   );
-
-  // Booked dates set for calendar (all bookings)
   const bookedDates = useMemo(
-    () => new Set(allBookings.map((b) => b.date)),
+    () => new Set(allBookings.map((b) => b.date ?? "")),
     [allBookings],
   );
-
-  // ── Handlers ────────────────────────────────────────────────────────────────
 
   async function handleConfirm(booking: BackendBooking) {
     try {
       await confirmMutation.mutateAsync(bookingIdToNumber(booking.id));
-      toast.success(`Booking #${String(booking.id).slice(-6)} confirmed!`);
+      toast.success(
+        `Booking #${String(booking.id ?? "").slice(-6)} confirmed!`,
+      );
     } catch (err) {
-      toast.error("Failed to confirm booking. Please try again.");
+      toast.error("Failed to confirm booking.");
       console.error(err);
     }
   }
@@ -1177,10 +1182,12 @@ export function ReceptionistDashboard() {
         bookingId: bookingIdToNumber(rejectTarget.id),
         reason,
       });
-      toast.success(`Booking #${String(rejectTarget.id).slice(-6)} rejected.`);
+      toast.success(
+        `Booking #${String(rejectTarget.id ?? "").slice(-6)} rejected.`,
+      );
       setRejectTarget(null);
     } catch (err) {
-      toast.error("Failed to reject booking. Please try again.");
+      toast.error("Failed to reject booking.");
       console.error(err);
     }
   }
@@ -1193,12 +1200,10 @@ export function ReceptionistDashboard() {
         newDate,
         newTime,
       });
-      toast.success(
-        `Booking #${String(rescheduleTarget.id).slice(-6)} rescheduled to ${newDate}.`,
-      );
+      toast.success(`Booking rescheduled to ${newDate}.`);
       setRescheduleTarget(null);
     } catch (err) {
-      toast.error("Failed to reschedule booking. Please try again.");
+      toast.error("Failed to reschedule booking.");
       console.error(err);
     }
   }
@@ -1224,7 +1229,7 @@ export function ReceptionistDashboard() {
 
   return (
     <Layout>
-      {/* Dashboard Header */}
+      {/* Header */}
       <div
         className="border-b border-border/20"
         style={{
@@ -1240,7 +1245,6 @@ export function ReceptionistDashboard() {
             className="flex items-center justify-between gap-4 flex-wrap"
           >
             <div className="flex items-center gap-4">
-              {/* Avatar */}
               <div
                 className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold font-display flex-shrink-0"
                 style={{
@@ -1278,8 +1282,7 @@ export function ReceptionistDashboard() {
                   📋
                 </h1>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  Manage booking requests and coordinate with the RAP Studio
-                  team
+                  Manage bookings and coordinate with the RAP Studio team
                 </p>
               </div>
             </div>
@@ -1306,6 +1309,7 @@ export function ReceptionistDashboard() {
                 <RefreshCw className="w-3.5 h-3.5" />
                 Refresh
               </Button>
+              <ReceptionistThemeToggle />
               <Button
                 type="button"
                 variant="outline"
@@ -1333,7 +1337,7 @@ export function ReceptionistDashboard() {
           {[
             {
               label: "Pending",
-              value: pendingBookings.length,
+              value: pendingCount,
               color: "text-amber-400",
               bg: "oklch(0.72 0.18 85 / 0.08)",
               border: "oklch(0.72 0.18 85 / 0.25)",
@@ -1388,25 +1392,17 @@ export function ReceptionistDashboard() {
               }}
             >
               <TabsTrigger
-                value="pending"
+                value="bookings"
                 className="gap-2 text-sm"
-                data-ocid="receptionist.tab.pending"
-              >
-                <Inbox className="w-4 h-4" />
-                Pending
-                {pendingBookings.length > 0 && !bookingsLoading && (
-                  <Badge className="ml-1 text-[10px] bg-amber-500/20 text-amber-300 border-0 h-4 px-1.5">
-                    {pendingBookings.length}
-                  </Badge>
-                )}
-              </TabsTrigger>
-              <TabsTrigger
-                value="all"
-                className="gap-2 text-sm"
-                data-ocid="receptionist.tab.all_bookings"
+                data-ocid="receptionist.tab.bookings"
               >
                 <List className="w-4 h-4" />
-                All Bookings
+                Bookings
+                {pendingCount > 0 && !bookingsLoading && (
+                  <Badge className="ml-1 text-[10px] bg-amber-500/20 text-amber-300 border-0 h-4 px-1.5">
+                    {pendingCount}
+                  </Badge>
+                )}
               </TabsTrigger>
               <TabsTrigger
                 value="calendar"
@@ -1416,9 +1412,16 @@ export function ReceptionistDashboard() {
                 <CalendarDays className="w-4 h-4" />
                 Calendar
               </TabsTrigger>
+              <TabsTrigger
+                value="profile"
+                className="gap-2 text-sm"
+                data-ocid="receptionist.tab.profile"
+              >
+                <User className="w-4 h-4" />
+                Profile
+              </TabsTrigger>
             </TabsList>
 
-            {/* Live indicator */}
             <div className="flex items-center gap-3">
               <LiveIndicator
                 updatedAt={dataUpdatedAt}
@@ -1433,39 +1436,21 @@ export function ReceptionistDashboard() {
             </div>
           </div>
 
-          {/* Pending Tab */}
-          <TabsContent value="pending">
+          {/* Bookings Tab */}
+          <TabsContent value="bookings">
             <AnimatePresence mode="wait">
               <motion.div
-                key="tab-pending"
+                key="tab-bookings"
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.25 }}
               >
-                <PendingTab
-                  bookings={pendingBookings}
+                <BookingsTab
+                  bookings={allBookings}
                   isLoading={bookingsLoading}
                   onConfirm={handleConfirm}
                   onReject={(b) => setRejectTarget(b)}
-                />
-              </motion.div>
-            </AnimatePresence>
-          </TabsContent>
-
-          {/* All Bookings Tab */}
-          <TabsContent value="all">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key="tab-all"
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.25 }}
-              >
-                <AllBookingsTab
-                  bookings={allBookings}
-                  isLoading={bookingsLoading}
                   onReschedule={(b) => setRescheduleTarget(b)}
                   onViewDetails={(b) => setViewTarget(b)}
                 />
@@ -1487,27 +1472,52 @@ export function ReceptionistDashboard() {
               </motion.div>
             </AnimatePresence>
           </TabsContent>
+
+          {/* Profile Tab */}
+          <TabsContent value="profile">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key="tab-profile"
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -8 }}
+                transition={{ duration: 0.25 }}
+              >
+                <ReceptionistProfileTab
+                  name={name}
+                  user={
+                    user
+                      ? {
+                          email: (user as { email?: string }).email,
+                          phone: (user as { phone?: string }).phone,
+                          name: (user as { name?: string }).name,
+                        }
+                      : null
+                  }
+                  profile={profile}
+                />
+              </motion.div>
+            </AnimatePresence>
+          </TabsContent>
         </Tabs>
       </div>
 
       {/* Modals */}
       <RejectModal
-        bookingId={rejectTarget ? String(rejectTarget.id) : ""}
+        bookingId={rejectTarget ? String(rejectTarget.id ?? "") : ""}
         open={!!rejectTarget}
         isPending={rejectMutation.isPending}
         onConfirm={handleRejectConfirm}
         onClose={() => setRejectTarget(null)}
       />
-
       <RescheduleModal
-        bookingId={rescheduleTarget ? String(rescheduleTarget.id) : ""}
+        bookingId={rescheduleTarget ? String(rescheduleTarget.id ?? "") : ""}
         currentDate={rescheduleTarget?.date ?? ""}
         open={!!rescheduleTarget}
         isPending={rescheduleMutation.isPending}
         onConfirm={handleRescheduleConfirm}
         onClose={() => setRescheduleTarget(null)}
       />
-
       <ViewDetailsModal
         booking={viewTarget}
         open={!!viewTarget}

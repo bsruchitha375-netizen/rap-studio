@@ -163,6 +163,7 @@ export const PaymentStatus = IDL.Variant({
 });
 export const PaymentType = IDL.Variant({
   'BookingBalance' : IDL.Null,
+  'CertificateDownload' : IDL.Null,
   'CourseEnrollment' : IDL.Null,
   'BookingUpfront' : IDL.Null,
 });
@@ -339,6 +340,44 @@ export const Certificate = IDL.Record({
   'courseName' : IDL.Text,
   'courseId' : CourseId,
 });
+export const ServiceRevenue = IDL.Record({
+  'serviceName' : IDL.Text,
+  'revenue' : IDL.Nat,
+  'serviceId' : IDL.Text,
+  'bookingCount' : IDL.Nat,
+});
+export const AnalyticsSummary = IDL.Record({
+  'pendingFeedbackCount' : IDL.Nat,
+  'pendingBookings' : IDL.Nat,
+  'totalEnrollments' : IDL.Nat,
+  'emailLogCount' : IDL.Nat,
+  'cancelledBookings' : IDL.Nat,
+  'totalBookings' : IDL.Nat,
+  'totalCourseRevenue' : IDL.Nat,
+  'totalMultiServiceBookings' : IDL.Nat,
+  'totalFeedback' : IDL.Nat,
+  'confirmedBookings' : IDL.Nat,
+  'completedBookings' : IDL.Nat,
+  'totalUsers' : IDL.Nat,
+  'totalRevenue' : IDL.Nat,
+  'totalCmsEntries' : IDL.Nat,
+  'revenueByService' : IDL.Vec(ServiceRevenue),
+});
+export const ActivityEventKind = IDL.Variant({
+  'Login' : IDL.Null,
+  'Registration' : IDL.Null,
+  'Booking' : IDL.Null,
+  'Enrollment' : IDL.Null,
+  'Payment' : IDL.Null,
+});
+export const ActivityEvent = IDL.Record({
+  'id' : IDL.Text,
+  'title' : IDL.Text,
+  'userId' : UserId,
+  'kind' : ActivityEventKind,
+  'detail' : IDL.Text,
+  'timestamp' : Timestamp,
+});
 export const AdminPaymentEntry = IDL.Record({
   'enrollmentId' : IDL.Opt(EnrollmentId),
   'bookingId' : IDL.Opt(BookingId),
@@ -363,21 +402,6 @@ export const PaymentOrderExtended = IDL.Record({
   'adminNotes' : IDL.Opt(IDL.Text),
   'paidAt' : IDL.Opt(Timestamp),
 });
-export const ActivityEventKind = IDL.Variant({
-  'Login' : IDL.Null,
-  'Registration' : IDL.Null,
-  'Booking' : IDL.Null,
-  'Enrollment' : IDL.Null,
-  'Payment' : IDL.Null,
-});
-export const ActivityEvent = IDL.Record({
-  'id' : IDL.Text,
-  'title' : IDL.Text,
-  'userId' : UserId,
-  'kind' : ActivityEventKind,
-  'detail' : IDL.Text,
-  'timestamp' : Timestamp,
-});
 export const CmsContentType = IDL.Variant({
   'color' : IDL.Null,
   'text' : IDL.Null,
@@ -401,29 +425,6 @@ export const Course = IDL.Record({
   'imageUrl' : IDL.Text,
   'category' : IDL.Text,
   'price' : IDL.Nat,
-});
-export const ServiceRevenue = IDL.Record({
-  'serviceName' : IDL.Text,
-  'revenue' : IDL.Nat,
-  'serviceId' : IDL.Text,
-  'bookingCount' : IDL.Nat,
-});
-export const AnalyticsSummary = IDL.Record({
-  'pendingFeedbackCount' : IDL.Nat,
-  'pendingBookings' : IDL.Nat,
-  'totalEnrollments' : IDL.Nat,
-  'emailLogCount' : IDL.Nat,
-  'cancelledBookings' : IDL.Nat,
-  'totalBookings' : IDL.Nat,
-  'totalCourseRevenue' : IDL.Nat,
-  'totalMultiServiceBookings' : IDL.Nat,
-  'totalFeedback' : IDL.Nat,
-  'confirmedBookings' : IDL.Nat,
-  'completedBookings' : IDL.Nat,
-  'totalUsers' : IDL.Nat,
-  'totalRevenue' : IDL.Nat,
-  'totalCmsEntries' : IDL.Nat,
-  'revenueByService' : IDL.Vec(ServiceRevenue),
 });
 export const EmailLog = IDL.Record({
   'id' : IDL.Nat,
@@ -642,6 +643,17 @@ export const idlService = IDL.Service({
     ),
   'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole__1], [], []),
   'assignWork' : IDL.Func([WorkAssignmentInput], [WorkAssignment], []),
+  'bootstrapAdminProfile' : IDL.Func(
+      [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+      [IDL.Variant({ 'ok' : PublicProfile, 'err' : IDL.Text })],
+      [],
+    ),
+  'bulkGetUserProfiles' : IDL.Func(
+      [IDL.Vec(UserId)],
+      [IDL.Vec(PublicProfile)],
+      ['query'],
+    ),
+  'clearStaleEnrollments' : IDL.Func([], [IDL.Nat], []),
   'confirmBooking' : IDL.Func([BookingId], [IDL.Bool], []),
   'confirmPayment' : IDL.Func([StripeConfirmation], [IDL.Bool], []),
   'createBookingRequest' : IDL.Func([BookingInput], [BookingRequest], []),
@@ -672,9 +684,71 @@ export const idlService = IDL.Service({
   'editQuizQuestion' : IDL.Func([IDL.Nat, QuizQuestionInput], [IDL.Bool], []),
   'enrollCourse' : IDL.Func([CourseId], [CourseEnrollment], []),
   'generateCertificate' : IDL.Func([EnrollmentId], [Certificate], []),
+  'getAdminBookings' : IDL.Func(
+      [],
+      [
+        IDL.Vec(
+          IDL.Record({
+            'id' : BookingId,
+            'status' : BookingStatus,
+            'duration' : IDL.Text,
+            'clientName' : IDL.Text,
+            'rejectedReason' : IDL.Opt(IDL.Text),
+            'userId' : UserId,
+            'date' : IDL.Text,
+            'createdAt' : Timestamp,
+            'clientEmail' : IDL.Text,
+            'rescheduledDate' : IDL.Opt(IDL.Text),
+            'rescheduledTime' : IDL.Opt(IDL.Text),
+            'subService' : IDL.Text,
+            'notes' : IDL.Opt(IDL.Text),
+            'serviceId' : IDL.Text,
+            'location' : LocationType,
+            'timeSlot' : TimeSlot,
+          })
+        ),
+      ],
+      ['query'],
+    ),
   'getAdminCourseBlob' : IDL.Func(
       [CourseId],
       [IDL.Opt(IDL.Vec(IDL.Nat8))],
+      ['query'],
+    ),
+  'getAdminDashboardData' : IDL.Func(
+      [],
+      [
+        IDL.Record({
+          'totalEnrollments' : IDL.Nat,
+          'pendingUsers' : IDL.Vec(PublicProfile),
+          'totalPayments' : IDL.Nat,
+          'totalBookings' : IDL.Nat,
+          'analytics' : AnalyticsSummary,
+          'recentActivity' : IDL.Vec(ActivityEvent),
+          'totalUsers' : IDL.Nat,
+        }),
+      ],
+      ['query'],
+    ),
+  'getAdminEnrollments' : IDL.Func(
+      [],
+      [
+        IDL.Vec(
+          IDL.Record({
+            'id' : EnrollmentId,
+            'completedAt' : IDL.Opt(Timestamp),
+            'studentEmail' : IDL.Text,
+            'paymentStatus' : PaymentStatus__1,
+            'studentName' : IDL.Text,
+            'userId' : UserId,
+            'progress' : IDL.Nat,
+            'enrolledAt' : Timestamp,
+            'courseName' : IDL.Text,
+            'certificateCode' : IDL.Opt(IDL.Text),
+            'courseId' : CourseId,
+          })
+        ),
+      ],
       ['query'],
     ),
   'getAdminPaymentDashboard' : IDL.Func(
@@ -725,10 +799,27 @@ export const idlService = IDL.Service({
       [IDL.Opt(CourseLessonProgress)],
       ['query'],
     ),
+  'getCourseProgressByEnrollment' : IDL.Func(
+      [EnrollmentId],
+      [IDL.Opt(CourseLessonProgress)],
+      ['query'],
+    ),
   'getEmailLogs' : IDL.Func([], [IDL.Vec(EmailLog)], ['query']),
   'getEnrollmentById' : IDL.Func(
       [EnrollmentId],
       [IDL.Opt(CourseEnrollment)],
+      ['query'],
+    ),
+  'getEnrollmentsByCourse' : IDL.Func(
+      [CourseId],
+      [
+        IDL.Vec(
+          IDL.Record({
+            'progress' : IDL.Opt(CourseLessonProgress),
+            'enrollment' : CourseEnrollment,
+          })
+        ),
+      ],
       ['query'],
     ),
   'getFeedbackForTarget' : IDL.Func([IDL.Text], [IDL.Vec(Feedback)], ['query']),
@@ -745,6 +836,11 @@ export const idlService = IDL.Service({
     ),
   'getMyAssignedWork' : IDL.Func([], [IDL.Vec(WorkAssignment)], ['query']),
   'getMyBookings' : IDL.Func([], [IDL.Vec(BookingRequest)], ['query']),
+  'getMyCertificate' : IDL.Func(
+      [EnrollmentId],
+      [IDL.Opt(Certificate)],
+      ['query'],
+    ),
   'getMyEnrollments' : IDL.Func([], [IDL.Vec(CourseEnrollment)], ['query']),
   'getMyFeedback' : IDL.Func([], [IDL.Vec(Feedback)], ['query']),
   'getMyMultiServiceBookings' : IDL.Func(
@@ -797,6 +893,7 @@ export const idlService = IDL.Service({
     ),
   'getWhatsAppLogs' : IDL.Func([], [IDL.Vec(WhatsAppLog)], ['query']),
   'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+  'isCertificatePaymentDone' : IDL.Func([EnrollmentId], [IDL.Bool], ['query']),
   'listMyPayments' : IDL.Func([], [IDL.Vec(PaymentOrder)], ['query']),
   'listPendingUsers' : IDL.Func([], [IDL.Vec(PublicProfile)], ['query']),
   'loginByEmail' : IDL.Func(
@@ -819,6 +916,18 @@ export const idlService = IDL.Service({
   'markNotificationRead' : IDL.Func([NotificationId], [IDL.Bool], []),
   'markVideoWatched' : IDL.Func([IDL.Nat], [LessonProgress], []),
   'markWorkDelivered' : IDL.Func([BookingId], [IDL.Bool], []),
+  'ping' : IDL.Func(
+      [],
+      [
+        IDL.Record({
+          'status' : IDL.Text,
+          'userCount' : IDL.Nat,
+          'bookingCount' : IDL.Nat,
+          'enrollmentCount' : IDL.Nat,
+        }),
+      ],
+      ['query'],
+    ),
   'register' : IDL.Func(
       [
         IDL.Text,
@@ -895,6 +1004,7 @@ export const idlService = IDL.Service({
       [IDL.Bool],
       [],
     ),
+  'updateCourseMode' : IDL.Func([CourseId, CourseMode], [IDL.Bool], []),
   'updateCourseProgress' : IDL.Func([CourseId, IDL.Bool], [IDL.Bool], []),
   'updateProfile' : IDL.Func(
       [IDL.Text, IDL.Text, IDL.Opt(IDL.Text)],
@@ -1068,6 +1178,7 @@ export const idlFactory = ({ IDL }) => {
   });
   const PaymentType = IDL.Variant({
     'BookingBalance' : IDL.Null,
+    'CertificateDownload' : IDL.Null,
     'CourseEnrollment' : IDL.Null,
     'BookingUpfront' : IDL.Null,
   });
@@ -1244,6 +1355,44 @@ export const idlFactory = ({ IDL }) => {
     'courseName' : IDL.Text,
     'courseId' : CourseId,
   });
+  const ServiceRevenue = IDL.Record({
+    'serviceName' : IDL.Text,
+    'revenue' : IDL.Nat,
+    'serviceId' : IDL.Text,
+    'bookingCount' : IDL.Nat,
+  });
+  const AnalyticsSummary = IDL.Record({
+    'pendingFeedbackCount' : IDL.Nat,
+    'pendingBookings' : IDL.Nat,
+    'totalEnrollments' : IDL.Nat,
+    'emailLogCount' : IDL.Nat,
+    'cancelledBookings' : IDL.Nat,
+    'totalBookings' : IDL.Nat,
+    'totalCourseRevenue' : IDL.Nat,
+    'totalMultiServiceBookings' : IDL.Nat,
+    'totalFeedback' : IDL.Nat,
+    'confirmedBookings' : IDL.Nat,
+    'completedBookings' : IDL.Nat,
+    'totalUsers' : IDL.Nat,
+    'totalRevenue' : IDL.Nat,
+    'totalCmsEntries' : IDL.Nat,
+    'revenueByService' : IDL.Vec(ServiceRevenue),
+  });
+  const ActivityEventKind = IDL.Variant({
+    'Login' : IDL.Null,
+    'Registration' : IDL.Null,
+    'Booking' : IDL.Null,
+    'Enrollment' : IDL.Null,
+    'Payment' : IDL.Null,
+  });
+  const ActivityEvent = IDL.Record({
+    'id' : IDL.Text,
+    'title' : IDL.Text,
+    'userId' : UserId,
+    'kind' : ActivityEventKind,
+    'detail' : IDL.Text,
+    'timestamp' : Timestamp,
+  });
   const AdminPaymentEntry = IDL.Record({
     'enrollmentId' : IDL.Opt(EnrollmentId),
     'bookingId' : IDL.Opt(BookingId),
@@ -1268,21 +1417,6 @@ export const idlFactory = ({ IDL }) => {
     'adminNotes' : IDL.Opt(IDL.Text),
     'paidAt' : IDL.Opt(Timestamp),
   });
-  const ActivityEventKind = IDL.Variant({
-    'Login' : IDL.Null,
-    'Registration' : IDL.Null,
-    'Booking' : IDL.Null,
-    'Enrollment' : IDL.Null,
-    'Payment' : IDL.Null,
-  });
-  const ActivityEvent = IDL.Record({
-    'id' : IDL.Text,
-    'title' : IDL.Text,
-    'userId' : UserId,
-    'kind' : ActivityEventKind,
-    'detail' : IDL.Text,
-    'timestamp' : Timestamp,
-  });
   const CmsContentType = IDL.Variant({
     'color' : IDL.Null,
     'text' : IDL.Null,
@@ -1306,29 +1440,6 @@ export const idlFactory = ({ IDL }) => {
     'imageUrl' : IDL.Text,
     'category' : IDL.Text,
     'price' : IDL.Nat,
-  });
-  const ServiceRevenue = IDL.Record({
-    'serviceName' : IDL.Text,
-    'revenue' : IDL.Nat,
-    'serviceId' : IDL.Text,
-    'bookingCount' : IDL.Nat,
-  });
-  const AnalyticsSummary = IDL.Record({
-    'pendingFeedbackCount' : IDL.Nat,
-    'pendingBookings' : IDL.Nat,
-    'totalEnrollments' : IDL.Nat,
-    'emailLogCount' : IDL.Nat,
-    'cancelledBookings' : IDL.Nat,
-    'totalBookings' : IDL.Nat,
-    'totalCourseRevenue' : IDL.Nat,
-    'totalMultiServiceBookings' : IDL.Nat,
-    'totalFeedback' : IDL.Nat,
-    'confirmedBookings' : IDL.Nat,
-    'completedBookings' : IDL.Nat,
-    'totalUsers' : IDL.Nat,
-    'totalRevenue' : IDL.Nat,
-    'totalCmsEntries' : IDL.Nat,
-    'revenueByService' : IDL.Vec(ServiceRevenue),
   });
   const EmailLog = IDL.Record({
     'id' : IDL.Nat,
@@ -1552,6 +1663,17 @@ export const idlFactory = ({ IDL }) => {
       ),
     'assignCallerUserRole' : IDL.Func([IDL.Principal, UserRole__1], [], []),
     'assignWork' : IDL.Func([WorkAssignmentInput], [WorkAssignment], []),
+    'bootstrapAdminProfile' : IDL.Func(
+        [IDL.Text, IDL.Text, IDL.Text, IDL.Text],
+        [IDL.Variant({ 'ok' : PublicProfile, 'err' : IDL.Text })],
+        [],
+      ),
+    'bulkGetUserProfiles' : IDL.Func(
+        [IDL.Vec(UserId)],
+        [IDL.Vec(PublicProfile)],
+        ['query'],
+      ),
+    'clearStaleEnrollments' : IDL.Func([], [IDL.Nat], []),
     'confirmBooking' : IDL.Func([BookingId], [IDL.Bool], []),
     'confirmPayment' : IDL.Func([StripeConfirmation], [IDL.Bool], []),
     'createBookingRequest' : IDL.Func([BookingInput], [BookingRequest], []),
@@ -1582,9 +1704,71 @@ export const idlFactory = ({ IDL }) => {
     'editQuizQuestion' : IDL.Func([IDL.Nat, QuizQuestionInput], [IDL.Bool], []),
     'enrollCourse' : IDL.Func([CourseId], [CourseEnrollment], []),
     'generateCertificate' : IDL.Func([EnrollmentId], [Certificate], []),
+    'getAdminBookings' : IDL.Func(
+        [],
+        [
+          IDL.Vec(
+            IDL.Record({
+              'id' : BookingId,
+              'status' : BookingStatus,
+              'duration' : IDL.Text,
+              'clientName' : IDL.Text,
+              'rejectedReason' : IDL.Opt(IDL.Text),
+              'userId' : UserId,
+              'date' : IDL.Text,
+              'createdAt' : Timestamp,
+              'clientEmail' : IDL.Text,
+              'rescheduledDate' : IDL.Opt(IDL.Text),
+              'rescheduledTime' : IDL.Opt(IDL.Text),
+              'subService' : IDL.Text,
+              'notes' : IDL.Opt(IDL.Text),
+              'serviceId' : IDL.Text,
+              'location' : LocationType,
+              'timeSlot' : TimeSlot,
+            })
+          ),
+        ],
+        ['query'],
+      ),
     'getAdminCourseBlob' : IDL.Func(
         [CourseId],
         [IDL.Opt(IDL.Vec(IDL.Nat8))],
+        ['query'],
+      ),
+    'getAdminDashboardData' : IDL.Func(
+        [],
+        [
+          IDL.Record({
+            'totalEnrollments' : IDL.Nat,
+            'pendingUsers' : IDL.Vec(PublicProfile),
+            'totalPayments' : IDL.Nat,
+            'totalBookings' : IDL.Nat,
+            'analytics' : AnalyticsSummary,
+            'recentActivity' : IDL.Vec(ActivityEvent),
+            'totalUsers' : IDL.Nat,
+          }),
+        ],
+        ['query'],
+      ),
+    'getAdminEnrollments' : IDL.Func(
+        [],
+        [
+          IDL.Vec(
+            IDL.Record({
+              'id' : EnrollmentId,
+              'completedAt' : IDL.Opt(Timestamp),
+              'studentEmail' : IDL.Text,
+              'paymentStatus' : PaymentStatus__1,
+              'studentName' : IDL.Text,
+              'userId' : UserId,
+              'progress' : IDL.Nat,
+              'enrolledAt' : Timestamp,
+              'courseName' : IDL.Text,
+              'certificateCode' : IDL.Opt(IDL.Text),
+              'courseId' : CourseId,
+            })
+          ),
+        ],
         ['query'],
       ),
     'getAdminPaymentDashboard' : IDL.Func(
@@ -1639,10 +1823,27 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Opt(CourseLessonProgress)],
         ['query'],
       ),
+    'getCourseProgressByEnrollment' : IDL.Func(
+        [EnrollmentId],
+        [IDL.Opt(CourseLessonProgress)],
+        ['query'],
+      ),
     'getEmailLogs' : IDL.Func([], [IDL.Vec(EmailLog)], ['query']),
     'getEnrollmentById' : IDL.Func(
         [EnrollmentId],
         [IDL.Opt(CourseEnrollment)],
+        ['query'],
+      ),
+    'getEnrollmentsByCourse' : IDL.Func(
+        [CourseId],
+        [
+          IDL.Vec(
+            IDL.Record({
+              'progress' : IDL.Opt(CourseLessonProgress),
+              'enrollment' : CourseEnrollment,
+            })
+          ),
+        ],
         ['query'],
       ),
     'getFeedbackForTarget' : IDL.Func(
@@ -1663,6 +1864,11 @@ export const idlFactory = ({ IDL }) => {
       ),
     'getMyAssignedWork' : IDL.Func([], [IDL.Vec(WorkAssignment)], ['query']),
     'getMyBookings' : IDL.Func([], [IDL.Vec(BookingRequest)], ['query']),
+    'getMyCertificate' : IDL.Func(
+        [EnrollmentId],
+        [IDL.Opt(Certificate)],
+        ['query'],
+      ),
     'getMyEnrollments' : IDL.Func([], [IDL.Vec(CourseEnrollment)], ['query']),
     'getMyFeedback' : IDL.Func([], [IDL.Vec(Feedback)], ['query']),
     'getMyMultiServiceBookings' : IDL.Func(
@@ -1723,6 +1929,11 @@ export const idlFactory = ({ IDL }) => {
       ),
     'getWhatsAppLogs' : IDL.Func([], [IDL.Vec(WhatsAppLog)], ['query']),
     'isCallerAdmin' : IDL.Func([], [IDL.Bool], ['query']),
+    'isCertificatePaymentDone' : IDL.Func(
+        [EnrollmentId],
+        [IDL.Bool],
+        ['query'],
+      ),
     'listMyPayments' : IDL.Func([], [IDL.Vec(PaymentOrder)], ['query']),
     'listPendingUsers' : IDL.Func([], [IDL.Vec(PublicProfile)], ['query']),
     'loginByEmail' : IDL.Func(
@@ -1745,6 +1956,18 @@ export const idlFactory = ({ IDL }) => {
     'markNotificationRead' : IDL.Func([NotificationId], [IDL.Bool], []),
     'markVideoWatched' : IDL.Func([IDL.Nat], [LessonProgress], []),
     'markWorkDelivered' : IDL.Func([BookingId], [IDL.Bool], []),
+    'ping' : IDL.Func(
+        [],
+        [
+          IDL.Record({
+            'status' : IDL.Text,
+            'userCount' : IDL.Nat,
+            'bookingCount' : IDL.Nat,
+            'enrollmentCount' : IDL.Nat,
+          }),
+        ],
+        ['query'],
+      ),
     'register' : IDL.Func(
         [
           IDL.Text,
@@ -1825,6 +2048,7 @@ export const idlFactory = ({ IDL }) => {
         [IDL.Bool],
         [],
       ),
+    'updateCourseMode' : IDL.Func([CourseId, CourseMode], [IDL.Bool], []),
     'updateCourseProgress' : IDL.Func([CourseId, IDL.Bool], [IDL.Bool], []),
     'updateProfile' : IDL.Func(
         [IDL.Text, IDL.Text, IDL.Opt(IDL.Text)],

@@ -1,9 +1,9 @@
+import { ChatbotWidget } from "../components/chatbot/ChatbotWidget";
 import { AboutFounders } from "../components/home/AboutFounders";
-import { ClientStories } from "../components/home/ClientStories";
 import { ContactSection } from "../components/home/ContactSection";
 import { CourseCarouselPreview } from "../components/home/CourseCarouselPreview";
+import { GalleryPreview } from "../components/home/GalleryPreview";
 import { HeroSection } from "../components/home/HeroSection";
-import { PlatformFeatures } from "../components/home/PlatformFeatures";
 import { ServicesOrbitPreview } from "../components/home/ServicesOrbitPreview";
 import { WhyChooseUs } from "../components/home/WhyChooseUs";
 import { Layout } from "../components/layout/Layout";
@@ -13,12 +13,12 @@ export function HomePage() {
     <Layout>
       <HeroSection />
       <WhyChooseUs />
-      <PlatformFeatures />
       <ServicesOrbitPreview />
-      <ClientStories />
       <CourseCarouselPreview />
+      <GalleryPreview />
       <AboutFounders />
       <ContactSection />
+      <ChatbotWidget />
     </Layout>
   );
 }

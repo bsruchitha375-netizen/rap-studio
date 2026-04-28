@@ -14,12 +14,16 @@ import Common "../types/common";
 import FeedbackLib "feedback";
 
 module {
-  /// Persisted login event record stored in activityLog list.
+  /// Persisted activity event record stored in activityLog list.
+  /// Covers: login, registration, enrollment, booking, payment.
   public type LoginEvent = {
     userId : Common.UserId;
     userName : Text;
     userRole : UserTypes.UserRole;
     loginAt : Common.Timestamp;
+    // Extended fields (optional for backward compat)
+    eventKind : ?{ #Login; #Registration; #Enrollment; #Booking; #Payment };
+    detail : ?Text;
   };
 
   /// Appends a login event to the activityLog list.
@@ -34,6 +38,82 @@ module {
       userName = userName;
       userRole = userRole;
       loginAt = Time.now();
+      eventKind = ?#Login;
+      detail = null;
+    });
+  };
+
+  /// Appends a registration event to the activityLog list.
+  public func recordRegistrationEvent(
+    activityLog : List.List<LoginEvent>,
+    userId : Common.UserId,
+    userName : Text,
+    userRole : UserTypes.UserRole,
+  ) {
+    activityLog.add({
+      userId = userId;
+      userName = userName;
+      userRole = userRole;
+      loginAt = Time.now();
+      eventKind = ?#Registration;
+      detail = ?("Registered as " # roleText(userRole));
+    });
+  };
+
+  /// Appends an enrollment event to the activityLog list.
+  public func recordEnrollmentEvent(
+    activityLog : List.List<LoginEvent>,
+    userId : Common.UserId,
+    userName : Text,
+    userRole : UserTypes.UserRole,
+    courseId : Common.CourseId,
+  ) {
+    activityLog.add({
+      userId = userId;
+      userName = userName;
+      userRole = userRole;
+      loginAt = Time.now();
+      eventKind = ?#Enrollment;
+      detail = ?("Enrolled in course #" # courseId.toText());
+    });
+  };
+
+  /// Appends a booking event to the activityLog list.
+  public func recordBookingEvent(
+    activityLog : List.List<LoginEvent>,
+    userId : Common.UserId,
+    userName : Text,
+    userRole : UserTypes.UserRole,
+    bookingId : Common.BookingId,
+    serviceId : Text,
+  ) {
+    activityLog.add({
+      userId = userId;
+      userName = userName;
+      userRole = userRole;
+      loginAt = Time.now();
+      eventKind = ?#Booking;
+      detail = ?("Booked service " # serviceId # " (booking #" # bookingId.toText() # ")");
+    });
+  };
+
+  /// Appends a payment event to the activityLog list.
+  public func recordPaymentEvent(
+    activityLog : List.List<LoginEvent>,
+    userId : Common.UserId,
+    userName : Text,
+    userRole : UserTypes.UserRole,
+    amount : Nat,
+    referenceId : Text,
+  ) {
+    let amountRupees = amount / 100;
+    activityLog.add({
+      userId = userId;
+      userName = userName;
+      userRole = userRole;
+      loginAt = Time.now();
+      eventKind = ?#Payment;
+      detail = ?("Payment of ₹" # amountRupees.toText() # " confirmed for " # referenceId);
     });
   };
 
@@ -72,7 +152,7 @@ module {
         case (#Paid) {
           totalRevenue += p.amount;
           switch (p.paymentType) {
-            case (#CourseEnrollment) { courseRevenue += p.amount };
+            case (#CourseEnrollment or #CertificateDownload) { courseRevenue += p.amount };
             case _ {};
           };
         };
@@ -132,7 +212,7 @@ module {
     };
   };
 
-  /// Collects the last 50 activity events across bookings, enrollments, payments,
+  /// Collects the last 100 activity events across bookings, enrollments, payments,
   /// registrations, and login events, sorted by timestamp descending.
   public func getRecentActivity(
     bookings : List.List<ServiceTypes.BookingRequest>,
@@ -207,7 +287,7 @@ module {
       });
     };
 
-    // Registration events
+    // Registration events from profiles (sorted by registeredAt)
     for ((_, prof) in profiles.entries()) {
       events.add({
         id = "registration-" # prof.id.toText();
@@ -219,23 +299,42 @@ module {
       });
     };
 
-    // Login events
-    var loginIdx = 0;
+    // Activity log events (login + all rich events)
+    var logIdx = 0;
     for (ev in activityLog.values()) {
+      let kind : AnalyticsTypes.ActivityEventKind = switch (ev.eventKind) {
+        case (?(#Login))        { #Login };
+        case (?(#Registration)) { #Registration };
+        case (?(#Enrollment))   { #Enrollment };
+        case (?(#Booking))      { #Booking };
+        case (?(#Payment))      { #Payment };
+        case null               { #Login }; // legacy records
+      };
+      let kindText = switch (kind) {
+        case (#Login)        { "Login" };
+        case (#Registration) { "Registration" };
+        case (#Enrollment)   { "Enrollment" };
+        case (#Booking)      { "Booking" };
+        case (#Payment)      { "Payment" };
+      };
+      let detailText = switch (ev.detail) {
+        case (?d) { d };
+        case null { ev.userName # " — " # roleText(ev.userRole) };
+      };
       events.add({
-        id = "login-" # loginIdx.toText();
-        kind = #Login;
-        title = "User Login — " # ev.userName;
-        detail = ev.userName # " logged in as " # roleText(ev.userRole);
+        id = "activity-" # logIdx.toText();
+        kind = kind;
+        title = kindText # " — " # ev.userName;
+        detail = detailText;
         userId = ev.userId;
         timestamp = ev.loginAt;
       });
-      loginIdx += 1;
+      logIdx += 1;
     };
 
-    // Sort descending by timestamp, take top 50
+    // Sort descending by timestamp, take top 100
     let sorted = events.sort(func(a, b) { Int.compare(b.timestamp, a.timestamp) });
-    sorted.toArray().sliceToArray(0, 50);
+    sorted.toArray().sliceToArray(0, 100);
   };
 
   func roleText(role : UserTypes.UserRole) : Text {

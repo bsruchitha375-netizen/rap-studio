@@ -11,64 +11,26 @@ import {
   XCircle,
 } from "lucide-react";
 import { motion } from "motion/react";
-import type { BookingRequest, BookingStatus } from "../../types";
+import type { BookingRequest as BackendBooking } from "../../backend.d.ts";
 
 interface BookingCardProps {
-  booking: BookingRequest;
+  booking: BackendBooking;
   showPayButton?: boolean;
   showActions?: boolean;
   isAdminView?: boolean;
-  onConfirm?: (id: string) => void;
-  onReject?: (id: string) => void;
-  onMarkDelivered?: (id: string) => void;
-  onTriggerPayment?: (id: string) => void;
+  onConfirm?: (id: bigint) => void;
+  onReject?: (id: bigint) => void;
+  onMarkDelivered?: (id: bigint) => void;
   index?: number;
 }
 
-const STATUS_CONFIG: Record<
-  BookingStatus,
-  { label: string; className: string }
-> = {
-  pending: {
-    label: "Pending",
-    className: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
-  },
-  reviewing: {
-    label: "Reviewing",
-    className: "bg-blue-400/20 text-blue-300 border-blue-400/30",
-  },
-  awaiting_payment: {
-    label: "Payment Pending",
-    className: "bg-orange-500/20 text-orange-300 border-orange-500/30",
-  },
-  confirmed: {
-    label: "Confirmed",
-    className: "bg-blue-500/20 text-blue-300 border-blue-500/30",
-  },
-  in_progress: {
-    label: "In Progress",
-    className: "bg-purple-500/20 text-purple-300 border-purple-500/30",
-  },
-  delivered: {
-    label: "Work Delivered",
-    className: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
-  },
-  awaiting_final_payment: {
-    label: "Final Payment Due",
-    className: "bg-orange-400/20 text-orange-300 border-orange-400/30",
-  },
-  completed: {
-    label: "Completed",
-    className:
-      "bg-yellow-600/20 text-yellow-400 border-yellow-600/30 font-semibold",
-  },
-  cancelled: {
-    label: "Cancelled",
-    className: "bg-red-500/20 text-red-300 border-red-500/30",
-  },
-};
-
 const TIME_LABELS: Record<string, string> = {
+  Morning: "Morning (8AM–12PM)",
+  Afternoon: "Afternoon (12PM–4PM)",
+  Evening: "Evening (4PM–8PM)",
+  Night: "Night (8PM–11PM)",
+  HalfDay: "Half Day",
+  FullDay: "Full Day",
   morning: "Morning (8AM–12PM)",
   afternoon: "Afternoon (12PM–4PM)",
   evening: "Evening (4PM–8PM)",
@@ -77,12 +39,60 @@ const TIME_LABELS: Record<string, string> = {
   full_day: "Full Day",
 };
 
-const LOC_LABELS: Record<string, string> = {
-  indoor: "Indoor",
-  outdoor: "Outdoor",
-  studio: "RAP Studio",
-  custom: "Custom Location",
-};
+function getStatusStr(status: BackendBooking["status"]): string {
+  if (typeof status === "string") return status.toLowerCase();
+  if (typeof status === "object" && status !== null) {
+    return (Object.keys(status as object)[0] ?? "pending").toLowerCase();
+  }
+  return "pending";
+}
+
+function getLocationLabel(location: BackendBooking["location"]): string {
+  if (!location) return "Studio";
+  if (typeof location === "string") return location;
+  const loc = location as { __kind__?: string; Custom?: string };
+  if (loc.__kind__ === "Custom") return `Custom — ${loc.Custom ?? ""}`;
+  return loc.__kind__ ?? "Studio";
+}
+
+function getStatusConfig(statusStr: string): { label: string; cls: string } {
+  const map: Record<string, { label: string; cls: string }> = {
+    pending: {
+      label: "Pending",
+      cls: "bg-amber-500/20 text-amber-300 border-amber-500/30 dark:text-amber-300",
+    },
+    confirmed: {
+      label: "Confirmed",
+      cls: "bg-emerald-500/20 text-emerald-600 border-emerald-500/30 dark:text-emerald-300",
+    },
+    rejected: {
+      label: "Rejected",
+      cls: "bg-red-500/20 text-red-600 border-red-500/30 dark:text-red-400",
+    },
+    completed: {
+      label: "Completed",
+      cls: "bg-blue-500/20 text-blue-600 border-blue-500/30 dark:text-blue-300",
+    },
+    workdelivered: {
+      label: "Work Delivered",
+      cls: "bg-violet-500/20 text-violet-600 border-violet-500/30 dark:text-violet-300",
+    },
+    paymentpending: {
+      label: "Payment Pending",
+      cls: "bg-orange-500/20 text-orange-600 border-orange-500/30 dark:text-orange-300",
+    },
+    cancelled: {
+      label: "Cancelled",
+      cls: "bg-muted text-muted-foreground border-border/40",
+    },
+  };
+  return (
+    map[statusStr.replace(/_/g, "").toLowerCase()] ?? {
+      label: statusStr,
+      cls: "bg-muted text-muted-foreground border-border/40",
+    }
+  );
+}
 
 export function BookingCard({
   booking,
@@ -94,10 +104,18 @@ export function BookingCard({
   onMarkDelivered,
   index = 0,
 }: BookingCardProps) {
-  const statusCfg = STATUS_CONFIG[booking.status] ?? STATUS_CONFIG.pending;
-  const isPending = booking.status === "pending";
+  const statusStr = getStatusStr(booking.status);
+  const statusCfg = getStatusConfig(statusStr);
+  const isPending = statusStr === "pending";
+  const timeLabel =
+    TIME_LABELS[String(booking.timeSlot ?? "")] ??
+    String(booking.timeSlot ?? "—");
+  const serviceLabel = (booking.serviceId ?? "—").replace(/_/g, " ");
+  const subServiceLabel = (booking.subService ?? "—").replace(/_/g, " ");
+  const locationLabel = getLocationLabel(booking.location);
+
   const whatsappMsg = encodeURIComponent(
-    `Booking ID: ${booking.id}\nService: ${booking.serviceCategoryId}\nDate: ${booking.date}\nStatus: ${statusCfg.label}`,
+    `Booking #${String(booking.id ?? "").slice(-6)}\nService: ${serviceLabel}\nDate: ${booking.date ?? ""}\nStatus: ${statusCfg.label}`,
   );
 
   return (
@@ -105,18 +123,18 @@ export function BookingCard({
       initial={{ opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: index * 0.07 }}
-      className={`rounded-2xl border transition-smooth ${
+      className={`rounded-2xl border transition-all duration-300 ${
         isPending && isAdminView
-          ? "border-yellow-500/40 bg-yellow-500/5 shadow-luxury"
-          : "border-border/50 bg-card shadow-subtle hover:border-primary/30"
+          ? "border-amber-500/40 bg-amber-500/5"
+          : "border-border/50 bg-card hover:border-primary/30"
       }`}
+      style={{ backdropFilter: "blur(12px)" }}
       data-ocid={`booking-card.${index + 1}`}
     >
-      {/* Pending banner — admin only */}
       {isPending && isAdminView && (
-        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-yellow-500/20 bg-yellow-500/10 rounded-t-2xl">
-          <AlertCircle className="w-4 h-4 text-yellow-400 flex-shrink-0" />
-          <p className="text-xs font-semibold text-yellow-300">
+        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-amber-500/20 bg-amber-500/10 rounded-t-2xl">
+          <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0" />
+          <p className="text-xs font-semibold text-amber-600 dark:text-amber-300">
             Action Required — New booking awaiting confirmation
           </p>
         </div>
@@ -129,24 +147,14 @@ export function BookingCard({
             <div className="flex items-center gap-2 mb-0.5">
               <Camera className="w-4 h-4 text-primary flex-shrink-0" />
               <span className="font-semibold font-display text-foreground text-sm truncate capitalize">
-                {booking.serviceCategoryId?.replace(/_/g, " ") || "—"}
+                {serviceLabel}
               </span>
             </div>
             <p className="text-xs text-muted-foreground capitalize ml-6">
-              {booking.subServiceId?.replace(/_/g, " ") || "—"}
+              {subServiceLabel}
             </p>
-            {booking.clientName && (
-              <p className="text-xs text-muted-foreground ml-6 mt-0.5">
-                Client:{" "}
-                <span className="text-foreground/80 font-medium">
-                  {booking.clientName}
-                </span>
-              </p>
-            )}
           </div>
-          <Badge
-            className={`text-xs border flex-shrink-0 ${statusCfg.className}`}
-          >
+          <Badge className={`text-xs border flex-shrink-0 ${statusCfg.cls}`}>
             {statusCfg.label}
           </Badge>
         </div>
@@ -154,29 +162,21 @@ export function BookingCard({
         {/* Details */}
         <div className="grid grid-cols-2 gap-2 mb-4">
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Calendar className="w-3.5 h-3.5 text-primary/70" />
-            <span>{booking.date}</span>
+            <Calendar className="w-3.5 h-3.5 text-primary/70 flex-shrink-0" />
+            <span className="text-foreground/80">{booking.date ?? "—"}</span>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Clock className="w-3.5 h-3.5 text-primary/70" />
-            <span>{TIME_LABELS[booking.timeSlot] ?? booking.timeSlot}</span>
+            <Clock className="w-3.5 h-3.5 text-primary/70 flex-shrink-0" />
+            <span className="text-foreground/80">{timeLabel}</span>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground col-span-2">
             <MapPin className="w-3.5 h-3.5 text-primary/70 flex-shrink-0" />
-            <span className="truncate">
-              {LOC_LABELS[booking.location.type] ?? booking.location.type}
-              {booking.location.placeName
-                ? ` — ${booking.location.placeName}`
-                : ""}
-              {booking.location.customAddress
-                ? ` — ${booking.location.customAddress}`
-                : ""}
-            </span>
+            <span className="truncate text-foreground/80">{locationLabel}</span>
           </div>
           {booking.duration && (
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span className="text-primary/70">⏱</span>
-              <span>{booking.duration}</span>
+              <span className="text-foreground/80">{booking.duration}</span>
             </div>
           )}
         </div>
@@ -187,90 +187,64 @@ export function BookingCard({
           </p>
         )}
 
-        {/* Payment row */}
-        <div className="flex items-center gap-4 text-xs mb-4 bg-muted/20 rounded-xl px-3 py-2 border border-border/30">
-          <div>
-            <span className="text-muted-foreground">Deposit:</span>{" "}
-            <span className="text-primary font-bold">
-              ₹{booking.initialPaymentAmount}
-            </span>
+        {booking.rejectedReason && (
+          <div className="rounded-lg px-3 py-2 mb-3 bg-destructive/10 border border-destructive/20">
+            <p className="text-xs text-destructive">
+              Rejection reason: {booking.rejectedReason}
+            </p>
           </div>
-          <div>
-            <span className="text-muted-foreground">Balance:</span>{" "}
-            <span className="text-foreground font-semibold">
-              ₹{booking.finalPaymentAmount}
-            </span>
-          </div>
-          <span className="font-mono text-[10px] text-muted-foreground/50 ml-auto">
-            #{booking.id}
-          </span>
+        )}
+
+        <div className="text-xs font-mono text-muted-foreground/50 mb-3">
+          Booking #{String(booking.id ?? "").slice(-8)}
         </div>
 
         {/* Actions */}
         <div className="flex flex-wrap gap-2">
-          {showPayButton && booking.status === "awaiting_payment" && (
-            <Button
-              type="button"
-              size="sm"
-              className="btn-primary-luxury text-xs flex-1"
-              data-ocid="pay-upfront-btn"
-            >
-              Pay ₹{booking.initialPaymentAmount} Deposit
-            </Button>
+          {showPayButton && (
+            <span className="text-xs text-muted-foreground italic self-center">
+              Payment handled via admin
+            </span>
           )}
-          {showPayButton && booking.status === "awaiting_final_payment" && (
+          {showActions && isPending && onConfirm && (
             <Button
               type="button"
               size="sm"
-              className="btn-primary-luxury text-xs flex-1"
-              data-ocid="pay-balance-btn"
-            >
-              Pay Remaining ₹{booking.finalPaymentAmount}
-            </Button>
-          )}
-
-          {showActions && booking.status === "pending" && onConfirm && (
-            <Button
-              type="button"
-              size="sm"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs flex-1"
+              className="bg-emerald-600 hover:bg-emerald-500 text-white text-xs flex-1 gap-1"
               onClick={() => onConfirm(booking.id)}
               data-ocid="confirm-booking-btn"
             >
-              <CheckCircle className="w-3.5 h-3.5 mr-1" />
-              Confirm
+              <CheckCircle className="w-3.5 h-3.5" /> Confirm
             </Button>
           )}
-          {showActions && booking.status === "pending" && onReject && (
+          {showActions && isPending && onReject && (
             <Button
               type="button"
               size="sm"
               variant="destructive"
-              className="text-xs flex-1"
+              className="text-xs flex-1 gap-1"
               onClick={() => onReject(booking.id)}
               data-ocid="reject-booking-btn"
             >
-              <XCircle className="w-3.5 h-3.5 mr-1" />
-              Reject
+              <XCircle className="w-3.5 h-3.5" /> Reject
             </Button>
           )}
-          {showActions && booking.status === "confirmed" && onMarkDelivered && (
+          {showActions && statusStr === "confirmed" && onMarkDelivered && (
             <Button
               type="button"
               size="sm"
-              className="bg-purple-600 hover:bg-purple-700 text-white text-xs flex-1"
+              className="bg-violet-600 hover:bg-violet-500 text-white text-xs flex-1 gap-1"
               onClick={() => onMarkDelivered(booking.id)}
               data-ocid="mark-delivered-btn"
             >
               Mark Delivered
             </Button>
           )}
-
           <a
             href={`https://wa.me/917338501228?text=${whatsappMsg}`}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:text-emerald-300 transition-colors ml-auto"
+            className="inline-flex items-center gap-1 text-xs text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 transition-colors ml-auto"
             data-ocid="whatsapp-booking-link"
           >
             <MessageCircle className="w-3.5 h-3.5" />

@@ -221,6 +221,7 @@ module {
         case (#BookingUpfront, #BookingUpfront) { true };
         case (#BookingBalance, #BookingBalance) { true };
         case (#CourseEnrollment, #CourseEnrollment) { true };
+        case (#CertificateDownload, #CertificateDownload) { true };
         case _ { false };
       })
     })) {
@@ -254,10 +255,10 @@ module {
             case null { null };
           };
         };
-        case (#CourseEnrollment) { null };
+        case (#CourseEnrollment or #CertificateDownload) { null };
       };
       let enrollmentId : ?Common.EnrollmentId = switch (order.paymentType) {
-        case (#CourseEnrollment) {
+        case (#CourseEnrollment or #CertificateDownload) {
           switch (order.referenceId.toNat()) {
             case (?n) { ?n };
             case null { null };
@@ -268,7 +269,7 @@ module {
       let serviceId : ?Text = switch (order.paymentType) {
         case (#BookingUpfront) { ?order.referenceId };
         case (#BookingBalance) { ?order.referenceId };
-        case (#CourseEnrollment) { null };
+        case (#CourseEnrollment or #CertificateDownload) { null };
       };
       {
         order = order;

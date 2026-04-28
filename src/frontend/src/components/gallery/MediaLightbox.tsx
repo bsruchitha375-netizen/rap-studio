@@ -8,6 +8,10 @@ interface MediaLightboxProps {
   currentIndex: number;
   onClose: () => void;
   onNavigate: (index: number) => void;
+  /** Optional CSS gradient fallbacks when items have no url */
+  gradients?: string[];
+  /** Optional emoji decorations when items have no url */
+  emojis?: string[];
 }
 
 export function MediaLightbox({
@@ -15,6 +19,8 @@ export function MediaLightbox({
   currentIndex,
   onClose,
   onNavigate,
+  gradients,
+  emojis,
 }: MediaLightboxProps) {
   const current = items[currentIndex];
   const hasPrev = currentIndex > 0;
@@ -45,6 +51,11 @@ export function MediaLightbox({
   if (!current) return null;
 
   const imgSrc = current.url || current.thumbnailUrl;
+  const hasImage = Boolean(imgSrc);
+  const gradient =
+    gradients?.[currentIndex] ??
+    "linear-gradient(135deg, oklch(0.18 0.025 280), oklch(0.12 0.015 270))";
+  const emoji = emojis?.[currentIndex] ?? "📷";
 
   return (
     <AnimatePresence>
@@ -59,7 +70,7 @@ export function MediaLightbox({
           backdropFilter: "blur(16px)",
         }}
         onClick={onClose}
-        data-ocid="lightbox-overlay"
+        data-ocid="lightbox.overlay"
       >
         {/* Top bar */}
         <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-6 py-4 z-20">
@@ -150,15 +161,16 @@ export function MediaLightbox({
           className="relative mx-16 flex flex-col items-center gap-4 max-w-5xl w-full mt-16"
           onClick={(e) => e.stopPropagation()}
         >
-          {/* Image */}
+          {/* Image or gradient fallback */}
           <div
             className="w-full rounded-2xl overflow-hidden relative"
             style={{
               boxShadow:
                 "0 0 80px oklch(0 0 0 / 0.8), 0 0 0 1px oklch(0.7 0.22 70 / 0.15)",
+              minHeight: "40vh",
             }}
           >
-            {imgSrc ? (
+            {hasImage ? (
               current.type === "video" ? (
                 <video
                   src={current.url}
@@ -176,8 +188,35 @@ export function MediaLightbox({
                 />
               )
             ) : (
-              <div className="w-full h-[50vh] bg-gradient-to-br from-card to-muted flex items-center justify-center">
-                <ZoomIn className="w-16 h-16 text-muted-foreground/30" />
+              // Graceful gradient tile fallback — no broken images
+              <div
+                className="w-full flex flex-col items-center justify-center"
+                style={{
+                  height: "50vh",
+                  background: gradient,
+                }}
+              >
+                <div
+                  className="absolute inset-0 flex items-center justify-center opacity-15 pointer-events-none"
+                  aria-hidden="true"
+                >
+                  <span
+                    className="text-[120px]"
+                    style={{ filter: "blur(3px)" }}
+                  >
+                    {emoji}
+                  </span>
+                </div>
+                <div className="relative z-10 flex flex-col items-center gap-3 text-center">
+                  <ZoomIn
+                    className="w-12 h-12 opacity-40"
+                    style={{ color: "oklch(0.72 0.14 82)" }}
+                  />
+                  <p className="font-display text-lg font-bold text-white/80">
+                    {current.title}
+                  </p>
+                  <p className="text-sm text-white/50">{current.category}</p>
+                </div>
               </div>
             )}
           </div>
@@ -190,6 +229,8 @@ export function MediaLightbox({
             >
               {items.map((it, idx) => {
                 const thumb = it.thumbnailUrl || it.url;
+                const thumbGrad = gradients?.[idx];
+                const thumbEmoji = emojis?.[idx];
                 return (
                   <button
                     key={it.id}
@@ -221,6 +262,13 @@ export function MediaLightbox({
                         alt={it.title}
                         className="w-full h-full object-cover"
                       />
+                    ) : thumbGrad ? (
+                      <div
+                        className="w-full h-full flex items-center justify-center text-sm"
+                        style={{ background: thumbGrad }}
+                      >
+                        <span className="opacity-60">{thumbEmoji}</span>
+                      </div>
                     ) : (
                       <div className="w-full h-full bg-card" />
                     )}

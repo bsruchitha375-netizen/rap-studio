@@ -1,7 +1,5 @@
-import Debug "mo:core/Debug";
 import List "mo:core/List";
 import Map "mo:core/Map";
-import Runtime "mo:core/Runtime";
 import AccessControl "mo:caffeineai-authorization/access-control";
 import Common "../types/common";
 import CourseTypes "../types/courses";
@@ -9,6 +7,7 @@ import PaymentTypes "../types/payments";
 import UserTypes "../types/users";
 import UserLib "../lib/users";
 import CourseLib "../lib/courses";
+import AnalyticsLib "../lib/analytics";
 
 mixin (
   accessControlState : AccessControl.AccessControlState,
@@ -18,14 +17,16 @@ mixin (
   nextEnrollmentId : Common.Counter,
   adminCourses : List.List<CourseTypes.AdminCourse>,
   nextAdminCourseId : Common.Counter,
-  // lesson & quiz state (new)
+  // lesson & quiz state
   lessons : List.List<CourseTypes.Lesson>,
   nextLessonId : Common.Counter,
   nextQuizQuestionId : Common.Counter,
   lessonProgress : List.List<CourseTypes.LessonProgress>,
   courseProgress : List.List<CourseTypes.CourseLessonProgress>,
+  // activity log for enrollment events
+  activityLog : List.List<AnalyticsLib.LoginEvent>,
 ) {
-  // ── Existing public API (unchanged) ───────────────────────────────────────
+  // ── Existing public API ───────────────────────────────────────────────────
 
   public query func getAllCourses() : async [CourseTypes.Course] {
     CourseLib.getMergedCourses(adminCourses);
@@ -63,13 +64,29 @@ mixin (
     };
   };
 
+  /// Enroll in a course — FREE, no payment required.
+  /// Idempotent: returns existing enrollment if already enrolled.
+  /// Does NOT require a registered profile — works with any Internet Identity principal.
   public shared ({ caller }) func enrollCourse(courseId : Common.CourseId) : async CourseTypes.CourseEnrollment {
-    switch (profiles.get(caller)) {
-      case null { Runtime.trap("Please register first") };
-      case (?_) {};
+    // Check if already enrolled (idempotent — always check first before any trap)
+    switch (enrollments.find(func(e) { e.userId == caller and e.courseId == courseId })) {
+      case (?existing) { return existing };
+      case null {};
     };
+    // Allow enrollment even if no explicit profile (Internet Identity users)
+    // but still require the course to exist
     let enrollment = CourseLib.enrollCourse(enrollments, adminCourses, nextEnrollmentId.value, caller, courseId);
     nextEnrollmentId.value += 1;
+    // Log enrollment activity (graceful fallback if no profile)
+    let userName = switch (profiles.get(caller)) {
+      case (?p) { p.name };
+      case null { caller.toText() };
+    };
+    let userRole = switch (profiles.get(caller)) {
+      case (?p) { p.role };
+      case null { #Student };
+    };
+    AnalyticsLib.recordEnrollmentEvent(activityLog, caller, userName, userRole, courseId);
     enrollment;
   };
 
@@ -181,34 +198,36 @@ mixin (
 
   // ── Student learning flow ─────────────────────────────────────────────────
 
-  /// Return all lessons for a course (publicly accessible to enrolled students).
+  /// Return all lessons for a course.
+  /// Open access for preview (no enrollment required).
+  /// Full lesson content (including quiz questions) gated by enrollment check.
   public query ({ caller }) func getLessons(courseId : Common.CourseId) : async [CourseTypes.Lesson] {
-    // Require enrollment or admin
     let isAdmin = UserLib.isRole(profiles, caller, #Admin);
-    if (not isAdmin) {
-      switch (enrollments.find(func(e) { e.userId == caller and e.courseId == courseId })) {
-        case null { Runtime.trap("Not enrolled in this course") };
-        case (?_) {};
-      };
+    let isEnrolled = switch (enrollments.find(func(e) { e.userId == caller and e.courseId == courseId })) {
+      case null { false };
+      case (?_) { true };
     };
-    CourseLib.getLessonsByCourse(lessons, courseId);
+    let allLessons = CourseLib.getLessonsByCourse(lessons, courseId);
+    if (isAdmin or isEnrolled) {
+      // Full access: video URLs and quiz questions visible
+      allLessons;
+    } else {
+      // Preview: return lesson metadata only, strip quiz questions and youtube URLs
+      allLessons.map<CourseTypes.Lesson, CourseTypes.Lesson>(func(l) {
+        { l with youtubeUrl = ""; quizQuestions = [] }
+      });
+    };
   };
 
   /// Mark video as watched for a lesson.
   public shared ({ caller }) func markVideoWatched(lessonId : Nat) : async CourseTypes.LessonProgress {
-    switch (profiles.get(caller)) {
-      case null { Runtime.trap("Please register first") };
-      case (?_) {};
-    };
+    // Enrollment check is done inside CourseLib.markVideoWatched
     CourseLib.markVideoWatched(lessonProgress, courseProgress, lessons, enrollments, caller, lessonId);
   };
 
   /// Submit quiz answers for a lesson. Returns score and updated course progress.
   public shared ({ caller }) func submitQuiz(lessonId : Nat, answers : [Nat]) : async { #ok : CourseTypes.QuizResult; #err : Text } {
-    switch (profiles.get(caller)) {
-      case null { return #err("Please register first") };
-      case (?_) {};
-    };
+    // Enrollment check is done inside CourseLib.submitQuiz
     CourseLib.submitQuiz(lessonProgress, courseProgress, enrollments, lessons, caller, lessonId, answers);
   };
 
@@ -228,5 +247,22 @@ mixin (
   public query ({ caller }) func adminGetAllCourseProgress() : async [CourseTypes.CourseLessonProgress] {
     UserLib.requireRole(profiles, caller, #Admin);
     courseProgress.toArray();
+  };
+
+  /// Get course progress by enrollmentId — caller must be the enrolled student or admin.
+  public query ({ caller }) func getCourseProgressByEnrollment(
+    enrollmentId : Common.EnrollmentId,
+  ) : async ?CourseTypes.CourseLessonProgress {
+    let isAdmin = UserLib.isRole(profiles, caller, #Admin);
+    switch (CourseLib.getEnrollmentById(enrollments, enrollmentId)) {
+      case null { null };
+      case (?e) {
+        if (not isAdmin and e.userId != caller) {
+          null // Not authorized — return null silently
+        } else {
+          CourseLib.getCourseProgress(courseProgress, e.userId, e.courseId);
+        };
+      };
+    };
   };
 };

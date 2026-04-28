@@ -925,7 +925,7 @@ function GalleryManager() {
   const allItems = [
     ...mediaItems.map((m) => ({
       id: m.id,
-      url: m.blob.getDirectURL(),
+      url: m.blob?.getDirectURL() ?? "",
       category: m.serviceCategory,
       title: m.title,
       isBackend: true as const,

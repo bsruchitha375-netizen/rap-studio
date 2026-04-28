@@ -548,6 +548,7 @@ export enum PaymentStatus__1 {
 }
 export enum PaymentType {
     BookingBalance = "BookingBalance",
+    CertificateDownload = "CertificateDownload",
     CourseEnrollment = "CourseEnrollment",
     BookingUpfront = "BookingUpfront"
 }
@@ -613,6 +614,15 @@ export interface backendInterface {
     }>;
     assignCallerUserRole(user: Principal, role: UserRole__1): Promise<void>;
     assignWork(input: WorkAssignmentInput): Promise<WorkAssignment>;
+    bootstrapAdminProfile(name: string, email: string, phone: string, passwordHash: string): Promise<{
+        __kind__: "ok";
+        ok: PublicProfile;
+    } | {
+        __kind__: "err";
+        err: string;
+    }>;
+    bulkGetUserProfiles(userIds: Array<UserId>): Promise<Array<PublicProfile>>;
+    clearStaleEnrollments(): Promise<bigint>;
     confirmBooking(bookingId: BookingId): Promise<boolean>;
     confirmPayment(confirmation: StripeConfirmation): Promise<boolean>;
     createBookingRequest(input: BookingInput): Promise<BookingRequest>;
@@ -633,7 +643,47 @@ export interface backendInterface {
     editQuizQuestion(questionId: bigint, input: QuizQuestionInput): Promise<boolean>;
     enrollCourse(courseId: CourseId): Promise<CourseEnrollment>;
     generateCertificate(enrollmentId: EnrollmentId): Promise<Certificate>;
+    getAdminBookings(): Promise<Array<{
+        id: BookingId;
+        status: BookingStatus;
+        duration: string;
+        clientName: string;
+        rejectedReason?: string;
+        userId: UserId;
+        date: string;
+        createdAt: Timestamp;
+        clientEmail: string;
+        rescheduledDate?: string;
+        rescheduledTime?: string;
+        subService: string;
+        notes?: string;
+        serviceId: string;
+        location: LocationType;
+        timeSlot: TimeSlot;
+    }>>;
     getAdminCourseBlob(courseId: CourseId): Promise<Uint8Array | null>;
+    getAdminDashboardData(): Promise<{
+        totalEnrollments: bigint;
+        pendingUsers: Array<PublicProfile>;
+        totalPayments: bigint;
+        totalBookings: bigint;
+        analytics: AnalyticsSummary;
+        recentActivity: Array<ActivityEvent>;
+        totalUsers: bigint;
+    }>;
+    getAdminEnrollments(): Promise<Array<{
+        id: EnrollmentId;
+        completedAt?: Timestamp;
+        studentEmail: string;
+        paymentStatus: PaymentStatus__1;
+        studentName: string;
+        userId: UserId;
+        progress: bigint;
+        enrolledAt: Timestamp;
+        courseName: string;
+        certificateCode?: string;
+        courseId: CourseId;
+    }>>;
     getAdminPaymentDashboard(): Promise<Array<AdminPaymentEntry>>;
     getAdminPayments(): Promise<Array<PaymentOrderExtended>>;
     getAdminServiceBlob(serviceId: ServiceId): Promise<Uint8Array | null>;
@@ -658,14 +708,20 @@ export interface backendInterface {
     getCmsContent(key: string): Promise<CmsContent | null>;
     getCourse(courseId: CourseId): Promise<Course | null>;
     getCourseProgress(courseId: CourseId): Promise<CourseLessonProgress | null>;
+    getCourseProgressByEnrollment(enrollmentId: EnrollmentId): Promise<CourseLessonProgress | null>;
     getEmailLogs(): Promise<Array<EmailLog>>;
     getEnrollmentById(enrollmentId: EnrollmentId): Promise<CourseEnrollment | null>;
+    getEnrollmentsByCourse(courseId: CourseId): Promise<Array<{
+        progress?: CourseLessonProgress;
+        enrollment: CourseEnrollment;
+    }>>;
     getFeedbackForTarget(targetId: string): Promise<Array<Feedback>>;
     getLessonProgressForCourse(courseId: CourseId): Promise<Array<LessonProgress>>;
     getLessons(courseId: CourseId): Promise<Array<Lesson>>;
     getMediaItems(category: string | null): Promise<Array<MediaItem>>;
     getMyAssignedWork(): Promise<Array<WorkAssignment>>;
     getMyBookings(): Promise<Array<BookingRequest>>;
+    getMyCertificate(enrollmentId: EnrollmentId): Promise<Certificate | null>;
     getMyEnrollments(): Promise<Array<CourseEnrollment>>;
     getMyFeedback(): Promise<Array<Feedback>>;
     getMyMultiServiceBookings(): Promise<Array<MultiServiceBooking>>;
@@ -688,6 +744,7 @@ export interface backendInterface {
     getSubServiceImageBlob(categoryId: string, subServiceId: string): Promise<Uint8Array | null>;
     getWhatsAppLogs(): Promise<Array<WhatsAppLog>>;
     isCallerAdmin(): Promise<boolean>;
+    isCertificatePaymentDone(enrollmentId: EnrollmentId): Promise<boolean>;
     listMyPayments(): Promise<Array<PaymentOrder>>;
     listPendingUsers(): Promise<Array<PublicProfile>>;
     loginByEmail(email: string, passwordHash: string): Promise<{
@@ -716,6 +773,12 @@ export interface backendInterface {
     markNotificationRead(notificationId: NotificationId): Promise<boolean>;
     markVideoWatched(lessonId: bigint): Promise<LessonProgress>;
     markWorkDelivered(bookingId: BookingId): Promise<boolean>;
+    ping(): Promise<{
+        status: string;
+        userCount: bigint;
+        bookingCount: bigint;
+        enrollmentCount: bigint;
+    }>;
     register(email: string, name: string, phone: string, passwordHash: string, role: UserRole, address: string | null, profilePhoto: Uint8Array | null, studentDetails: StudentDetails | null): Promise<{
         __kind__: "ok";
         ok: PublicProfile;
@@ -763,6 +826,7 @@ export interface backendInterface {
     transformWhatsApp(input: TransformationInput): Promise<TransformationOutput>;
     triggerPaymentRequest(bookingId: BookingId, paymentType: string): Promise<string>;
     updateAssignmentStatus(assignmentId: bigint, status: AssignmentStatus): Promise<boolean>;
+    updateCourseMode(courseId: CourseId, mode: CourseMode): Promise<boolean>;
     updateCourseProgress(courseId: CourseId, completed: boolean): Promise<boolean>;
     updateProfile(name: string, phone: string, address: string | null): Promise<boolean>;
     uploadMedia(input: MediaInput): Promise<MediaItem>;

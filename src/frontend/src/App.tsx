@@ -1,4 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
+import { useActor } from "@caffeineai/core-infrastructure";
 import {
   Outlet,
   RouterProvider,
@@ -7,8 +8,11 @@ import {
   createRouter,
 } from "@tanstack/react-router";
 import { ThemeProvider } from "next-themes";
-import { Suspense, lazy, useEffect } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
+import { createActor } from "./backend";
 import { getAdminSession, readStoredProfile } from "./hooks/useAuth";
+import { ActorReadyContext } from "./hooks/useBackend";
+import type { ActorReadyState } from "./types";
 
 // Lazy-loaded pages
 const HomePage = lazy(() =>
@@ -89,6 +93,63 @@ function PageFallback() {
       <Skeleton className="h-12 w-64" />
       <Skeleton className="h-64 rounded-2xl" />
     </div>
+  );
+}
+
+// ── Actor warmup provider ──────────────────────────────────────────────────────
+// Fires ping() as soon as the actor is available to warm up the canister
+// connection. Exposes isReady / isWarming via ActorReadyContext so all hooks
+// can gate their first call on this flag.
+function ActorWarmupProvider({ children }: { children: React.ReactNode }) {
+  const { actor, isFetching } = useActor(createActor);
+  const [state, setState] = useState<ActorReadyState>({
+    isReady: false,
+    isWarming: true,
+  });
+
+  useEffect(() => {
+    if (isFetching || !actor) return;
+
+    let cancelled = false;
+
+    async function warmUp() {
+      if (!actor) return;
+      try {
+        // Use type assertion to call ping safely
+        const a = actor as unknown as Record<string, () => Promise<unknown>>;
+        if (typeof a.ping === "function") {
+          await a.ping();
+        }
+      } catch {
+        // Ignore ping errors — actor is still usable
+      } finally {
+        if (!cancelled) {
+          setState({ isReady: true, isWarming: false });
+        }
+      }
+    }
+
+    void warmUp();
+    return () => {
+      cancelled = true;
+    };
+  }, [actor, isFetching]);
+
+  // If actor never becomes ready within 8s, mark as ready anyway
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setState((prev) => ({
+        isReady: prev.isReady || !!actor,
+        isWarming: false,
+      }));
+    }, 8000);
+    return () => clearTimeout(timer);
+  }, [actor]);
+
+  return (
+    <ActorReadyContext.Provider value={state}>
+      {children}
+    </ActorReadyContext.Provider>
   );
 }
 
@@ -325,7 +386,9 @@ export default function App() {
       enableSystem={false}
       storageKey="rap-studio-theme"
     >
-      <RouterProvider router={router} />
+      <ActorWarmupProvider>
+        <RouterProvider router={router} />
+      </ActorWarmupProvider>
     </ThemeProvider>
   );
 }

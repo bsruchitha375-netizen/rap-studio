@@ -277,11 +277,15 @@ export function PendingApprovalsPanel() {
     setProcessingId(uid);
     try {
       const result = await approveUserMutation.mutateAsync(user.id);
-      if (result.__kind__ === "ok") {
+      if (result && result.__kind__ === "ok") {
         setRemovedIds((prev) => new Set([...prev, uid]));
         toast.success(`✓ ${user.name} approved — they can now sign in`);
-      } else {
+      } else if (result && result.__kind__ === "err") {
         toast.error(`Failed to approve: ${result.err}`);
+      } else {
+        // mutation succeeded without explicit kind — treat as success
+        setRemovedIds((prev) => new Set([...prev, uid]));
+        toast.success(`✓ ${user.name} approved — they can now sign in`);
       }
     } catch {
       toast.error("Approval failed. Please try again.");
@@ -295,11 +299,14 @@ export function PendingApprovalsPanel() {
     setProcessingId(uid);
     try {
       const result = await rejectUserMutation.mutateAsync(user.id);
-      if (result.__kind__ === "ok") {
+      if (result && result.__kind__ === "ok") {
         setRemovedIds((prev) => new Set([...prev, uid]));
         toast.error(`${user.name}'s registration has been rejected`);
-      } else {
+      } else if (result && result.__kind__ === "err") {
         toast.error(`Failed to reject: ${result.err}`);
+      } else {
+        setRemovedIds((prev) => new Set([...prev, uid]));
+        toast.error(`${user.name}'s registration has been rejected`);
       }
     } catch {
       toast.error("Rejection failed. Please try again.");

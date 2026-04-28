@@ -1,6 +1,12 @@
+import { UserRole, createActor } from "@/backend";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/useAuth";
-import { getAdminSession, saveAdminSession } from "@/hooks/useAuth";
+import {
+  getAdminSession,
+  hashPassword,
+  saveAdminSession,
+  useAuth,
+} from "@/hooks/useAuth";
+import { useActor } from "@caffeineai/core-infrastructure";
 import { useNavigate } from "@tanstack/react-router";
 import {
   AlertTriangle,
@@ -23,9 +29,10 @@ import { toast } from "sonner";
 // ── Constants ─────────────────────────────────────────────────────────────────
 const ADMIN_PASSWORD = "rapstudio2024";
 const MAX_ATTEMPTS = 3;
+const WARN_AFTER = 2; // show warning after this many failures
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Lockout countdown hook ─────────────────────────────────────────────────────
 function useLockoutCountdown(lockedUntil: number | null): string {
   const [remaining, setRemaining] = useState("");
   useEffect(() => {
@@ -51,6 +58,7 @@ function useLockoutCountdown(lockedUntil: number | null): string {
   return remaining;
 }
 
+// ── Password strength ─────────────────────────────────────────────────────────
 function getPasswordStrength(pwd: string): 0 | 1 | 2 | 3 | 4 {
   if (!pwd) return 0;
   let score = 0;
@@ -63,13 +71,21 @@ function getPasswordStrength(pwd: string): 0 | 1 | 2 | 3 | 4 {
 }
 
 const STRENGTH_LABELS = ["", "Weak", "Fair", "Good", "Strong"];
-const STRENGTH_COLORS = [
-  "",
-  "bg-red-500",
-  "bg-orange-400",
-  "bg-blue-400",
-  "bg-emerald-500",
-];
+// Using semantic token-compatible colors
+const STRENGTH_COLOR_STYLES: Record<number, React.CSSProperties> = {
+  0: {},
+  1: { background: "oklch(0.58 0.22 25)" },
+  2: { background: "oklch(0.65 0.18 50)" },
+  3: { background: "oklch(0.65 0.18 250)" },
+  4: { background: "oklch(0.65 0.18 150)" },
+};
+const STRENGTH_TEXT_COLORS: Record<number, string> = {
+  0: "",
+  1: "oklch(0.58 0.22 25)",
+  2: "oklch(0.65 0.18 50)",
+  3: "oklch(0.65 0.18 250)",
+  4: "oklch(0.65 0.18 150)",
+};
 
 const SpinnerIcon = () => (
   <svg
@@ -125,6 +141,7 @@ function PasswordInput({
   disabled,
   hasError,
   ocid,
+  autoComplete,
 }: {
   id: string;
   value: string;
@@ -133,6 +150,7 @@ function PasswordInput({
   disabled?: boolean;
   hasError?: boolean;
   ocid?: string;
+  autoComplete?: string;
 }) {
   const [show, setShow] = useState(false);
   return (
@@ -150,7 +168,7 @@ function PasswordInput({
           opacity: disabled ? 0.5 : 1,
         }}
         data-ocid={ocid}
-        autoComplete="current-password"
+        autoComplete={autoComplete ?? "current-password"}
       />
       <button
         type="button"
@@ -175,14 +193,20 @@ function PasswordStrengthBar({ password }: { password: string }) {
         {[1, 2, 3, 4].map((lvl) => (
           <div
             key={lvl}
-            className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
-              strength >= lvl ? STRENGTH_COLORS[strength] : "bg-muted"
-            }`}
+            className="h-1 flex-1 rounded-full transition-all duration-300"
+            style={
+              strength >= lvl
+                ? STRENGTH_COLOR_STYLES[strength]
+                : { background: "oklch(var(--muted))" }
+            }
           />
         ))}
       </div>
       {strength > 0 && (
-        <p className="text-[10px] text-muted-foreground">
+        <p
+          className="text-[10px] text-muted-foreground"
+          style={{ color: STRENGTH_TEXT_COLORS[strength] }}
+        >
           {STRENGTH_LABELS[strength]} password
         </p>
       )}
@@ -190,15 +214,34 @@ function PasswordStrengthBar({ password }: { password: string }) {
   );
 }
 
-// ── Section divider ───────────────────────────────────────────────────────────
+// ── Gold divider ───────────────────────────────────────────────────────────────
 function GoldDivider({ label }: { label: string }) {
   return (
     <div className="relative flex items-center gap-3 py-2">
-      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
-      <span className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[2px] text-primary border border-primary/30 bg-primary/8 whitespace-nowrap">
+      <div
+        className="flex-1 h-px"
+        style={{
+          background:
+            "linear-gradient(to right, transparent, oklch(var(--primary) / 0.4), transparent)",
+        }}
+      />
+      <span
+        className="px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[2px] whitespace-nowrap border"
+        style={{
+          color: "oklch(var(--primary))",
+          borderColor: "oklch(var(--primary) / 0.3)",
+          background: "oklch(var(--primary) / 0.08)",
+        }}
+      >
         {label}
       </span>
-      <div className="flex-1 h-px bg-gradient-to-r from-transparent via-primary/40 to-transparent" />
+      <div
+        className="flex-1 h-px"
+        style={{
+          background:
+            "linear-gradient(to right, transparent, oklch(var(--primary) / 0.4), transparent)",
+        }}
+      />
     </div>
   );
 }
@@ -208,6 +251,7 @@ function GoldDivider({ label }: { label: string }) {
 // ─────────────────────────────────────────────────────────────────────────────
 function AdminSignInSection() {
   const navigate = useNavigate();
+  const { actor } = useActor(createActor);
   const [password, setPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [attempts, setAttempts] = useState(0);
@@ -220,6 +264,7 @@ function AdminSignInSection() {
   const isLocked = lockedUntil !== null && Date.now() < lockedUntil;
   const lockoutCountdown = useLockoutCountdown(isLocked ? lockedUntil : null);
   const remainingAttempts = MAX_ATTEMPTS - attempts;
+  const showWarning = attempts >= WARN_AFTER && !isLocked;
 
   useEffect(() => {
     setTimeout(() => passwordRef.current?.focus(), 200);
@@ -245,6 +290,22 @@ function AdminSignInSection() {
 
     if (password === ADMIN_PASSWORD) {
       saveAdminSession("Administrator", "+917338501228");
+      // Bootstrap admin profile in the backend so all panels see real data
+      if (actor) {
+        try {
+          const pwdHash = await hashPassword(ADMIN_PASSWORD);
+          await actor
+            .bootstrapAdminProfile(
+              "Administrator",
+              "admin@rapstudio.local",
+              "+917338501228",
+              pwdHash,
+            )
+            .catch(() => {}); // ignore if already exists
+        } catch {
+          // non-blocking: profile may already exist
+        }
+      }
       toast.success("Welcome back, Administrator!");
       void navigate({ to: "/admin" });
     } else {
@@ -255,11 +316,13 @@ function AdminSignInSection() {
         const until = Date.now() + LOCKOUT_DURATION_MS;
         setLockedUntil(until);
         setPasswordError("Too many failed attempts. Locked for 15 minutes.");
-        toast.error("Account locked for 15 minutes.");
+        toast.error(
+          "Account locked for 15 minutes due to too many failed attempts.",
+        );
       } else {
         const left = MAX_ATTEMPTS - newAttempts;
         setPasswordError(
-          `Incorrect password. ${left} attempt${left === 1 ? "" : "s"} remaining.`,
+          `Incorrect password. ${left} attempt${left === 1 ? "" : "s"} remaining before lockout.`,
         );
         toast.error("Incorrect password.");
       }
@@ -285,12 +348,25 @@ function AdminSignInSection() {
             >
               RAP
             </div>
-            <div className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full bg-emerald-500 border-2 border-background flex items-center justify-center shadow-sm">
-              <ShieldCheck className="w-3.5 h-3.5 text-white" />
+            <div
+              className="absolute -bottom-1 -right-1 w-6 h-6 rounded-full border-2 border-background flex items-center justify-center shadow-sm"
+              style={{ background: "oklch(0.65 0.18 150)" }}
+            >
+              <ShieldCheck
+                className="w-3.5 h-3.5"
+                style={{ color: "oklch(1 0 0)" }}
+              />
             </div>
           </div>
         </motion.div>
-        <div className="inline-flex items-center gap-1.5 mb-2.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest bg-muted text-muted-foreground border border-border">
+        <div
+          className="inline-flex items-center gap-1.5 mb-2.5 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border"
+          style={{
+            background: "oklch(var(--muted))",
+            color: "oklch(var(--muted-foreground))",
+            borderColor: "oklch(var(--border))",
+          }}
+        >
           <Shield className="w-3 h-3 text-primary" />
           Restricted Access
         </div>
@@ -300,7 +376,44 @@ function AdminSignInSection() {
         <p className="text-xs text-muted-foreground">
           RAP Integrated Studio — Owner Access
         </p>
+        <p className="text-[10px] text-muted-foreground/50 mt-1 uppercase tracking-widest">
+          Authorized Personnel Only
+        </p>
       </div>
+
+      {/* Warning banner — shown after WARN_AFTER attempts */}
+      <AnimatePresence>
+        {showWarning && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="mb-4 flex items-start gap-2.5 px-4 py-3 rounded-xl border"
+            style={{
+              borderColor: "oklch(0.72 0.18 85 / 0.5)",
+              background: "oklch(0.72 0.18 85 / 0.08)",
+            }}
+            data-ocid="admin-login.warning_banner"
+          >
+            <AlertTriangle
+              className="w-4 h-4 mt-0.5 shrink-0"
+              style={{ color: "oklch(0.72 0.18 85)" }}
+            />
+            <div>
+              <p
+                className="text-sm font-semibold"
+                style={{ color: "oklch(0.72 0.18 85)" }}
+              >
+                Warning: Multiple Failed Attempts
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {remainingAttempts} attempt{remainingAttempts === 1 ? "" : "s"}{" "}
+                remaining before 15-minute lockout.
+              </p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Lockout banner */}
       <AnimatePresence>
@@ -310,6 +423,7 @@ function AdminSignInSection() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             className="mb-4 flex items-start gap-2.5 px-4 py-3 rounded-xl border border-destructive/40 bg-destructive/8"
+            data-ocid="admin-login.lockout_banner"
           >
             <Lock className="w-4 h-4 mt-0.5 shrink-0 text-destructive" />
             <div>
@@ -371,7 +485,10 @@ function AdminSignInSection() {
             remainingAttempts > 0 &&
             !passwordError && (
               <p className="text-xs text-muted-foreground/70 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-yellow-500/80 shrink-0" />
+                <span
+                  className="w-1.5 h-1.5 rounded-full shrink-0"
+                  style={{ background: "oklch(0.72 0.18 85 / 0.8)" }}
+                />
                 {remainingAttempts} attempt{remainingAttempts === 1 ? "" : "s"}{" "}
                 remaining before lockout
               </p>
@@ -411,7 +528,13 @@ function AdminSignInSection() {
         </Button>
       </form>
 
-      <div className="mt-4 flex items-start gap-2.5 px-3 py-2.5 rounded-xl bg-muted/40 border border-border/60">
+      <div
+        className="mt-4 flex items-start gap-2.5 px-3 py-2.5 rounded-xl border"
+        style={{
+          background: "oklch(var(--muted) / 0.4)",
+          borderColor: "oklch(var(--border) / 0.6)",
+        }}
+      >
         <ShieldCheck className="w-4 h-4 mt-0.5 shrink-0 text-primary" />
         <p className="text-[11px] text-muted-foreground leading-relaxed">
           This portal is exclusively for studio owners. Unauthorized access
@@ -468,7 +591,7 @@ function StaffRegisterTab() {
       e.email = "Valid email is required.";
     if (
       !form.phone.trim() ||
-      !/^\d{10}$/.test(form.phone?.replace(/\D/g, "") || "")
+      !/^\d{10}$/.test(form.phone?.replace(/\D/g, "") ?? "")
     )
       e.phone = "10-digit mobile number required.";
     if (!form.password || form.password.length < 6)
@@ -492,7 +615,7 @@ function StaffRegisterTab() {
       const result = await doRegister({
         email: form.email,
         name: form.name,
-        phone: form.phone?.replace(/\D/g, "") || "",
+        phone: form.phone?.replace(/\D/g, "") ?? "",
         password: form.password,
         role: form.role.toLowerCase() as "staff" | "receptionist",
         address: form.address,
@@ -527,42 +650,59 @@ function StaffRegisterTab() {
     label: string;
     icon: React.ReactNode;
     desc: string;
-    color: string;
+    activeStyle: React.CSSProperties;
   }[] = [
     {
       value: "Receptionist",
       label: "Receptionist",
       icon: <Users className="w-4 h-4" />,
       desc: "Manage bookings & client coordination",
-      color: "border-purple-500/60 bg-purple-500/12 text-purple-400",
+      activeStyle: {
+        borderColor: "oklch(var(--accent) / 0.6)",
+        background: "oklch(var(--accent) / 0.12)",
+        color: "oklch(var(--accent))",
+      },
     },
     {
       value: "Staff",
       label: "Staff",
       icon: <Briefcase className="w-4 h-4" />,
       desc: "Photography, videography & production",
-      color: "border-orange-500/60 bg-orange-500/12 text-orange-400",
+      activeStyle: {
+        borderColor: "oklch(var(--primary) / 0.6)",
+        background: "oklch(var(--primary) / 0.12)",
+        color: "oklch(var(--primary))",
+      },
     },
   ];
 
   return (
     <div>
-      {/* Success banner */}
       <AnimatePresence>
         {successBanner && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            className="mb-4 flex items-start gap-2.5 px-4 py-3.5 rounded-xl border border-yellow-500/50 bg-yellow-500/10"
+            className="mb-4 flex items-start gap-2.5 px-4 py-3.5 rounded-xl border"
+            style={{
+              borderColor: "oklch(0.72 0.18 85 / 0.5)",
+              background: "oklch(0.72 0.18 85 / 0.1)",
+            }}
             data-ocid="staff-register.success_state"
           >
-            <CheckCircle2 className="w-4 h-4 mt-0.5 shrink-0 text-yellow-500" />
+            <CheckCircle2
+              className="w-4 h-4 mt-0.5 shrink-0"
+              style={{ color: "oklch(0.72 0.18 85)" }}
+            />
             <div>
-              <p className="text-sm font-bold text-yellow-700 dark:text-yellow-300">
+              <p
+                className="text-sm font-bold"
+                style={{ color: "oklch(0.72 0.18 85)" }}
+              >
                 Registration Submitted!
               </p>
-              <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Your account is awaiting admin approval. You will receive access
                 once approved.
               </p>
@@ -570,7 +710,7 @@ function StaffRegisterTab() {
             <button
               type="button"
               onClick={() => setSuccessBanner(false)}
-              className="ml-auto text-yellow-500 hover:text-yellow-400 text-lg leading-none"
+              className="ml-auto text-muted-foreground hover:text-foreground text-lg leading-none"
               aria-label="Dismiss"
             >
               ×
@@ -596,11 +736,16 @@ function StaffRegisterTab() {
                 key={opt.value}
                 type="button"
                 onClick={() => set("role", opt.value)}
-                className={`flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-smooth ${
+                className="flex flex-col items-start gap-1 p-3 rounded-xl border text-left transition-smooth"
+                style={
                   form.role === opt.value
-                    ? opt.color
-                    : "border-border bg-muted/20 text-muted-foreground hover:border-border/60"
-                }`}
+                    ? opt.activeStyle
+                    : {
+                        borderColor: "oklch(var(--border))",
+                        background: "oklch(var(--muted) / 0.2)",
+                        color: "oklch(var(--muted-foreground))",
+                      }
+                }
                 data-ocid={`staff-register.role.${opt.value.toLowerCase()}`}
               >
                 {opt.icon}
@@ -613,9 +758,8 @@ function StaffRegisterTab() {
           </div>
         </div>
 
-        {/* Fields */}
+        {/* Fields grid */}
         <div className="grid grid-cols-1 gap-3">
-          {/* Full Name */}
           <div className="space-y-1">
             <label
               htmlFor="reg-name"
@@ -638,7 +782,6 @@ function StaffRegisterTab() {
             />
           </div>
 
-          {/* Email */}
           <div className="space-y-1">
             <label
               htmlFor="reg-email"
@@ -662,7 +805,6 @@ function StaffRegisterTab() {
             />
           </div>
 
-          {/* Mobile */}
           <div className="space-y-1">
             <label
               htmlFor="reg-phone"
@@ -685,7 +827,6 @@ function StaffRegisterTab() {
             />
           </div>
 
-          {/* Password */}
           <div className="space-y-1">
             <label
               htmlFor="reg-password"
@@ -700,6 +841,7 @@ function StaffRegisterTab() {
               placeholder="Create a strong password"
               hasError={!!errors.password}
               ocid="staff-register.password.input"
+              autoComplete="new-password"
             />
             <PasswordStrengthBar password={form.password} />
             <FieldError
@@ -708,7 +850,6 @@ function StaffRegisterTab() {
             />
           </div>
 
-          {/* Confirm Password */}
           <div className="space-y-1">
             <label
               htmlFor="reg-confirm"
@@ -723,6 +864,7 @@ function StaffRegisterTab() {
               placeholder="Re-enter password"
               hasError={!!errors.confirmPassword}
               ocid="staff-register.confirm_password.input"
+              autoComplete="new-password"
             />
             <FieldError
               msg={errors.confirmPassword}
@@ -730,7 +872,6 @@ function StaffRegisterTab() {
             />
           </div>
 
-          {/* Address */}
           <div className="space-y-1">
             <label
               htmlFor="reg-address"
@@ -753,7 +894,6 @@ function StaffRegisterTab() {
             />
           </div>
 
-          {/* Department (optional) */}
           <div className="space-y-1">
             <label
               htmlFor="reg-dept"
@@ -786,9 +926,12 @@ function StaffRegisterTab() {
           style={{
             background:
               form.role === "Receptionist"
-                ? "linear-gradient(135deg, oklch(0.55 0.2 300), oklch(0.48 0.22 290))"
-                : "linear-gradient(135deg, oklch(0.6 0.18 45), oklch(0.52 0.20 35))",
-            color: "#fff",
+                ? "linear-gradient(135deg, oklch(var(--accent)), oklch(var(--accent) / 0.75))"
+                : "var(--gradient-gold)",
+            color:
+              form.role === "Receptionist"
+                ? "oklch(var(--accent-foreground))"
+                : "oklch(var(--primary-foreground))",
           }}
           data-ocid="staff-register.submit_button"
         >
@@ -798,8 +941,7 @@ function StaffRegisterTab() {
             </>
           ) : (
             <>
-              <ChevronRight className="w-4 h-4" />
-              Register as {form.role}
+              <ChevronRight className="w-4 h-4" /> Register as {form.role}
             </>
           )}
         </Button>
@@ -853,7 +995,6 @@ function StaffSignInTab() {
     try {
       const result = await login(identifier.trim(), password);
       if (result.success) {
-        // Determine where to navigate based on role in session
         const sessionRaw = localStorage.getItem("rap_session");
         if (sessionRaw) {
           const session = JSON.parse(sessionRaw) as { role: string };
@@ -889,24 +1030,36 @@ function StaffSignInTab() {
 
   return (
     <div>
-      {/* Banners */}
       <AnimatePresence>
         {pendingBanner && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
-            className="mb-4 flex items-start gap-2.5 px-4 py-3.5 rounded-xl border border-yellow-500/50 bg-yellow-500/10"
+            className="mb-4 flex items-start gap-2.5 px-4 py-3.5 rounded-xl border"
+            style={{
+              borderColor: "oklch(0.72 0.18 85 / 0.5)",
+              background: "oklch(0.72 0.18 85 / 0.1)",
+            }}
             data-ocid="staff-signin.pending_state"
           >
-            <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-yellow-500" />
+            <AlertTriangle
+              className="w-4 h-4 mt-0.5 shrink-0"
+              style={{ color: "oklch(0.72 0.18 85)" }}
+            />
             <div>
-              <p className="text-sm font-bold text-yellow-700 dark:text-yellow-300">
+              <p
+                className="text-sm font-bold"
+                style={{ color: "oklch(0.72 0.18 85)" }}
+              >
                 Awaiting Admin Approval
               </p>
-              <p className="text-xs text-yellow-600 dark:text-yellow-400 mt-0.5">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Your account is pending approval. Contact admin at{" "}
-                <a href="mailto:ruchithabs550@gmail.com" className="underline">
+                <a
+                  href="mailto:ruchithabs550@gmail.com"
+                  className="underline text-primary"
+                >
                   ruchithabs550@gmail.com
                 </a>
               </p>
@@ -1022,12 +1175,24 @@ function StaffSignInTab() {
         </Button>
 
         <div className="flex flex-wrap gap-2 justify-center pt-1">
-          <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground px-2.5 py-1 rounded-full border border-border/50 bg-muted/20">
-            <Building2 className="w-3 h-3 text-purple-400" />
+          <span
+            className="flex items-center gap-1.5 text-[11px] text-muted-foreground px-2.5 py-1 rounded-full border"
+            style={{
+              borderColor: "oklch(var(--border) / 0.5)",
+              background: "oklch(var(--muted) / 0.2)",
+            }}
+          >
+            <Building2 className="w-3 h-3 text-accent" />
             Receptionist
           </span>
-          <span className="flex items-center gap-1.5 text-[11px] text-muted-foreground px-2.5 py-1 rounded-full border border-border/50 bg-muted/20">
-            <Briefcase className="w-3 h-3 text-orange-400" />
+          <span
+            className="flex items-center gap-1.5 text-[11px] text-muted-foreground px-2.5 py-1 rounded-full border"
+            style={{
+              borderColor: "oklch(var(--border) / 0.5)",
+              background: "oklch(var(--muted) / 0.2)",
+            }}
+          >
+            <Briefcase className="w-3 h-3 text-primary" />
             Staff
           </span>
         </div>
@@ -1037,21 +1202,26 @@ function StaffSignInTab() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// STAFF/RECEPTIONIST PORTAL SECTION (tabbed)
+// STAFF/RECEPTIONIST PORTAL SECTION
 // ─────────────────────────────────────────────────────────────────────────────
 function StaffPortalSection() {
   const [activeTab, setActiveTab] = useState<"register" | "signin">("signin");
 
   return (
     <div>
-      {/* Subheading */}
       <div className="flex items-center gap-2 mb-4">
-        <div className="w-8 h-8 rounded-lg bg-accent/15 border border-accent/30 flex items-center justify-center">
+        <div
+          className="w-8 h-8 rounded-lg border flex items-center justify-center"
+          style={{
+            background: "oklch(var(--accent) / 0.15)",
+            borderColor: "oklch(var(--accent) / 0.3)",
+          }}
+        >
           <Users className="w-4 h-4 text-accent" />
         </div>
         <div>
           <h2 className="text-sm font-display font-bold text-foreground">
-            Staff & Receptionist Portal
+            Staff &amp; Receptionist Portal
           </h2>
           <p className="text-[11px] text-muted-foreground">
             Registration requires admin approval
@@ -1059,9 +1229,12 @@ function StaffPortalSection() {
         </div>
       </div>
 
-      {/* Tabs */}
       <div
-        className="flex rounded-xl border border-border bg-muted/20 p-1 mb-5 gap-1"
+        className="flex rounded-xl border p-1 mb-5 gap-1"
+        style={{
+          background: "oklch(var(--muted) / 0.2)",
+          borderColor: "oklch(var(--border))",
+        }}
         data-ocid="staff-portal.tab"
       >
         {(["signin", "register"] as const).map((tab) => (
@@ -1069,11 +1242,16 @@ function StaffPortalSection() {
             key={tab}
             type="button"
             onClick={() => setActiveTab(tab)}
-            className={`flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-smooth capitalize ${
+            className="flex-1 py-2 px-3 rounded-lg text-xs font-bold transition-smooth capitalize"
+            style={
               activeTab === tab
-                ? "bg-card text-foreground shadow-subtle border border-border/60"
-                : "text-muted-foreground hover:text-foreground"
-            }`}
+                ? {
+                    background: "oklch(var(--card))",
+                    color: "oklch(var(--foreground))",
+                    border: "1px solid oklch(var(--border) / 0.6)",
+                  }
+                : { color: "oklch(var(--muted-foreground))" }
+            }
             data-ocid={`staff-portal.${tab}.tab`}
           >
             {tab === "signin" ? "Sign In" : "New Registration"}
@@ -1081,7 +1259,6 @@ function StaffPortalSection() {
         ))}
       </div>
 
-      {/* Tab content */}
       <AnimatePresence mode="wait">
         <motion.div
           key={activeTab}
@@ -1098,12 +1275,388 @@ function StaffPortalSection() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// DIRECT ADD USER SECTION
+// ─────────────────────────────────────────────────────────────────────────────
+type DirectRole = "client" | "student" | "receptionist" | "staff";
+
+interface DirectAddForm {
+  name: string;
+  email: string;
+  phone: string;
+  password: string;
+  role: DirectRole;
+  address: string;
+}
+
+function DirectAddUserSection() {
+  const { actor } = useActor(createActor);
+  const [form, setForm] = useState<DirectAddForm>({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+    role: "client",
+    address: "",
+  });
+  const [errors, setErrors] = useState<
+    Partial<DirectAddForm & { submit: string }>
+  >({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
+
+  const set = (key: keyof DirectAddForm, val: string) => {
+    setForm((p) => ({ ...p, [key]: val }));
+    if (errors[key]) setErrors((p) => ({ ...p, [key]: undefined }));
+  };
+
+  const ROLE_MAP: Record<DirectRole, UserRole> = {
+    client: UserRole.Client,
+    student: UserRole.Student,
+    receptionist: UserRole.Receptionist,
+    staff: UserRole.Staff,
+  };
+
+  const validate = (): boolean => {
+    const e: Partial<DirectAddForm & { submit: string }> = {};
+    if (!form.name.trim()) e.name = "Name required";
+    if (!form.email.trim() || !/\S+@\S+\.\S+/.test(form.email))
+      e.email = "Valid email required";
+    if (!/^\d{10}$/.test(form.phone.replace(/\D/g, "")))
+      e.phone = "10-digit mobile required";
+    if (!form.password || form.password.length < 6)
+      e.password = "Min 6 characters";
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+    if (!actor) {
+      toast.error("Backend not ready. Please try again.");
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const pwdHash = await hashPassword(form.password);
+      const phone = `+91${form.phone.replace(/\D/g, "").slice(-10)}`;
+      const result = await actor.adminCreateUser(
+        form.email.trim().toLowerCase(),
+        form.name.trim(),
+        phone,
+        pwdHash,
+        ROLE_MAP[form.role],
+        form.address.trim() || null,
+        null,
+      );
+      if (result.__kind__ === "err") {
+        toast.error(String(result.err) || "Failed to create user.");
+      } else {
+        toast.success(
+          `${form.role.charAt(0).toUpperCase() + form.role.slice(1)} account created successfully!`,
+        );
+        setForm({
+          name: "",
+          email: "",
+          phone: "",
+          password: "",
+          role: "client",
+          address: "",
+        });
+        setErrors({});
+        setIsOpen(false);
+      }
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Failed to create user.",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const ROLE_OPTIONS: { value: DirectRole; label: string; color: string }[] = [
+    { value: "client", label: "Client", color: "oklch(var(--primary))" },
+    { value: "student", label: "Student", color: "oklch(var(--accent))" },
+    {
+      value: "receptionist",
+      label: "Receptionist",
+      color: "oklch(0.66 0.18 180)",
+    },
+    { value: "staff", label: "Staff", color: "oklch(0.65 0.18 250)" },
+  ];
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setIsOpen((p) => !p)}
+        className="w-full flex items-center justify-between px-4 py-3 rounded-xl border transition-all duration-300"
+        style={{
+          background: isOpen
+            ? "oklch(var(--primary) / 0.1)"
+            : "oklch(var(--muted) / 0.3)",
+          borderColor: isOpen
+            ? "oklch(var(--primary) / 0.5)"
+            : "oklch(var(--border) / 0.5)",
+          color: isOpen
+            ? "oklch(var(--primary))"
+            : "oklch(var(--muted-foreground))",
+        }}
+        data-ocid="admin-direct-add.toggle"
+      >
+        <span className="flex items-center gap-2 text-sm font-bold">
+          <Users className="w-4 h-4" />
+          Add User Directly
+          <span
+            className="text-[10px] px-1.5 py-0.5 rounded font-bold uppercase tracking-wider"
+            style={{
+              background: "oklch(var(--primary) / 0.2)",
+              color: "oklch(var(--primary))",
+            }}
+          >
+            Admin Only
+          </span>
+        </span>
+        <ChevronRight
+          className="w-4 h-4 transition-transform duration-300"
+          style={{ transform: isOpen ? "rotate(90deg)" : "none" }}
+        />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.3, ease: [0.4, 0, 0.2, 1] }}
+            className="overflow-hidden"
+          >
+            <div
+              className="mt-3 rounded-xl p-4 border space-y-3"
+              style={{
+                background: "oklch(var(--card) / 0.6)",
+                borderColor: "oklch(var(--primary) / 0.25)",
+              }}
+            >
+              <p className="text-xs text-muted-foreground font-medium">
+                Create an account directly — no registration flow, immediately
+                active.
+              </p>
+
+              <form
+                onSubmit={(e) => void handleSubmit(e)}
+                className="space-y-3"
+                data-ocid="admin-direct-add.form"
+                noValidate
+              >
+                {/* Role */}
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground mb-1.5">
+                    Role
+                  </p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {ROLE_OPTIONS.map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() => set("role", opt.value)}
+                        className="py-1.5 px-2 rounded-lg border text-xs font-bold transition-all duration-200"
+                        style={
+                          form.role === opt.value
+                            ? {
+                                background: `${opt.color}20`,
+                                borderColor: `${opt.color}60`,
+                                color: opt.color,
+                              }
+                            : {
+                                background: "oklch(var(--muted) / 0.3)",
+                                borderColor: "oklch(var(--border) / 0.5)",
+                                color: "oklch(var(--muted-foreground))",
+                              }
+                        }
+                        data-ocid={`admin-direct-add.role.${opt.value}`}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Name */}
+                <div className="space-y-1">
+                  <label
+                    htmlFor="direct-add-name"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    Full Name *
+                  </label>
+                  <input
+                    id="direct-add-name"
+                    type="text"
+                    placeholder="Full name"
+                    value={form.name}
+                    onChange={(e) => set("name", e.target.value)}
+                    className="input-field text-sm"
+                    data-ocid="admin-direct-add.name.input"
+                    style={{
+                      borderColor: errors.name
+                        ? "oklch(var(--destructive))"
+                        : undefined,
+                    }}
+                  />
+                  <FieldError
+                    msg={errors.name}
+                    ocid="admin-direct-add.name.field_error"
+                  />
+                </div>
+
+                {/* Email */}
+                <div className="space-y-1">
+                  <label
+                    htmlFor="direct-add-email"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    Email *
+                  </label>
+                  <input
+                    id="direct-add-email"
+                    type="email"
+                    placeholder="user@email.com"
+                    value={form.email}
+                    onChange={(e) => set("email", e.target.value)}
+                    className="input-field text-sm"
+                    data-ocid="admin-direct-add.email.input"
+                    style={{
+                      borderColor: errors.email
+                        ? "oklch(var(--destructive))"
+                        : undefined,
+                    }}
+                    autoComplete="off"
+                  />
+                  <FieldError
+                    msg={errors.email}
+                    ocid="admin-direct-add.email.field_error"
+                  />
+                </div>
+
+                {/* Phone */}
+                <div className="space-y-1">
+                  <label
+                    htmlFor="direct-add-phone"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    Mobile Number *
+                  </label>
+                  <input
+                    id="direct-add-phone"
+                    type="tel"
+                    placeholder="10-digit mobile"
+                    value={form.phone}
+                    onChange={(e) =>
+                      set(
+                        "phone",
+                        e.target.value.replace(/\D/g, "").slice(0, 10),
+                      )
+                    }
+                    className="input-field text-sm"
+                    data-ocid="admin-direct-add.phone.input"
+                    style={{
+                      borderColor: errors.phone
+                        ? "oklch(var(--destructive))"
+                        : undefined,
+                    }}
+                  />
+                  <FieldError
+                    msg={errors.phone}
+                    ocid="admin-direct-add.phone.field_error"
+                  />
+                </div>
+
+                {/* Password */}
+                <div className="space-y-1">
+                  <label
+                    htmlFor="direct-add-password"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    Password *
+                  </label>
+                  <PasswordInput
+                    id="direct-add-password"
+                    value={form.password}
+                    onChange={(v) => set("password", v)}
+                    placeholder="Min 6 characters"
+                    hasError={!!errors.password}
+                    ocid="admin-direct-add.password.input"
+                    autoComplete="new-password"
+                  />
+                  <FieldError
+                    msg={errors.password}
+                    ocid="admin-direct-add.password.field_error"
+                  />
+                </div>
+
+                {/* Address (optional) */}
+                <div className="space-y-1">
+                  <label
+                    htmlFor="direct-add-address"
+                    className="text-xs font-medium text-muted-foreground"
+                  >
+                    Address <span className="opacity-50">(optional)</span>
+                  </label>
+                  <input
+                    id="direct-add-address"
+                    type="text"
+                    placeholder="User's address"
+                    value={form.address}
+                    onChange={(e) => set("address", e.target.value)}
+                    className="input-field text-sm"
+                    data-ocid="admin-direct-add.address.input"
+                  />
+                </div>
+
+                <FieldError
+                  msg={errors.submit}
+                  ocid="admin-direct-add.submit.field_error"
+                />
+
+                <Button
+                  type="submit"
+                  disabled={isSubmitting || !actor}
+                  className="w-full h-10 text-sm font-bold"
+                  style={{
+                    background: "var(--gradient-gold)",
+                    color: "oklch(var(--primary-foreground))",
+                  }}
+                  data-ocid="admin-direct-add.submit_button"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <SpinnerIcon /> Creating…
+                    </>
+                  ) : (
+                    <>
+                      <Users className="w-4 h-4" />
+                      Create Account Directly
+                    </>
+                  )}
+                </Button>
+              </form>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // MAIN PAGE
 // ─────────────────────────────────────────────────────────────────────────────
 export function AdminLoginPage() {
   const navigate = useNavigate();
 
-  // Redirect if already logged in as admin
   useEffect(() => {
     const session = getAdminSession();
     if (session?.loggedIn) {
@@ -1142,24 +1695,21 @@ export function AdminLoginPage() {
       >
         {/* Card */}
         <div className="rounded-2xl glass-effect shadow-luxury luxury-border overflow-hidden">
-          {/* Gold accent top bar */}
           <div className="h-1 w-full gradient-gold" />
-
           <div className="px-7 pt-7 pb-7 space-y-0">
-            {/* ADMIN SIGN IN */}
             <AdminSignInSection />
-
-            {/* Divider */}
             <div className="py-5">
-              <GoldDivider label="Staff & Receptionist Portal" />
+              <GoldDivider label="Staff &amp; Receptionist Portal" />
             </div>
-
-            {/* STAFF / RECEPTIONIST PORTAL */}
             <StaffPortalSection />
+            <div className="py-5">
+              <GoldDivider label="Admin: Direct Add User" />
+            </div>
+            <DirectAddUserSection />
           </div>
         </div>
 
-        {/* Back link */}
+        {/* Back links */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}

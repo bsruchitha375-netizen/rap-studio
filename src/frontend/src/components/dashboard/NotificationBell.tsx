@@ -96,7 +96,7 @@ export function NotificationBell() {
   const { data: backendNotifs = [], isLoading } = useAdminNotifications();
   const { actor } = useActor(createActor);
 
-  const notifications = backendNotifs;
+  const notifications = backendNotifs ?? [];
   const unread = notifications.filter(
     (n) => !n.read && !readIds.has(String(n.id)),
   ).length;

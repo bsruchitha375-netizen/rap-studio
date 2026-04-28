@@ -1,41 +1,41 @@
-import { QuizEngine } from "@/components/courses/QuizEngine";
-import { VideoPlayer } from "@/components/courses/VideoPlayer";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { readSession } from "@/hooks/useAuth";
 import {
   useCourseProgress,
+  useCourses,
+  useEnrollCourse,
   useLessonProgress,
   useLessons,
   useMarkVideoWatched,
   useMyEnrollments,
+  useMyPayments,
 } from "@/hooks/useBackend";
+import { useStripe } from "@/hooks/useStripe";
 import type { Lesson, LessonProgress, QuizResult } from "@/types";
+import { useActor } from "@caffeineai/core-infrastructure";
 import { useParams } from "@tanstack/react-router";
 import { AnimatePresence, motion } from "motion/react";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
+import { createActor } from "../backend";
+import { QuizEngine } from "../components/courses/QuizEngine";
+import { VideoPlayer } from "../components/courses/VideoPlayer";
 
-// ── Step ring indicator ───────────────────────────────────────────────────────
 type StepState = "pending" | "active" | "completed";
 
 function StepRing({
   index,
   state,
   label,
-}: {
-  index: number;
-  state: StepState;
-  label: string;
-}) {
+}: { index: number; state: StepState; label: string }) {
   const ringColor =
     state === "completed"
       ? "oklch(0.65 0.18 150)"
       : state === "active"
         ? "oklch(var(--primary))"
         : "oklch(var(--muted-foreground) / 0.3)";
-
   return (
     <div className="flex flex-col items-center gap-1 min-w-0">
       <div
@@ -73,73 +73,82 @@ function StepRing({
   );
 }
 
-// ── No-YouTube placeholder ────────────────────────────────────────────────────
-function NoVideoPlaceholder({ isAdmin }: { isAdmin?: boolean }) {
+function OfflineLessonCard({
+  description,
+  onMarkComplete,
+  isCompleted,
+}: { description: string; onMarkComplete: () => void; isCompleted: boolean }) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
-      className="aspect-video w-full rounded-2xl flex flex-col items-center justify-center gap-4 border-2 border-dashed"
+      className="aspect-video w-full rounded-2xl flex flex-col items-center justify-center gap-4 p-8"
       style={{
-        borderColor: "oklch(var(--primary) / 0.3)",
-        background: "oklch(var(--card) / 0.5)",
+        background:
+          "linear-gradient(135deg, oklch(0.10 0.015 280), oklch(0.14 0.020 285))",
+        border: isCompleted
+          ? "2px solid oklch(0.65 0.18 150 / 0.5)"
+          : "2px dashed oklch(var(--primary) / 0.3)",
       }}
-      data-ocid="video_player.no_video_placeholder"
+      data-ocid="lesson.offline_card"
     >
-      <div className="text-5xl">🎬</div>
-      <div className="text-center px-8">
-        <p className="font-display font-semibold text-foreground mb-1">
-          Video Coming Soon
+      <div className="text-5xl">{isCompleted ? "✅" : "🏫"}</div>
+      <div className="text-center max-w-md">
+        <p className="font-display font-semibold text-foreground mb-2 text-lg">
+          {isCompleted ? "Lesson Completed!" : "In-Person Lesson"}
         </p>
-        <p className="text-sm text-muted-foreground">
-          The instructor hasn&apos;t added a video for this lesson yet.
+        <p className="text-sm text-muted-foreground mb-4">
+          {description ||
+            "Attend this in-person lesson at RAP Studio. Mark complete when done."}
         </p>
-        {isAdmin && (
-          <a
-            href="/admin"
-            className="inline-flex items-center gap-1.5 mt-3 text-xs font-semibold px-3 py-1.5 rounded-lg border transition-colors"
+        {!isCompleted && (
+          <Button
+            onClick={onMarkComplete}
             style={{
-              borderColor: "oklch(var(--primary) / 0.4)",
-              color: "oklch(var(--primary))",
-              background: "oklch(var(--primary) / 0.06)",
+              background: "var(--gradient-gold)",
+              color: "oklch(var(--primary-foreground))",
             }}
+            data-ocid="lesson.mark_complete_button"
           >
-            + Add YouTube URL in Admin CMS →
-          </a>
+            Mark Lesson Complete
+          </Button>
         )}
       </div>
     </motion.div>
   );
 }
 
-// ── Sidebar lesson list ───────────────────────────────────────────────────────
 function LessonSidebar({
   lessons,
   progressMap,
   currentId,
+  isOnlineCourse,
   onSelect,
 }: {
   lessons: Lesson[];
   progressMap: Map<number, LessonProgress>;
   currentId: number | null;
+  isOnlineCourse: boolean;
   onSelect: (id: number) => void;
 }) {
   return (
     <div className="space-y-1" data-ocid="lesson.sidebar">
       {lessons.map((lesson, idx) => {
         const prog = progressMap.get(lesson.id);
-        const isCompleted = !!(prog?.quizPassed && prog?.videoWatched);
+        const isCompleted = isOnlineCourse
+          ? !!(prog?.quizPassed && prog?.videoWatched)
+          : !!prog?.quizPassed;
         const isCurrent = lesson.id === currentId;
         const isAccessible =
           idx === 0 ||
           (() => {
             const prev = lessons[idx - 1];
+            if (!prev) return false;
             const prevProg = progressMap.get(prev.id);
-            return !!(prevProg?.quizPassed && prevProg?.videoWatched);
+            return isOnlineCourse
+              ? !!(prevProg?.quizPassed && prevProg?.videoWatched)
+              : !!prevProg?.quizPassed;
           })();
-
-        const hasVideo = !!(lesson.youtubeUrl ?? "");
-
         return (
           <button
             key={lesson.id}
@@ -190,7 +199,7 @@ function LessonSidebar({
               >
                 {lesson.title ?? `Lesson ${idx + 1}`}
               </p>
-              {prog?.videoWatched && !prog.quizPassed && (
+              {isOnlineCourse && prog?.videoWatched && !prog.quizPassed && (
                 <p className="text-[10px] text-muted-foreground">
                   Quiz pending
                 </p>
@@ -201,11 +210,6 @@ function LessonSidebar({
                   style={{ color: "oklch(0.65 0.18 150)" }}
                 >
                   Completed ✓
-                </p>
-              )}
-              {!hasVideo && !isCompleted && (
-                <p className="text-[10px] text-muted-foreground/60">
-                  No video yet
                 </p>
               )}
             </div>
@@ -219,27 +223,218 @@ function LessonSidebar({
   );
 }
 
-// ── Main page ─────────────────────────────────────────────────────────────────
+function PaymentGate({
+  courseId,
+  courseName,
+  onPaymentSuccess,
+}: { courseId: string; courseName: string; onPaymentSuccess: () => void }) {
+  const { initiatePayment, isLoading } = useStripe();
+  const handlePay = () => {
+    void initiatePayment({
+      amount: 999,
+      name: courseName,
+      description: `Certificate: ${courseName}`,
+      referenceId: `cert_enrollment_${courseId}_${Date.now()}`,
+      paymentType: "certificate_download",
+      onSuccess: () => {
+        toast.success("Payment confirmed! Your certificate is now available.");
+        onPaymentSuccess();
+      },
+      onFailure: (err) => {
+        toast.error(`Payment failed: ${err}`);
+      },
+    });
+  };
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="rounded-2xl border p-6 text-center space-y-4"
+      style={{
+        background: "oklch(0.72 0.14 82 / 0.05)",
+        borderColor: "oklch(0.72 0.14 82 / 0.3)",
+      }}
+      data-ocid="certificate.payment_gate"
+    >
+      <div className="text-4xl">🔒</div>
+      <div>
+        <p className="font-display font-semibold text-foreground text-lg mb-1">
+          Complete payment to unlock your certificate
+        </p>
+        <p className="text-sm text-muted-foreground">
+          All lessons complete! Pay once to download your verified certificate.
+        </p>
+      </div>
+      <Button
+        onClick={handlePay}
+        disabled={isLoading}
+        className="font-bold px-8"
+        style={{
+          background:
+            "linear-gradient(90deg, oklch(0.72 0.14 82), oklch(0.78 0.18 82))",
+          color: "oklch(0.08 0.01 280)",
+        }}
+        data-ocid="certificate.pay_now_button"
+      >
+        {isLoading ? "Processing…" : "Pay ₹999 to Get Certificate"}
+      </Button>
+    </motion.div>
+  );
+}
+
+function EnrollmentGate({ courseId }: { courseId: string }) {
+  const [enrolling, setEnrolling] = useState(false);
+  const enrollCourse = useEnrollCourse();
+  const { refetch: refetchEnrollments } = useMyEnrollments();
+  const { actor } = useActor(createActor);
+
+  const handleEnroll = async () => {
+    const numId = Number.parseInt(courseId, 10);
+    if (!actor) {
+      toast.error("Backend not ready. Please wait a moment and try again.");
+      return;
+    }
+    if (Number.isNaN(numId) || numId <= 0) {
+      toast.error("Invalid course. Please go back and try again.");
+      return;
+    }
+    setEnrolling(true);
+    try {
+      await enrollCourse.mutateAsync(numId);
+      // Wait for enrollment to be reflected before reloading
+      await refetchEnrollments();
+      toast.success("Enrolled! Loading your lessons…");
+      // Small delay to ensure query cache is updated
+      setTimeout(() => window.location.reload(), 400);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err ?? "");
+      if (
+        msg.toLowerCase().includes("already") ||
+        msg.toLowerCase().includes("exists")
+      ) {
+        await refetchEnrollments();
+        window.location.reload();
+        return;
+      }
+      toast.error("Enrollment failed. Please try again.");
+      setEnrolling(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background flex items-center justify-center p-6">
+      <div className="text-center max-w-sm">
+        <div className="text-5xl mb-4">🎓</div>
+        <h2 className="font-display text-xl font-semibold text-foreground mb-2">
+          Enroll to Start Learning
+        </h2>
+        <p className="text-muted-foreground text-sm mb-6">
+          Enrollment is completely free. Complete all lessons to earn your
+          verified certificate.
+        </p>
+        <div className="flex gap-3 justify-center">
+          <a
+            href="/courses"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border text-sm text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
+          >
+            ← Browse Courses
+          </a>
+          <Button
+            onClick={() => void handleEnroll()}
+            disabled={enrolling}
+            className="gap-2 font-bold"
+            style={{
+              background: "var(--gradient-gold)",
+              color: "oklch(var(--primary-foreground))",
+            }}
+            data-ocid="course_learn.enroll_button"
+          >
+            {enrolling ? (
+              <>
+                <span className="w-4 h-4 border-2 border-current/40 border-t-current rounded-full animate-spin" />
+                Enrolling…
+              </>
+            ) : (
+              "Enroll Free →"
+            )}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="min-h-screen bg-background p-6 space-y-4">
+      <Skeleton className="h-10 w-64" />
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <Skeleton className="h-96 lg:col-span-1 rounded-2xl" />
+        <Skeleton className="h-96 lg:col-span-3 rounded-2xl" />
+      </div>
+    </div>
+  );
+}
+
 export function CourseLearnPage() {
   const { courseId } = useParams({ strict: false }) as { courseId?: string };
   const parsedCourseId = courseId ? Number.parseInt(courseId, 10) : null;
 
-  // ── 1. Check enrollment FIRST. Only show not-enrolled AFTER isLoading = false.
-  const { data: enrollments = [], isLoading: enrollmentsLoading } =
-    useMyEnrollments();
+  // Step 1: Check enrollment first — lessons are only fetched after confirming enrollment
+  const {
+    data: enrollments = [],
+    isLoading: enrollmentsLoading,
+    refetch: refetchEnrollments,
+  } = useMyEnrollments();
+  const { data: payments = [] } = useMyPayments();
+
+  // Track if we've done an initial enrollment refresh to prevent race on page load
+  const hasRefreshedRef = useRef(false);
+  const { actor } = useActor(createActor);
+
+  // On mount: if actor is available and enrollment data looks empty, refresh once
+  useEffect(() => {
+    if (hasRefreshedRef.current) return;
+    if (!actor || enrollmentsLoading) return;
+    if (enrollments.length === 0) {
+      hasRefreshedRef.current = true;
+      void refetchEnrollments();
+    }
+  }, [actor, enrollments.length, enrollmentsLoading, refetchEnrollments]);
 
   const isEnrolled = useMemo(() => {
-    if (parsedCourseId === null) return false;
+    if (parsedCourseId === null || enrollments.length === 0) return false;
     return enrollments.some(
-      (e) => String(e.courseId) === String(parsedCourseId),
+      (e) =>
+        Number(e.courseId) === parsedCourseId ||
+        String(e.courseId) === String(parsedCourseId),
     );
   }, [enrollments, parsedCourseId]);
 
-  // ── 2. Load lessons only after enrollment confirmed
+  const enrollment = useMemo(
+    () =>
+      enrollments.find(
+        (e) =>
+          Number(e.courseId) === parsedCourseId ||
+          String(e.courseId) === String(parsedCourseId),
+      ),
+    [enrollments, parsedCourseId],
+  );
+
+  const isPaid = useMemo(() => {
+    if (enrollment?.paymentStatus === "paid") return true;
+    return payments.some(
+      (p) =>
+        (p.referenceId?.includes(String(parsedCourseId)) ?? false) &&
+        p.status === "paid",
+    );
+  }, [enrollment, payments, parsedCourseId]);
+
+  // Step 2: Fetch lessons ONLY after enrollment is confirmed
   const { data: lessons = [], isLoading: lessonsLoading } = useLessons(
     isEnrolled ? parsedCourseId : null,
   );
-  const { data: courseProgress } = useCourseProgress(
+  const { data: courseProgress, refetch: refetchProgress } = useCourseProgress(
     isEnrolled ? parsedCourseId : null,
   );
   const { data: lessonProgressList = [] } = useLessonProgress(
@@ -247,38 +442,48 @@ export function CourseLearnPage() {
   );
   const markVideoWatched = useMarkVideoWatched();
 
+  // Resolve course name for payment gate
+  const { data: allCourses = [] } = useCourses();
+  const currentCourse = useMemo(
+    () => allCourses.find((c) => String(c.id) === String(parsedCourseId)),
+    [allCourses, parsedCourseId],
+  );
+
   const session = readSession();
   const studentName = session?.profile?.name ?? "Student";
 
+  const isOnlineCourse = useMemo(() => {
+    if (lessons.length === 0) return true;
+    return lessons.some((l) => (l.youtubeUrl ?? "").length > 0);
+  }, [lessons]);
+
   const progressMap = useMemo(() => {
     const m = new Map<number, LessonProgress>();
-    for (const lp of lessonProgressList) {
-      m.set(lp.lessonId, lp);
-    }
+    for (const lp of lessonProgressList) m.set(lp.lessonId, lp);
     return m;
   }, [lessonProgressList]);
 
-  // ── Determine current lesson (first incomplete or last)
   const currentLessonId = useMemo(() => {
     if (!lessons.length) return null;
     const incomplete = lessons.find((l) => {
       const p = progressMap.get(l.id);
-      return !(p?.quizPassed && p?.videoWatched);
+      return isOnlineCourse
+        ? !(p?.quizPassed && p?.videoWatched)
+        : !p?.quizPassed;
     });
     return incomplete?.id ?? lessons[lessons.length - 1].id;
-  }, [lessons, progressMap]);
+  }, [lessons, progressMap, isOnlineCourse]);
 
   const [activeLessonId, setActiveLessonId] = useState<number | null>(null);
   const [showQuiz, setShowQuiz] = useState(false);
-  const [, setQuizResult] = useState<{ passed: boolean; score: number } | null>(
-    null,
-  );
+  const [paymentDone, setPaymentDone] = useState(isPaid);
 
-  // Sync active lesson on initial load
   useEffect(() => {
-    if (!activeLessonId && currentLessonId) {
-      setActiveLessonId(currentLessonId);
-    }
+    if (isPaid) setPaymentDone(true);
+  }, [isPaid]);
+
+  useEffect(() => {
+    if (!activeLessonId && currentLessonId) setActiveLessonId(currentLessonId);
   }, [currentLessonId, activeLessonId]);
 
   const activeLesson = useMemo(
@@ -292,25 +497,32 @@ export function CourseLearnPage() {
   const handleSelectLesson = (id: number) => {
     setActiveLessonId(id);
     setShowQuiz(false);
-    setQuizResult(null);
   };
 
   const handleVideoComplete = useCallback(() => {
     if (!activeLessonId) return;
     markVideoWatched.mutate(activeLessonId, {
       onSuccess: () => {
-        toast.success("Video marked as watched!");
+        toast.success("Video completed! Time for the quiz.");
         setShowQuiz(true);
       },
       onError: () => {
-        toast.error("Could not save progress. Please try again.");
+        toast.warning("Progress save failed, but you can still take the quiz.");
+        setShowQuiz(true);
       },
+    });
+  }, [activeLessonId, markVideoWatched]);
+
+  const handleOfflineMarkComplete = useCallback(() => {
+    if (!activeLessonId) return;
+    markVideoWatched.mutate(activeLessonId, {
+      onSuccess: () => setShowQuiz(true),
+      onError: () => setShowQuiz(true),
     });
   }, [activeLessonId, markVideoWatched]);
 
   const handleQuizComplete = useCallback(
     (result: QuizResult) => {
-      setQuizResult({ passed: result.passed, score: result.score });
       if (result.passed) {
         toast.success("Quiz passed! Lesson completed 🎉");
         setTimeout(() => {
@@ -320,7 +532,6 @@ export function CourseLearnPage() {
           if (next) {
             setActiveLessonId(next.id);
             setShowQuiz(false);
-            setQuizResult(null);
           }
         }, 1500);
       }
@@ -330,60 +541,25 @@ export function CourseLearnPage() {
 
   const overallPercent = Number(courseProgress?.overallPercent ?? 0);
   const certificateEarned = courseProgress?.certificateEarned ?? false;
-
   const completedCount = lessons.filter((l) => {
     const p = progressMap.get(l.id);
-    return p?.quizPassed && p?.videoWatched;
+    return isOnlineCourse ? p?.quizPassed && p?.videoWatched : p?.quizPassed;
   }).length;
+  const allLessonsComplete =
+    lessons.length > 0 && completedCount === lessons.length;
 
-  // ── Loading state ──
-  if (enrollmentsLoading || lessonsLoading) {
-    return (
-      <div className="min-h-screen bg-background p-6 space-y-4">
-        <Skeleton className="h-10 w-64" />
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <Skeleton className="h-96 lg:col-span-1" />
-          <Skeleton className="h-96 lg:col-span-3" />
-        </div>
-      </div>
-    );
-  }
+  // Show skeleton while loading enrollment status
+  if (enrollmentsLoading) return <LoadingSkeleton />;
 
-  // ── Not enrolled — shown only AFTER enrollment data is loaded
-  if (!isEnrolled) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-6">
-        <div className="text-center max-w-sm">
-          <div className="text-5xl mb-4">🔒</div>
-          <h2 className="font-display text-xl font-semibold text-foreground mb-2">
-            Enrollment Required
-          </h2>
-          <p className="text-muted-foreground text-sm mb-6">
-            You need to enroll in this course before accessing lessons.
-          </p>
-          <div className="flex gap-3 justify-center">
-            <a
-              href="/courses"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border text-sm text-muted-foreground hover:text-foreground hover:border-primary/40 transition-colors"
-            >
-              ← Browse Courses
-            </a>
-            <a
-              href={`/courses/${courseId ?? ""}`}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-semibold hover:bg-primary/90 transition-colors"
-              data-ocid="course_learn.enroll_link"
-            >
-              Enroll Now →
-            </a>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // If not enrolled, show enrollment gate
+  if (!isEnrolled) return <EnrollmentGate courseId={courseId ?? ""} />;
+
+  // Show skeleton while loading lessons
+  if (lessonsLoading) return <LoadingSkeleton />;
 
   return (
     <div className="min-h-screen bg-background" data-ocid="course_learn.page">
-      {/* ── Sticky header ── */}
+      {/* Sticky header */}
       <header className="sticky top-0 z-30 bg-card/95 backdrop-blur-xl border-b border-border/40 px-4 sm:px-6 py-3 flex items-center gap-4">
         <a
           href="/courses"
@@ -397,7 +573,6 @@ export function CourseLearnPage() {
           {activeLesson?.title ?? "Course Learning"}
         </span>
         <div className="ml-auto flex items-center gap-3 shrink-0">
-          {/* Progress bar */}
           <div className="hidden sm:flex items-center gap-2">
             <div className="w-32 h-2 rounded-full bg-muted/40 overflow-hidden">
               <motion.div
@@ -429,13 +604,15 @@ export function CourseLearnPage() {
       </header>
 
       <div className="max-w-7xl mx-auto p-4 sm:p-6">
-        {/* ── Lesson step indicators ── */}
+        {/* Step progress bar */}
         {lessons.length > 0 && (
           <div className="mb-6 overflow-x-auto pb-2">
             <div className="flex items-center gap-2 min-w-max">
               {lessons.map((lesson, idx) => {
                 const prog = progressMap.get(lesson.id);
-                const isCompleted = !!(prog?.quizPassed && prog?.videoWatched);
+                const isCompleted = isOnlineCourse
+                  ? !!(prog?.quizPassed && prog?.videoWatched)
+                  : !!prog?.quizPassed;
                 const isCurrent = lesson.id === activeLessonId;
                 const state: StepState = isCompleted
                   ? "completed"
@@ -466,7 +643,7 @@ export function CourseLearnPage() {
           </div>
         )}
 
-        {/* ── Empty lessons ── */}
+        {/* Empty lessons */}
         {lessons.length === 0 ? (
           <div
             className="text-center py-20 rounded-2xl border border-border/40 bg-card/40"
@@ -483,7 +660,7 @@ export function CourseLearnPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* ── Sidebar ── */}
+            {/* Sidebar */}
             <aside className="lg:col-span-1 space-y-4">
               <div className="rounded-2xl border border-border/40 bg-card/60 p-4 space-y-3">
                 <div>
@@ -506,11 +683,11 @@ export function CourseLearnPage() {
                   lessons={lessons}
                   progressMap={progressMap}
                   currentId={activeLessonId}
+                  isOnlineCourse={isOnlineCourse}
                   onSelect={handleSelectLesson}
                 />
               </div>
 
-              {/* ── Certificate panel ── */}
               {certificateEarned && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
@@ -541,11 +718,10 @@ export function CourseLearnPage() {
               )}
             </aside>
 
-            {/* ── Main content ── */}
+            {/* Main content */}
             <main className="lg:col-span-3 space-y-5">
               {activeLesson ? (
                 <>
-                  {/* Lesson header */}
                   <div className="flex items-start gap-3">
                     <div>
                       <h1 className="font-display text-xl sm:text-2xl font-bold text-foreground leading-tight">
@@ -589,7 +765,7 @@ export function CourseLearnPage() {
                     </div>
                   </div>
 
-                  {/* ── Video area ── */}
+                  {/* Video / offline card */}
                   <motion.div
                     key={`video-${activeLesson.id}`}
                     initial={{ opacity: 0, y: 8 }}
@@ -605,11 +781,24 @@ export function CourseLearnPage() {
                         onVideoComplete={handleVideoComplete}
                       />
                     ) : (
-                      <NoVideoPlaceholder />
+                      <OfflineLessonCard
+                        description={activeLesson.description ?? ""}
+                        onMarkComplete={handleOfflineMarkComplete}
+                        isCompleted={activeProgress?.videoWatched ?? false}
+                      />
                     )}
                   </motion.div>
 
-                  {/* ── Quiz section — shown after video watched ── */}
+                  {/* Lesson description */}
+                  {activeLesson.description && (
+                    <div className="rounded-xl border border-border/30 bg-card/40 p-4">
+                      <p className="text-sm text-muted-foreground leading-relaxed">
+                        {activeLesson.description}
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Quiz section */}
                   <AnimatePresence>
                     {(activeProgress?.videoWatched || showQuiz) && (
                       <motion.div
@@ -634,17 +823,16 @@ export function CourseLearnPage() {
                           quizScore={activeProgress?.quizScore}
                           onQuizPass={handleQuizComplete}
                           onQuizFail={(result) => {
-                            setQuizResult({
-                              passed: false,
-                              score: result.score,
-                            });
+                            toast.error(
+                              `Quiz failed — score: ${result.score}/${result.totalQuestions}. Minimum 60% needed.`,
+                            );
                           }}
                         />
                       </motion.div>
                     )}
                   </AnimatePresence>
 
-                  {/* ── Lesson complete panel ── */}
+                  {/* Lesson complete banner */}
                   <AnimatePresence>
                     {activeProgress?.quizPassed && (
                       <motion.div
@@ -663,7 +851,7 @@ export function CourseLearnPage() {
                           Lesson Complete!
                         </h3>
                         <p className="text-sm text-muted-foreground mb-4">
-                          Great work! You&apos;ve finished this lesson.
+                          Great work! You've finished this lesson.
                         </p>
                         {(() => {
                           const currentIdx = lessons.findIndex(
@@ -675,7 +863,6 @@ export function CourseLearnPage() {
                               onClick={() => {
                                 setActiveLessonId(next.id);
                                 setShowQuiz(false);
-                                setQuizResult(null);
                               }}
                               style={{
                                 background: "var(--gradient-gold)",
@@ -685,23 +872,78 @@ export function CourseLearnPage() {
                             >
                               Next Lesson: {next.title ?? "Next"} →
                             </Button>
-                          ) : (
-                            <div className="space-y-2">
-                              <p className="text-sm font-semibold text-foreground">
-                                🎓 You&apos;ve completed all lessons!
-                              </p>
-                              {certificateEarned && (
-                                <a
-                                  href="/dashboard/student"
-                                  className="inline-block mt-2 text-sm font-semibold text-primary underline"
-                                  data-ocid="lesson.view_certificate_link"
-                                >
-                                  View your Certificate →
-                                </a>
-                              )}
-                            </div>
-                          );
+                          ) : null;
                         })()}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+
+                  {/* Course completion + certificate */}
+                  <AnimatePresence>
+                    {allLessonsComplete && (
+                      <motion.div
+                        key="all-complete"
+                        initial={{ opacity: 0, y: 12 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3 }}
+                        className="rounded-2xl border p-8 text-center space-y-4"
+                        style={{
+                          background: "oklch(0.72 0.14 82 / 0.06)",
+                          borderColor: "oklch(0.72 0.14 82 / 0.4)",
+                        }}
+                        data-ocid="course_learn.completion_banner"
+                      >
+                        <div className="text-5xl">🎓</div>
+                        <div>
+                          <h3 className="font-display text-2xl font-bold text-foreground mb-2">
+                            You've completed all lessons!
+                          </h3>
+                          <p className="text-sm text-muted-foreground">
+                            Congratulations, {studentName}! You've demonstrated
+                            mastery of this course.
+                          </p>
+                        </div>
+                        {certificateEarned && paymentDone ? (
+                          <div className="space-y-3">
+                            <p
+                              className="text-sm font-semibold"
+                              style={{ color: "oklch(0.72 0.18 85)" }}
+                            >
+                              🏆 Your certificate is ready!
+                            </p>
+                            <a
+                              href="/dashboard/student"
+                              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl font-bold text-sm"
+                              style={{
+                                background: "var(--gradient-gold)",
+                                color: "oklch(0.08 0.01 280)",
+                              }}
+                              data-ocid="course_learn.view_certificate_button"
+                            >
+                              View &amp; Download Certificate →
+                            </a>
+                          </div>
+                        ) : !paymentDone ? (
+                          <PaymentGate
+                            courseId={courseId ?? ""}
+                            courseName={currentCourse?.title ?? "Course"}
+                            onPaymentSuccess={() => {
+                              setPaymentDone(true);
+                              void refetchProgress();
+                            }}
+                          />
+                        ) : (
+                          <div
+                            className="rounded-xl p-4 text-sm text-muted-foreground"
+                            style={{
+                              background: "oklch(var(--muted) / 0.3)",
+                              border: "1px solid oklch(var(--border) / 0.3)",
+                            }}
+                          >
+                            Certificate is being generated. Check your dashboard
+                            shortly.
+                          </div>
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>

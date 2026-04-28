@@ -1,25 +1,28 @@
 {
-  "overview": "RAP Integrated Studio Management platform — a luxury, cinematic web application for a premium photography, videography, and short film studio. Features multi-role access (Admin, Client, Student, Receptionist, Staff), online course learning with YouTube videos and quizzes, Stripe payment integration, booking system, gallery, and a full admin CMS.",
+  "overview": "RAP Integrated Studio is a luxury cinematic management platform for photography, videography, and short film studio services. It features multi-role access (Admin, Client, Student, Receptionist, Staff), Stripe payments for course enrollment, a full CMS, and certificate issuance after course completion.",
   "features": [
-    "Online course learning with YouTube video lessons and 10-question quizzes",
-    "Step-by-step learning: video → quiz → certificate flow",
-    "Admin CMS to manage lesson YouTube URLs and quiz questions",
-    "Live Stripe payment configuration for real enrollment payments",
-    "Multi-role authentication with admin approval workflow",
-    "Real-time admin dashboard with 5-second polling",
-    "Certificate generation with QR code after course completion",
-    "Premium cinematic UI with dark/light theme toggle"
+    "Multi-role login and registration (/login for Client/Student, /admin/login for Receptionist/Staff/Admin)",
+    "Admin super dashboard with live data, pending approvals, direct user add/remove, full CMS",
+    "Stripe payment gateway for course enrollment and studio bookings",
+    "Online course learning flow: YouTube lessons, 10+ question quizzes, certificate after completion + payment",
+    "Certificate with QR code verifiable at /verify/{code}",
+    "Premium dark/light theme with deep navy, rich gold, midnight blue, champagne palette",
+    "Glassmorphism cards, smooth animations, circular orbital service layout",
+    "Gallery with masonry grid, lightbox, category filters",
+    "Student, Staff, Receptionist, and Client role-based dashboards with live 5-second polling",
+    "All data stored in backend canister state — no mock data"
   ],
-  "category": "education-studio-management",
+  "category": "productivity",
   "tags": [
     "studio",
+    "photography",
+    "videography",
     "courses",
-    "learning",
     "payments",
-    "admin",
-    "cinematic",
-    "certificates",
-    "youtube"
+    "luxury",
+    "multi-role",
+    "cms",
+    "certificates"
   ],
-  "last_updated": "2026-04-25T17:51:33.963Z"
+  "last_updated": "2026-04-26T17:07:34.774Z"
 }

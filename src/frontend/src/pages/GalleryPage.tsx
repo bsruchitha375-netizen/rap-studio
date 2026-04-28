@@ -372,18 +372,24 @@ export function GalleryPage() {
         className="relative overflow-hidden border-b border-border/20"
         style={{ minHeight: "420px" }}
       >
-        {/* Background image with parallax feel */}
+        {/* Rich CSS gradient background — no external images */}
         <div
           className="absolute inset-0"
           style={{
-            backgroundImage:
-              "url('https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=1600&q=80')",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
-            filter: "brightness(0.22) saturate(0.7)",
+            background:
+              "linear-gradient(160deg, oklch(0.07 0.025 265) 0%, oklch(0.1 0.035 280) 35%, oklch(0.08 0.02 295) 65%, oklch(0.06 0.015 270) 100%)",
           }}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-background/30 via-background/60 to-background" />
+        {/* Decorative grid */}
+        <div
+          className="absolute inset-0 opacity-[0.04]"
+          style={{
+            backgroundImage:
+              "linear-gradient(oklch(0.72 0.14 82 / 0.3) 1px, transparent 1px), linear-gradient(90deg, oklch(0.72 0.14 82 / 0.3) 1px, transparent 1px)",
+            backgroundSize: "80px 80px",
+          }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-background/10 via-background/40 to-background" />
 
         {/* Gold ambient glow */}
         <motion.div

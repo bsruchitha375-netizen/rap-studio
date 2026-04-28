@@ -12,6 +12,7 @@ import {
   Clock,
   Code2,
   CreditCard,
+  GraduationCap,
   History,
   Images,
   LayoutDashboard,
@@ -46,11 +47,11 @@ import { CmsTab } from "../components/dashboard/CmsTab";
 import { LiveIndicator } from "../components/dashboard/LiveIndicator";
 import { NotificationBell } from "../components/dashboard/NotificationBell";
 import { PendingApprovalsPanel } from "../components/dashboard/PendingApprovalsPanel";
-import { StripeConfigPanel } from "../components/dashboard/StripeConfigPanel";
 import { ThemeToggle } from "../components/layout/ThemeToggle";
 import { clearAdminSession, useIsAdmin } from "../hooks/useAuth";
 import {
   type AdminCreateUserInput,
+  useActorReady,
   useAdminAllBookings,
   useAdminAllFeedback,
   useAdminAllUsers,
@@ -58,6 +59,7 @@ import {
   useAdminCreateUser,
   useAdminDeleteCourse,
   useAdminDeleteUser,
+  useAdminGetAllEnrollments,
   useAdminPendingUsers,
   useAdminRecentActivity,
   useApproveUser,
@@ -67,13 +69,14 @@ import {
   useRejectBooking,
 } from "../hooks/useBackend";
 
-// ─── Nav items ───────────────────────────────────────────────────────────────
+// ─── Nav items ────────────────────────────────────────────────────────────────
 const NAV_ITEMS = [
   { id: "overview", label: "Overview", icon: LayoutDashboard },
   { id: "approvals", label: "Pending Approvals", icon: Users },
   { id: "bookings", label: "Bookings", icon: Calendar },
   { id: "payments", label: "Payments", icon: CreditCard },
   { id: "users", label: "All Users", icon: Users },
+  { id: "enrollments", label: "Enrollments", icon: GraduationCap },
   { id: "courses", label: "Courses", icon: BookOpen },
   { id: "media", label: "Media / Gallery", icon: Images },
   { id: "cms", label: "CMS Editor", icon: Code2 },
@@ -84,7 +87,16 @@ const NAV_ITEMS = [
   { id: "settings", label: "Settings", icon: Settings },
 ];
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── NAV GROUP labels ─────────────────────────────────────────────────────────
+const NAV_GROUPS: Record<string, string[]> = {
+  "": ["overview"],
+  Management: ["approvals", "bookings", "payments", "users", "enrollments"],
+  Content: ["courses", "media", "cms"],
+  Reports: ["notifications", "feedback", "history", "emails"],
+  System: ["settings"],
+};
+
+// ─── Role colors ──────────────────────────────────────────────────────────────
 const ROLE_COLORS: Record<string, string> = {
   Admin: "bg-primary/20 text-primary border-primary/30",
   admin: "bg-primary/20 text-primary border-primary/30",
@@ -94,14 +106,12 @@ const ROLE_COLORS: Record<string, string> = {
     "bg-purple-500/20 text-purple-700 border-purple-500/30 dark:text-purple-300",
   receptionist:
     "bg-purple-500/20 text-purple-700 border-purple-500/30 dark:text-purple-300",
-  Client:
-    "bg-emerald-500/20 text-emerald-700 border-emerald-500/30 dark:text-emerald-300",
-  client:
-    "bg-emerald-500/20 text-emerald-700 border-emerald-500/30 dark:text-emerald-300",
+  Client: "bg-teal-500/20 text-teal-700 border-teal-500/30 dark:text-teal-300",
+  client: "bg-teal-500/20 text-teal-700 border-teal-500/30 dark:text-teal-300",
   Student:
-    "bg-orange-500/20 text-orange-700 border-orange-500/30 dark:text-orange-300",
+    "bg-violet-500/20 text-violet-700 border-violet-500/30 dark:text-violet-300",
   student:
-    "bg-orange-500/20 text-orange-700 border-orange-500/30 dark:text-orange-300",
+    "bg-violet-500/20 text-violet-700 border-violet-500/30 dark:text-violet-300",
 };
 
 const BOOKING_STATUS_CONFIG: Record<
@@ -111,36 +121,34 @@ const BOOKING_STATUS_CONFIG: Record<
   Pending: {
     label: "Pending",
     className:
-      "bg-yellow-500/20 text-yellow-700 border-yellow-500/40 dark:text-yellow-300 dark:border-yellow-500/30",
+      "bg-yellow-500/20 text-yellow-700 border-yellow-500/40 dark:text-yellow-300",
   },
   Confirmed: {
     label: "Confirmed",
     className:
-      "bg-blue-500/20 text-blue-700 border-blue-500/40 dark:text-blue-300 dark:border-blue-500/30",
+      "bg-blue-500/20 text-blue-700 border-blue-500/40 dark:text-blue-300",
   },
   Completed: {
     label: "Completed",
     className:
-      "bg-emerald-500/20 text-emerald-700 border-emerald-500/40 dark:text-emerald-300 dark:border-emerald-500/30",
+      "bg-emerald-500/20 text-emerald-700 border-emerald-500/40 dark:text-emerald-300",
   },
   Cancelled: {
     label: "Cancelled",
-    className:
-      "bg-red-500/20 text-red-700 border-red-500/40 dark:text-red-300 dark:border-red-500/30",
+    className: "bg-red-500/20 text-red-700 border-red-500/40 dark:text-red-300",
   },
   WorkDelivered: {
     label: "Delivered",
     className:
-      "bg-purple-500/20 text-purple-700 border-purple-500/40 dark:text-purple-300 dark:border-purple-500/30",
+      "bg-purple-500/20 text-purple-700 border-purple-500/40 dark:text-purple-300",
   },
   PaymentPending: {
     label: "Awaiting Payment",
     className:
-      "bg-orange-500/20 text-orange-700 border-orange-500/40 dark:text-orange-300 dark:border-orange-500/30",
+      "bg-orange-500/20 text-orange-700 border-orange-500/40 dark:text-orange-300",
   },
 };
 
-// ─── Normalise backend status ─────────────────────────────────────────────────
 function getStatusFromBackend(raw: unknown): string {
   if (!raw) return "Pending";
   if (typeof raw === "string") return raw;
@@ -179,7 +187,6 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
-// ─── Booking row ──────────────────────────────────────────────────────────────
 function formatLocation(loc: LocationType | undefined): string {
   if (!loc) return "—";
   if (loc.__kind__ === "Studio") return "Studio";
@@ -189,6 +196,7 @@ function formatLocation(loc: LocationType | undefined): string {
   return "—";
 }
 
+// ─── Booking row ──────────────────────────────────────────────────────────────
 function AdminBookingRow({
   booking,
   effectiveStatus,
@@ -212,7 +220,7 @@ function AdminBookingRow({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.05 }}
-      className={`w-full rounded-xl border p-4 transition-smooth bg-card hover:border-primary/30 ${isPending ? "border-yellow-500/40" : "border-border/60"}`}
+      className={`w-full rounded-xl border p-4 transition-all duration-200 bg-card hover:border-primary/30 ${isPending ? "border-yellow-500/40" : "border-border/60"}`}
       data-ocid={`admin-booking-row.${index + 1}`}
     >
       <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
@@ -398,13 +406,13 @@ const ROLE_OPTIONS_ADD: { value: AddUserRole; label: string; color: string }[] =
       value: "client",
       label: "Client",
       color:
-        "border-emerald-500/60 bg-emerald-500/12 text-emerald-700 dark:text-emerald-300",
+        "border-teal-500/60 bg-teal-500/12 text-teal-700 dark:text-teal-300",
     },
     {
       value: "student",
       label: "Student",
       color:
-        "border-orange-500/60 bg-orange-500/12 text-orange-700 dark:text-orange-300",
+        "border-violet-500/60 bg-violet-500/12 text-violet-700 dark:text-violet-300",
     },
     {
       value: "staff",
@@ -490,7 +498,6 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
         transition={{ type: "spring", stiffness: 280, damping: 28 }}
         className="w-full max-w-md rounded-2xl border border-primary/30 bg-card shadow-xl overflow-hidden"
       >
-        {/* Header */}
         <div className="px-6 pt-5 pb-4 border-b border-border flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-lg bg-primary/15 border border-primary/30 flex items-center justify-center">
@@ -516,13 +523,11 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        {/* Form */}
         <form
           onSubmit={(e) => void handleSubmit(e)}
           className="px-6 py-5 space-y-3"
           noValidate
         >
-          {/* Role picker */}
           <div className="space-y-1.5">
             <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Role
@@ -533,11 +538,7 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
                   key={opt.value}
                   type="button"
                   onClick={() => set("role", opt.value)}
-                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all duration-200 ${
-                    form.role === opt.value
-                      ? opt.color
-                      : "border-border bg-muted/20 text-muted-foreground hover:border-border/60"
-                  }`}
+                  className={`py-2 px-3 rounded-xl border text-xs font-bold transition-all duration-200 ${form.role === opt.value ? opt.color : "border-border bg-muted/20 text-muted-foreground hover:border-border/60"}`}
                   data-ocid={`admin-add-user.role.${opt.value}`}
                 >
                   {opt.label}
@@ -546,123 +547,78 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          {/* Full Name */}
-          <div className="space-y-1">
-            <label
-              htmlFor="add-name"
-              className="text-xs font-medium text-muted-foreground"
-            >
-              Full Name *
-            </label>
-            <input
-              id="add-name"
-              type="text"
-              placeholder="Full name"
-              value={form.name}
-              onChange={(e) => set("name", e.target.value)}
-              className="input-field"
-              data-ocid="admin-add-user.name.input"
-            />
-            {errors.name && (
-              <p className="text-xs text-destructive" role="alert">
-                {errors.name}
-              </p>
-            )}
-          </div>
-
-          {/* Email */}
-          <div className="space-y-1">
-            <label
-              htmlFor="add-email"
-              className="text-xs font-medium text-muted-foreground"
-            >
-              Email *
-            </label>
-            <input
-              id="add-email"
-              type="email"
-              placeholder="user@example.com"
-              value={form.email}
-              onChange={(e) => set("email", e.target.value)}
-              className="input-field"
-              data-ocid="admin-add-user.email.input"
-            />
-            {errors.email && (
-              <p className="text-xs text-destructive" role="alert">
-                {errors.email}
-              </p>
-            )}
-          </div>
-
-          {/* Phone */}
-          <div className="space-y-1">
-            <label
-              htmlFor="add-phone"
-              className="text-xs font-medium text-muted-foreground"
-            >
-              Mobile Number *
-            </label>
-            <input
-              id="add-phone"
-              type="tel"
-              placeholder="10-digit mobile"
-              value={form.phone}
-              onChange={(e) =>
-                set("phone", e.target.value.replace(/\D/g, "").slice(0, 10))
-              }
-              className="input-field"
-              data-ocid="admin-add-user.phone.input"
-            />
-            {errors.phone && (
-              <p className="text-xs text-destructive" role="alert">
-                {errors.phone}
-              </p>
-            )}
-          </div>
-
-          {/* Password */}
-          <div className="space-y-1">
-            <label
-              htmlFor="add-password"
-              className="text-xs font-medium text-muted-foreground"
-            >
-              Password *
-            </label>
-            <input
-              id="add-password"
-              type="password"
-              placeholder="Min 6 characters"
-              value={form.password}
-              onChange={(e) => set("password", e.target.value)}
-              className="input-field"
-              data-ocid="admin-add-user.password.input"
-              autoComplete="new-password"
-            />
-            {errors.password && (
-              <p className="text-xs text-destructive" role="alert">
-                {errors.password}
-              </p>
-            )}
-          </div>
-
-          {/* Address (optional) */}
-          <div className="space-y-1">
-            <label
-              htmlFor="add-address"
-              className="text-xs font-medium text-muted-foreground"
-            >
-              Address <span className="opacity-60 font-normal">(optional)</span>
-            </label>
-            <input
-              id="add-address"
-              type="text"
-              placeholder="Address"
-              value={form.address}
-              onChange={(e) => set("address", e.target.value)}
-              className="input-field"
-              data-ocid="admin-add-user.address.input"
-            />
-          </div>
+          {[
+            {
+              key: "name" as const,
+              label: "Full Name *",
+              type: "text",
+              placeholder: "Full name",
+              ocid: "admin-add-user.name.input",
+            },
+            {
+              key: "email" as const,
+              label: "Email *",
+              type: "email",
+              placeholder: "user@example.com",
+              ocid: "admin-add-user.email.input",
+            },
+            {
+              key: "phone" as const,
+              label: "Mobile Number *",
+              type: "tel",
+              placeholder: "10-digit mobile",
+              ocid: "admin-add-user.phone.input",
+            },
+            {
+              key: "password" as const,
+              label: "Password *",
+              type: "password",
+              placeholder: "Min 6 characters",
+              ocid: "admin-add-user.password.input",
+            },
+            {
+              key: "address" as const,
+              label: "Address (optional)",
+              type: "text",
+              placeholder: "Address",
+              ocid: "admin-add-user.address.input",
+            },
+          ].map((field) => (
+            <div key={field.key} className="space-y-1">
+              <label
+                htmlFor={`add-${field.key}`}
+                className="text-xs font-medium text-muted-foreground"
+              >
+                {field.label}
+              </label>
+              <input
+                id={`add-${field.key}`}
+                type={field.type}
+                placeholder={field.placeholder}
+                value={form[field.key]}
+                onChange={(e) => {
+                  if (field.key === "phone") {
+                    set(
+                      field.key,
+                      e.target.value.replace(/\D/g, "").slice(0, 10),
+                    );
+                  } else {
+                    set(field.key, e.target.value);
+                  }
+                }}
+                className="input-field"
+                data-ocid={field.ocid}
+                autoComplete={
+                  field.key === "password" ? "new-password" : undefined
+                }
+              />
+              {errors[field.key] && (
+                <p className="text-xs text-destructive" role="alert">
+                  {errors[field.key]}
+                </p>
+              )}
+            </div>
+          ))}
 
           {errors.submit && (
             <p
@@ -723,146 +679,196 @@ function SkeletonRows({ count = 3 }: { count?: number }) {
   );
 }
 
-const NOTIF_TYPE_COLORS: Record<string, string> = {
-  booking: "bg-blue-500/20 text-blue-700 border-blue-500/40 dark:text-blue-300",
-  payment:
-    "bg-emerald-500/20 text-emerald-700 border-emerald-500/40 dark:text-emerald-300",
-  course:
-    "bg-purple-500/20 text-purple-700 border-purple-500/40 dark:text-purple-300",
-  system: "bg-muted/50 text-muted-foreground border-border/40",
-};
+// ─── Enrollment Row ───────────────────────────────────────────────────────────
+function EnrollmentsPanel() {
+  const {
+    data: enrollments = [],
+    isLoading,
+    dataUpdatedAt,
+  } = useAdminGetAllEnrollments();
 
-// ─── Tab pane with error boundary ─────────────────────────────────────────────
-function TabPane({
-  id,
-  label,
-  activeTab,
-  children,
-}: {
-  id: string;
-  label?: string;
-  activeTab: string;
-  children: React.ReactNode;
-}) {
-  if (activeTab !== id) return null;
+  const completedCount = enrollments.filter(
+    (e) => e.completedAt != null,
+  ).length;
+  const inProgressCount = enrollments.filter(
+    (e) => e.completedAt == null && e.progress > 0,
+  ).length;
+  const certCount = enrollments.filter((e) => !!e.certificateCode).length;
+
   return (
-    <motion.div
-      key={id}
-      initial={{ opacity: 0, y: 10 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -10 }}
-      transition={{ duration: 0.28 }}
-      className="w-full"
-    >
-      <AdminErrorBoundary tabLabel={label ?? id}>{children}</AdminErrorBoundary>
-    </motion.div>
+    <div className="space-y-4 w-full">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="font-display font-bold text-lg text-foreground flex items-center gap-2">
+            <GraduationCap className="w-5 h-5 text-primary" />
+            Student Enrollments
+          </h2>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Live enrollment tracking — all students
+          </p>
+        </div>
+        <LiveIndicator updatedAt={dataUpdatedAt} pollMs={5000} />
+      </div>
+
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        {[
+          {
+            label: "Total Enrollments",
+            value: enrollments.length,
+            color: "text-foreground",
+            bg: "bg-muted/30",
+            border: "border-border/50",
+          },
+          {
+            label: "Completed",
+            value: completedCount,
+            color: "text-emerald-600 dark:text-emerald-300",
+            bg: "bg-emerald-500/10",
+            border: "border-emerald-500/20",
+          },
+          {
+            label: "In Progress",
+            value: inProgressCount,
+            color: "text-primary",
+            bg: "bg-primary/10",
+            border: "border-primary/20",
+          },
+          {
+            label: "Certificates Issued",
+            value: certCount,
+            color: "text-yellow-600 dark:text-yellow-300",
+            bg: "bg-yellow-500/10",
+            border: "border-yellow-500/20",
+          },
+        ].map((s) => (
+          <div
+            key={s.label}
+            className={`rounded-xl border ${s.border} ${s.bg} p-4 text-center`}
+            data-ocid="admin-enrollment-summary-card"
+          >
+            <p className={`text-2xl font-bold font-display ${s.color}`}>
+              {s.value}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5 font-medium">
+              {s.label}
+            </p>
+          </div>
+        ))}
+      </div>
+
+      {/* Enrollment list */}
+      {isLoading ? (
+        <SkeletonRows count={4} />
+      ) : enrollments.length === 0 ? (
+        <div
+          className="text-center py-14 rounded-xl border border-border bg-card"
+          data-ocid="enrollments-empty_state"
+        >
+          <GraduationCap className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
+          <p className="text-muted-foreground font-medium">
+            No enrollments yet.
+          </p>
+          <p className="text-xs text-muted-foreground/60 mt-1">
+            Students who enroll in courses will appear here.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {/* Table header */}
+          <div className="hidden md:grid grid-cols-[1fr_1fr_120px_100px_80px] gap-3 px-4 py-2.5 rounded-xl bg-muted/40 border border-border text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+            <span>Student</span>
+            <span>Course</span>
+            <span>Progress</span>
+            <span>Status</span>
+            <span>Certificate</span>
+          </div>
+          {enrollments.map((e, i) => {
+            const isComplete = e.completedAt != null;
+            const hasCert = !!e.certificateCode;
+            return (
+              <motion.div
+                key={e.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.04 }}
+                className="rounded-xl bg-card border border-border/60 p-4 hover:border-primary/30 transition-smooth"
+                data-ocid={`admin-enrollment-row.${i + 1}`}
+              >
+                <div className="grid md:grid-cols-[1fr_1fr_120px_100px_80px] gap-3 items-center">
+                  {/* Student */}
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-foreground truncate">
+                      {e.studentName}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {e.studentEmail}
+                    </p>
+                  </div>
+                  {/* Course */}
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-foreground truncate">
+                      {e.courseName}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      Enrolled {formatDateTs(e.enrolledAt)}
+                    </p>
+                  </div>
+                  {/* Progress bar */}
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[10px] text-muted-foreground">
+                      <span>Progress</span>
+                      <span className="font-bold text-primary">
+                        {e.progress}%
+                      </span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-muted/50 overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: `${e.progress}%` }}
+                        transition={{ duration: 0.8, ease: "easeOut" }}
+                        className="h-full rounded-full bg-primary"
+                      />
+                    </div>
+                  </div>
+                  {/* Status */}
+                  <Badge
+                    className={`text-[10px] border font-semibold w-fit ${
+                      isComplete
+                        ? "bg-emerald-500/20 text-emerald-700 border-emerald-500/40 dark:text-emerald-300"
+                        : e.progress > 0
+                          ? "bg-blue-500/20 text-blue-700 border-blue-500/40 dark:text-blue-300"
+                          : "bg-muted/40 text-muted-foreground border-border/40"
+                    }`}
+                  >
+                    {isComplete
+                      ? "Completed"
+                      : e.progress > 0
+                        ? "In Progress"
+                        : "Not Started"}
+                  </Badge>
+                  {/* Certificate */}
+                  {hasCert ? (
+                    <Badge className="text-[10px] border font-semibold bg-yellow-500/20 text-yellow-700 border-yellow-500/40 dark:text-yellow-300 w-fit">
+                      ✓ Issued
+                    </Badge>
+                  ) : (
+                    <span className="text-[10px] text-muted-foreground/50">
+                      —
+                    </span>
+                  )}
+                </div>
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
 
-// ─── Error boundaries ─────────────────────────────────────────────────────────
-interface EBState {
-  hasError: boolean;
-  error?: Error;
-}
-
-class AdminErrorBoundary extends React.Component<
-  { children: React.ReactNode; tabLabel?: string },
-  EBState
-> {
-  constructor(props: { children: React.ReactNode; tabLabel?: string }) {
-    super(props);
-    this.state = { hasError: false };
-  }
-  static getDerivedStateFromError(error: Error): EBState {
-    return { hasError: true, error };
-  }
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error(
-      `[AdminDashboard/${this.props.tabLabel ?? "tab"}] Error:`,
-      error,
-      info,
-    );
-  }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-8 text-center max-w-lg mx-auto my-8">
-          <div className="w-12 h-12 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center mx-auto mb-4">
-            <XCircle className="w-6 h-6 text-red-500" />
-          </div>
-          <h3 className="font-display font-bold text-foreground mb-1 text-sm">
-            {this.props.tabLabel
-              ? `"${this.props.tabLabel}" tab error`
-              : "Tab crashed"}
-          </h3>
-          <p className="text-xs text-muted-foreground mb-4 font-mono bg-muted/20 rounded px-3 py-2 break-all">
-            {this.state.error?.message ?? "Unknown error"}
-          </p>
-          <Button
-            size="sm"
-            onClick={() => this.setState({ hasError: false, error: undefined })}
-            className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs"
-          >
-            Retry Tab
-          </Button>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-class AdminPageBoundary extends React.Component<
-  { children: React.ReactNode },
-  EBState
-> {
-  constructor(props: { children: React.ReactNode }) {
-    super(props);
-    this.state = { hasError: false };
-  }
-  static getDerivedStateFromError(error: Error): EBState {
-    return { hasError: true, error };
-  }
-  componentDidCatch(error: Error, info: React.ErrorInfo) {
-    console.error("[AdminDashboard] Fatal error:", error, info);
-  }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="min-h-screen bg-background flex items-center justify-center p-8">
-          <div className="text-center max-w-md">
-            <div className="w-16 h-16 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center mx-auto mb-5">
-              <XCircle className="w-8 h-8 text-red-500" />
-            </div>
-            <h2 className="text-xl font-display font-bold text-foreground mb-2">
-              Dashboard Error
-            </h2>
-            <p className="text-sm text-muted-foreground mb-1">
-              An unexpected error occurred.
-            </p>
-            <p className="text-xs text-muted-foreground/70 mb-6 font-mono bg-muted/20 rounded px-3 py-2">
-              {this.state.error?.message ?? "Unknown error"}
-            </p>
-            <Button
-              onClick={() => this.setState({ hasError: false })}
-              className="bg-primary text-primary-foreground hover:bg-primary/90"
-            >
-              Reload Dashboard
-            </Button>
-          </div>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
 // ─── Courses panel ────────────────────────────────────────────────────────────
-function CoursesPanel({
-  onNavigateCms,
-}: {
-  onNavigateCms: () => void;
-}) {
+function CoursesPanel({ onNavigateCms }: { onNavigateCms: () => void }) {
   const {
     data: adminCourses = [],
     isLoading,
@@ -895,7 +901,7 @@ function CoursesPanel({
           Courses
         </h2>
         <div className="flex items-center gap-3">
-          <LiveIndicator dataUpdatedAt={dataUpdatedAt} pollMs={5000} />
+          <LiveIndicator updatedAt={dataUpdatedAt} pollMs={5000} />
           <Button
             type="button"
             size="sm"
@@ -1000,7 +1006,6 @@ function CoursesPanel({
                   </div>
                 </div>
 
-                {/* Lesson editor panel */}
                 <AnimatePresence>
                   {isExpanded && (
                     <motion.div
@@ -1025,7 +1030,6 @@ function CoursesPanel({
         </div>
       )}
 
-      {/* Confirm delete dialog */}
       {confirmDeleteId !== null && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm"
@@ -1176,9 +1180,146 @@ function MediaPanel() {
   );
 }
 
+// ─── Tab pane ─────────────────────────────────────────────────────────────────
+function TabPane({
+  id,
+  label,
+  activeTab,
+  children,
+}: {
+  id: string;
+  label?: string;
+  activeTab: string;
+  children: React.ReactNode;
+}) {
+  if (activeTab !== id) return null;
+  return (
+    <motion.div
+      key={id}
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -10 }}
+      transition={{ duration: 0.28 }}
+      className="w-full"
+    >
+      <AdminErrorBoundary tabLabel={label ?? id}>{children}</AdminErrorBoundary>
+    </motion.div>
+  );
+}
+
+// ─── Error boundaries ─────────────────────────────────────────────────────────
+interface EBState {
+  hasError: boolean;
+  error?: Error;
+}
+
+class AdminErrorBoundary extends React.Component<
+  { children: React.ReactNode; tabLabel?: string },
+  EBState
+> {
+  constructor(props: { children: React.ReactNode; tabLabel?: string }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError(error: Error): EBState {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error(
+      `[AdminDashboard/${this.props.tabLabel ?? "tab"}] Error:`,
+      error,
+      info,
+    );
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="rounded-2xl border border-red-500/20 bg-red-500/5 p-8 text-center max-w-lg mx-auto my-8">
+          <div className="w-12 h-12 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center mx-auto mb-4">
+            <XCircle className="w-6 h-6 text-red-500" />
+          </div>
+          <h3 className="font-display font-bold text-foreground mb-1 text-sm">
+            {this.props.tabLabel
+              ? `"${this.props.tabLabel}" tab error`
+              : "Tab crashed"}
+          </h3>
+          <p className="text-xs text-muted-foreground mb-4 font-mono bg-muted/20 rounded px-3 py-2 break-all">
+            {this.state.error?.message ?? "Unknown error"}
+          </p>
+          <Button
+            size="sm"
+            onClick={() => this.setState({ hasError: false, error: undefined })}
+            className="bg-primary text-primary-foreground hover:bg-primary/90 text-xs"
+          >
+            Retry Tab
+          </Button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+class AdminPageBoundary extends React.Component<
+  { children: React.ReactNode },
+  EBState
+> {
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError(error: Error): EBState {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error("[AdminDashboard] Fatal error:", error, info);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center p-8">
+          <div className="text-center max-w-md">
+            <div className="w-16 h-16 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center mx-auto mb-5">
+              <XCircle className="w-8 h-8 text-red-500" />
+            </div>
+            <h2 className="text-xl font-display font-bold text-foreground mb-2">
+              Dashboard Error
+            </h2>
+            <p className="text-sm text-muted-foreground mb-1">
+              An unexpected error occurred.
+            </p>
+            <p className="text-xs text-muted-foreground/70 mb-6 font-mono bg-muted/20 rounded px-3 py-2">
+              {this.state.error?.message ?? "Unknown error"}
+            </p>
+            <Button
+              onClick={() => this.setState({ hasError: false })}
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+            >
+              Reload Dashboard
+            </Button>
+          </div>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const NOTIF_TYPE_COLORS: Record<string, string> = {
+  booking: "bg-blue-500/20 text-blue-700 border-blue-500/40 dark:text-blue-300",
+  payment:
+    "bg-emerald-500/20 text-emerald-700 border-emerald-500/40 dark:text-emerald-300",
+  course:
+    "bg-purple-500/20 text-purple-700 border-purple-500/40 dark:text-purple-300",
+  system: "bg-muted/50 text-muted-foreground border-border/40",
+};
+
 // ─── Dashboard content ────────────────────────────────────────────────────────
 function AdminDashboardContent() {
   const isAdminLoggedIn = useIsAdmin();
+  const actorState = useActorReady();
+  const actorReady = actorState.isReady;
+  const isWarming = actorState.isWarming;
   const [activeTab, setActiveTab] = useState("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [bookingFilter, setBookingFilter] = useState("all");
@@ -1190,55 +1331,41 @@ function AdminDashboardContent() {
 
   const deleteUserMutation = useAdminDeleteUser();
 
-  // ── Live polling hooks ────────────────────────────────────────────────────
   const {
     data: backendBookings = [],
     isLoading: bookingsLoading,
     dataUpdatedAt: bookingsUpdatedAt,
   } = useAdminAllBookings();
-
   const {
     data: backendUsers = [],
     isLoading: usersLoading,
     dataUpdatedAt: usersUpdatedAt,
   } = useAdminAllUsers();
-
   const { data: pendingUsers = [] } = useAdminPendingUsers();
   const pendingApprovalsCount = pendingUsers.length;
-
   const { data: adminNotifications = [] } = useMyNotifications();
-
   const { data: activityEvents = [], isLoading: activityLoading } =
     useAdminRecentActivity();
-
   const { data: feedbackList = [] } = useAdminAllFeedback();
-
   const confirmBookingMutation = useConfirmBooking();
   const rejectBookingMutation = useRejectBooking();
 
-  // ── Normalised bookings with status extraction ────────────────────────────
   const bookingsWithStatus = backendBookings.map((b) => ({
     booking: b,
     status: getStatusFromBackend(b.status),
   }));
-
   const pendingCount = bookingsWithStatus.filter(
     (b) => b.status === "Pending" || b.status === "pending",
   ).length;
-
-  const filteredBookings = bookingsWithStatus.filter(({ status }) => {
-    if (bookingFilter === "all") return true;
-    return status === bookingFilter;
-  });
-
+  const filteredBookings = bookingsWithStatus.filter(({ status }) =>
+    bookingFilter === "all" ? true : status === bookingFilter,
+  );
   const filteredUsers = backendUsers.filter(
     (u) =>
       u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
       u.email.toLowerCase().includes(userSearch.toLowerCase()) ||
       (u.phone ?? "").includes(userSearch),
   );
-
-  // Activity events filtered for history tab
   const filteredActivityEvents = activityEvents.filter((e) => {
     if (historyFilter === "all") return true;
     const kind = String(e.kind).toLowerCase();
@@ -1250,7 +1377,6 @@ function AdminDashboardContent() {
 
   const currentLabel =
     NAV_ITEMS.find((n) => n.id === activeTab)?.label ?? "Admin";
-
   const lastLogin = new Date().toLocaleString("en-IN", {
     day: "2-digit",
     month: "short",
@@ -1262,7 +1388,7 @@ function AdminDashboardContent() {
   async function confirmBooking(id: bigint) {
     try {
       await confirmBookingMutation.mutateAsync(id);
-      toast.success(`Booking #${id} confirmed — client notified`);
+      toast.success(`Booking #${id} confirmed`);
     } catch {
       toast.error("Failed to confirm booking");
     }
@@ -1302,6 +1428,48 @@ function AdminDashboardContent() {
     );
   }
 
+  // Full-screen warmup spinner — shown only when backend hasn't responded yet
+  if (isWarming && !actorReady) {
+    return (
+      <div
+        className="min-h-screen bg-background flex flex-col items-center justify-center gap-5"
+        data-ocid="admin-warmup.loading_state"
+      >
+        <div className="relative">
+          <div
+            className="w-20 h-20 rounded-2xl flex items-center justify-center font-display font-bold text-2xl shadow-glow-gold"
+            style={{
+              background: "var(--gradient-gold)",
+              color: "oklch(var(--primary-foreground))",
+            }}
+          >
+            RAP
+          </div>
+          <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full border-2 border-background flex items-center justify-center bg-emerald-500">
+            <div className="w-3 h-3 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+          </div>
+        </div>
+        <div className="text-center">
+          <p className="font-display font-bold text-foreground text-lg mb-1">
+            Connecting to Backend
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Warming up the studio dashboard — this takes a few seconds…
+          </p>
+        </div>
+        <div className="flex gap-1.5">
+          {[0, 1, 2].map((i) => (
+            <div
+              key={i}
+              className="w-2 h-2 rounded-full bg-primary/60 animate-bounce"
+              style={{ animationDelay: `${i * 0.15}s` }}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-background flex w-full">
       {/* Mobile overlay */}
@@ -1314,23 +1482,44 @@ function AdminDashboardContent() {
         />
       )}
 
-      {/* ── Sidebar ─────────────────────────────────────────────────────────── */}
+      {/* ── Premium Sidebar ─────────────────────────────────────────────────── */}
       <aside
-        className={`fixed lg:sticky top-0 h-screen w-60 flex-shrink-0 bg-card border-r border-border flex flex-col z-50 transition-transform duration-300 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } lg:translate-x-0`}
+        className={`fixed lg:sticky top-0 h-screen w-60 flex-shrink-0 flex flex-col z-50 transition-transform duration-300 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
+        style={{
+          background:
+            "linear-gradient(180deg, oklch(0.12 0.028 258) 0%, oklch(0.10 0.022 262) 100%)",
+          borderRight: "1px solid oklch(0.24 0.038 260)",
+        }}
       >
         {/* Logo */}
-        <div className="px-4 py-4 border-b border-border flex items-center justify-between">
+        <div
+          className="px-4 py-4 border-b flex items-center justify-between"
+          style={{ borderColor: "oklch(0.24 0.038 260)" }}
+        >
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center flex-shrink-0">
-              <Camera className="w-4 h-4 text-primary" />
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0"
+              style={{
+                background:
+                  "linear-gradient(135deg, oklch(0.73 0.148 83), oklch(0.65 0.13 75))",
+              }}
+            >
+              <Camera
+                className="w-4.5 h-4.5 text-[oklch(0.1_0.01_262)]"
+                style={{ color: "oklch(0.1 0.01 262)" }}
+              />
             </div>
             <div>
-              <p className="font-display font-bold text-sm text-foreground leading-none">
+              <p
+                className="font-display font-bold text-sm leading-none"
+                style={{ color: "oklch(0.95 0.01 75)" }}
+              >
                 RAP Studio
               </p>
-              <p className="text-[10px] text-muted-foreground mt-0.5">
+              <p
+                className="text-[10px] mt-0.5"
+                style={{ color: "oklch(0.55 0.012 260)" }}
+              >
                 Admin Dashboard
               </p>
             </div>
@@ -1347,58 +1536,110 @@ function AdminDashboardContent() {
         </div>
 
         {/* Nav */}
-        <nav className="flex-1 px-2 py-3 space-y-0.5 overflow-y-auto">
-          {NAV_ITEMS.map((item) => {
-            const Icon = item.icon;
-            const showBookingBadge = item.id === "bookings" && pendingCount > 0;
-            const showApprovalBadge =
-              item.id === "approvals" && pendingApprovalsCount > 0;
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                type="button"
-                onClick={() => {
-                  setActiveTab(item.id);
-                  setSidebarOpen(false);
-                }}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-smooth text-left ${
-                  isActive
-                    ? "bg-primary/15 text-primary font-bold border border-primary/25 shadow-subtle"
-                    : "text-muted-foreground hover:bg-muted/40 hover:text-foreground"
-                }`}
-                data-ocid={`admin-nav-${item.id}`}
-              >
-                <Icon
-                  className={`w-4 h-4 flex-shrink-0 ${isActive ? "text-primary" : ""}`}
-                />
-                <span className="flex-1">{item.label}</span>
-                {showBookingBadge && (
-                  <span className="w-5 h-5 rounded-full bg-yellow-500/20 text-yellow-700 dark:text-yellow-300 text-[10px] font-bold flex items-center justify-center border border-yellow-500/30">
-                    {pendingCount}
-                  </span>
-                )}
-                {showApprovalBadge && (
-                  <span className="w-5 h-5 rounded-full bg-orange-500/20 text-orange-700 dark:text-orange-300 text-[10px] font-bold flex items-center justify-center border border-orange-500/30">
-                    {pendingApprovalsCount}
-                  </span>
-                )}
-              </button>
-            );
-          })}
+        <nav className="flex-1 px-2 py-3 overflow-y-auto">
+          {Object.entries(NAV_GROUPS).map(([groupLabel, groupIds]) => (
+            <div key={groupLabel} className="mb-4">
+              {groupLabel && (
+                <p
+                  className="text-[9px] font-bold uppercase tracking-widest px-3 mb-1.5"
+                  style={{ color: "oklch(0.45 0.015 260)" }}
+                >
+                  {groupLabel}
+                </p>
+              )}
+              <div className="space-y-0.5">
+                {groupIds.map((id) => {
+                  const item = NAV_ITEMS.find((n) => n.id === id);
+                  if (!item) return null;
+                  const Icon = item.icon;
+                  const isActive = activeTab === id;
+                  const showBookingBadge =
+                    id === "bookings" && pendingCount > 0;
+                  const showApprovalBadge =
+                    id === "approvals" && pendingApprovalsCount > 0;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => {
+                        setActiveTab(id);
+                        setSidebarOpen(false);
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 text-left group"
+                      style={
+                        isActive
+                          ? {
+                              background:
+                                "linear-gradient(135deg, oklch(0.73 0.148 83 / 0.18), oklch(0.73 0.148 83 / 0.10))",
+                              color: "oklch(0.73 0.148 83)",
+                              border: "1px solid oklch(0.73 0.148 83 / 0.3)",
+                              boxShadow:
+                                "0 2px 8px oklch(0.73 0.148 83 / 0.12)",
+                            }
+                          : {
+                              color: "oklch(0.55 0.012 260)",
+                              border: "1px solid transparent",
+                            }
+                      }
+                      data-ocid={`admin-nav-${id}`}
+                    >
+                      <Icon
+                        className="w-4 h-4 flex-shrink-0"
+                        style={
+                          isActive ? { color: "oklch(0.73 0.148 83)" } : {}
+                        }
+                      />
+                      <span
+                        className="flex-1 font-medium"
+                        style={isActive ? { color: "oklch(0.88 0.06 83)" } : {}}
+                      >
+                        {item.label}
+                      </span>
+                      {showBookingBadge && (
+                        <span className="w-5 h-5 rounded-full bg-yellow-500/25 text-yellow-400 text-[10px] font-bold flex items-center justify-center border border-yellow-500/40">
+                          {pendingCount}
+                        </span>
+                      )}
+                      {showApprovalBadge && (
+                        <span className="w-5 h-5 rounded-full bg-orange-500/25 text-orange-400 text-[10px] font-bold flex items-center justify-center border border-orange-500/40">
+                          {pendingApprovalsCount}
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </nav>
 
         {/* Footer */}
-        <div className="px-3 py-3 border-t border-border">
+        <div
+          className="px-3 py-3 border-t"
+          style={{ borderColor: "oklch(0.24 0.038 260)" }}
+        >
           <div className="flex items-center gap-2 mb-2.5">
-            <div className="w-8 h-8 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-center text-xs font-bold text-primary flex-shrink-0">
+            <div
+              className="w-8 h-8 rounded-full border flex items-center justify-center text-xs font-bold flex-shrink-0"
+              style={{
+                background: "oklch(0.73 0.148 83 / 0.15)",
+                borderColor: "oklch(0.73 0.148 83 / 0.3)",
+                color: "oklch(0.73 0.148 83)",
+              }}
+            >
               A
             </div>
             <div className="min-w-0">
-              <p className="text-[11px] font-bold text-foreground truncate">
+              <p
+                className="text-[11px] font-bold truncate"
+                style={{ color: "oklch(0.88 0.06 83)" }}
+              >
                 Admin (Owner)
               </p>
-              <p className="text-[9px] text-muted-foreground truncate">
+              <p
+                className="text-[9px] truncate"
+                style={{ color: "oklch(0.45 0.015 260)" }}
+              >
                 Full access · all features
               </p>
             </div>
@@ -1407,7 +1648,11 @@ function AdminDashboardContent() {
             type="button"
             variant="outline"
             size="sm"
-            className="w-full text-[10px] h-7 border-border text-muted-foreground hover:text-foreground hover:bg-muted/40 font-semibold"
+            className="w-full text-[10px] h-7 font-semibold"
+            style={{
+              borderColor: "oklch(0.3 0.025 260)",
+              color: "oklch(0.55 0.012 260)",
+            }}
             onClick={() => {
               clearAdminSession();
               window.location.href = "/admin/login";
@@ -1433,14 +1678,17 @@ function AdminDashboardContent() {
             <Menu className="w-5 h-5" />
           </Button>
 
-          <h1 className="font-display font-bold text-foreground text-base">
-            {currentLabel}
-          </h1>
-
-          {/* Live indicator */}
-          <div className="hidden sm:flex items-center gap-1.5 ml-2 text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Live</span>
+          <div className="flex items-center gap-3">
+            <h1 className="font-display font-bold text-foreground text-base">
+              {currentLabel}
+            </h1>
+            <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+              <span className="relative flex h-1.5 w-1.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-400" />
+              </span>
+              <span>Live · 5s refresh</span>
+            </div>
           </div>
 
           <div className="ml-auto flex items-center gap-2">
@@ -1463,12 +1711,10 @@ function AdminDashboardContent() {
         {/* Content */}
         <main className="flex-1 p-4 md:p-6 w-full">
           <AnimatePresence mode="wait">
-            {/* ── Overview ──────────────────────────────────────── */}
             <TabPane id="overview" label="Overview" activeTab={activeTab}>
               <AdminStats />
             </TabPane>
 
-            {/* ── Pending Approvals ─────────────────────────────── */}
             <TabPane
               id="approvals"
               label="Pending Approvals"
@@ -1477,17 +1723,13 @@ function AdminDashboardContent() {
               <PendingApprovalsPanel />
             </TabPane>
 
-            {/* ── Bookings ──────────────────────────────────────── */}
             <TabPane id="bookings" label="Bookings" activeTab={activeTab}>
               <div className="space-y-4 w-full">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                   <h2 className="font-display font-bold text-lg text-foreground">
                     All Bookings
                   </h2>
-                  <LiveIndicator
-                    dataUpdatedAt={bookingsUpdatedAt}
-                    pollMs={5000}
-                  />
+                  <LiveIndicator updatedAt={bookingsUpdatedAt} pollMs={5000} />
                 </div>
 
                 {pendingCount > 0 && (
@@ -1513,7 +1755,6 @@ function AdminDashboardContent() {
                   </motion.div>
                 )}
 
-                {/* Filter tabs */}
                 <div
                   className="flex flex-wrap gap-2"
                   data-ocid="booking-filter-tabs"
@@ -1531,11 +1772,7 @@ function AdminDashboardContent() {
                       key={s}
                       type="button"
                       onClick={() => setBookingFilter(s)}
-                      className={`text-xs px-3 py-1.5 rounded-full border transition-smooth capitalize font-semibold ${
-                        bookingFilter === s
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground bg-card"
-                      }`}
+                      className={`text-xs px-3 py-1.5 rounded-full border transition-smooth capitalize font-semibold ${bookingFilter === s ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground bg-card"}`}
                       data-ocid={`booking-filter.${s.toLowerCase()}`}
                     >
                       {s === "all"
@@ -1545,7 +1782,6 @@ function AdminDashboardContent() {
                   ))}
                 </div>
 
-                {/* Booking list */}
                 <div className="space-y-3 w-full">
                   {bookingsLoading ? (
                     <SkeletonRows count={3} />
@@ -1574,12 +1810,10 @@ function AdminDashboardContent() {
               </div>
             </TabPane>
 
-            {/* ── Payments ──────────────────────────────────────── */}
             <TabPane id="payments" label="Payments" activeTab={activeTab}>
               <AdminPaymentsPanel />
             </TabPane>
 
-            {/* ── Users ─────────────────────────────────────────── */}
             <TabPane id="users" label="Users" activeTab={activeTab}>
               <div className="space-y-4 w-full">
                 <div className="flex flex-wrap items-center justify-between gap-3">
@@ -1587,10 +1821,7 @@ function AdminDashboardContent() {
                     All Users
                   </h2>
                   <div className="flex items-center gap-2">
-                    <LiveIndicator
-                      dataUpdatedAt={usersUpdatedAt}
-                      pollMs={10000}
-                    />
+                    <LiveIndicator updatedAt={usersUpdatedAt} pollMs={10000} />
                     <Button
                       type="button"
                       size="sm"
@@ -1640,22 +1871,22 @@ function AdminDashboardContent() {
               </div>
             </TabPane>
 
-            {/* ── Courses ───────────────────────────────────────── */}
+            <TabPane id="enrollments" label="Enrollments" activeTab={activeTab}>
+              <EnrollmentsPanel />
+            </TabPane>
+
             <TabPane id="courses" label="Courses" activeTab={activeTab}>
               <CoursesPanel onNavigateCms={() => setActiveTab("cms")} />
             </TabPane>
 
-            {/* ── Media ─────────────────────────────────────────── */}
             <TabPane id="media" label="Media / Gallery" activeTab={activeTab}>
               <MediaPanel />
             </TabPane>
 
-            {/* ── CMS ───────────────────────────────────────────── */}
             <TabPane id="cms" label="CMS Editor" activeTab={activeTab}>
               <CmsTab />
             </TabPane>
 
-            {/* ── Notifications ─────────────────────────────────── */}
             <TabPane
               id="notifications"
               label="Notifications"
@@ -1725,7 +1956,6 @@ function AdminDashboardContent() {
               </div>
             </TabPane>
 
-            {/* ── Feedback ──────────────────────────────────────── */}
             <TabPane id="feedback" label="Feedback" activeTab={activeTab}>
               <div className="space-y-3 w-full">
                 <div className="flex items-center gap-4 mb-4">
@@ -1767,9 +1997,6 @@ function AdminDashboardContent() {
                     <MessageSquare className="w-12 h-12 text-muted-foreground/30 mx-auto mb-3" />
                     <p className="text-muted-foreground font-medium">
                       No feedback received yet.
-                    </p>
-                    <p className="text-sm text-muted-foreground/60 mt-1">
-                      Feedback from clients and students will appear here.
                     </p>
                   </div>
                 ) : (
@@ -1825,7 +2052,6 @@ function AdminDashboardContent() {
               </div>
             </TabPane>
 
-            {/* ── History ───────────────────────────────────────── */}
             <TabPane id="history" label="History" activeTab={activeTab}>
               <div className="space-y-4 w-full">
                 <div className="flex items-center justify-between">
@@ -1844,11 +2070,7 @@ function AdminDashboardContent() {
                       key={f}
                       type="button"
                       onClick={() => setHistoryFilter(f)}
-                      className={`text-xs px-3 py-1.5 rounded-full border transition-smooth capitalize font-semibold ${
-                        historyFilter === f
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground bg-card"
-                      }`}
+                      className={`text-xs px-3 py-1.5 rounded-full border transition-smooth capitalize font-semibold ${historyFilter === f ? "bg-primary text-primary-foreground border-primary" : "border-border text-muted-foreground hover:border-primary/40 hover:text-foreground bg-card"}`}
                     >
                       {f === "all"
                         ? "All"
@@ -1909,7 +2131,6 @@ function AdminDashboardContent() {
               </div>
             </TabPane>
 
-            {/* ── Email Log ─────────────────────────────────────── */}
             <TabPane id="emails" label="Email Log" activeTab={activeTab}>
               <div className="space-y-4 w-full">
                 <h2 className="font-display font-bold text-lg text-foreground">
@@ -1919,7 +2140,7 @@ function AdminDashboardContent() {
                   <Mail className="w-4 h-4 text-muted-foreground flex-shrink-0" />
                   <p className="text-xs text-muted-foreground font-medium">
                     All system activity is tracked in real time via the History
-                    tab. Email delivery is handled automatically when enabled.
+                    tab.
                   </p>
                 </div>
                 <div
@@ -1938,16 +2159,12 @@ function AdminDashboardContent() {
               </div>
             </TabPane>
 
-            {/* ── Settings ──────────────────────────────────────── */}
             <TabPane id="settings" label="Settings" activeTab={activeTab}>
               <div className="w-full max-w-2xl space-y-5">
                 <h2 className="font-display font-bold text-lg text-foreground">
                   Settings
                 </h2>
-
-                {/* Stripe Configuration */}
-                <StripeConfigPanel />
-
+                <StripeSettings />
                 {[
                   {
                     label: "Admin Contact Email",
@@ -1967,7 +2184,7 @@ function AdminDashboardContent() {
                   {
                     label: "WhatsApp Number",
                     value: "wa.me/917338501228",
-                    hint: "Opens direct chat — number never shown as text",
+                    hint: "Opens direct chat",
                   },
                 ].map((setting) => (
                   <div
@@ -1988,7 +2205,6 @@ function AdminDashboardContent() {
                     )}
                   </div>
                 ))}
-
                 <div className="rounded-xl border border-red-500/30 bg-red-500/5 p-4">
                   <p className="text-xs font-bold text-red-600 dark:text-red-400 mb-1">
                     Danger Zone
@@ -2031,14 +2247,14 @@ function AdminDashboardContent() {
         </main>
       </div>
 
-      {/* ── Add User Modal ──────────────────────────────────────────────────── */}
+      {/* ── Add User Modal ─────────────────────────────────────────────────────── */}
       <AnimatePresence>
         {showAddUserModal && (
           <AddUserModal onClose={() => setShowAddUserModal(false)} />
         )}
       </AnimatePresence>
 
-      {/* ── Confirm Remove User dialog ──────────────────────────────────────── */}
+      {/* ── Confirm Remove User ──────────────────────────────────────────────── */}
       <AnimatePresence>
         {confirmRemoveUser && (
           <div
@@ -2059,8 +2275,8 @@ function AdminDashboardContent() {
                 Remove {confirmRemoveUser.name}?
               </h3>
               <p className="text-xs text-muted-foreground mb-5">
-                This will suspend the user&apos;s account. Their data will be
-                retained but they won&apos;t be able to sign in.
+                This will suspend the user's account. Their data will be
+                retained but they won't be able to sign in.
               </p>
               <div className="flex gap-2">
                 <Button

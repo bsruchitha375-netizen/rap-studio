@@ -1,5 +1,6 @@
 import { useActor } from "@caffeineai/core-infrastructure";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createContext, useContext } from "react";
 import { createActor } from "../backend";
 import { CmsContentType, FeedbackTargetType, UserRole } from "../backend";
 import type {
@@ -18,16 +19,29 @@ import type {
 } from "../backend.d.ts";
 import { SERVICE_CATEGORIES } from "../data/services";
 import type {
+  ActorReadyState,
+  AdminDashboardData,
+  AdminEnrollmentView,
   BookingRequest,
   BookingSlot,
   BookingStats,
+  BulkProfileResult,
+  Certificate,
   Course,
   CourseEnrollment,
+  EnrollmentsByCourseEntry,
   NotificationRecord,
   PaymentOrder,
   ServiceCategory,
 } from "../types";
 import { getAdminSession, hashPassword, useAuth } from "./useAuth";
+
+// ── Actor readiness context ──────────────────────────────────────────────────
+export const ActorReadyContext = createContext<ActorReadyState>({
+  isReady: false,
+  isWarming: true,
+});
+export const useActorReady = () => useContext(ActorReadyContext);
 
 // ── Polling intervals ─────────────────────────────────────────────────────────
 const LIVE_POLL_INTERVAL = 10_000; // 10s — admin CMS changes
@@ -35,6 +49,12 @@ const DASHBOARD_POLL = 5_000; // 5s — booking/payment/enrollment dashboards
 const ACTIVITY_POLL = 5_000; // 5s — live activity feed
 const USERS_POLL = 10_000; // 10s — user list
 const NOTIFICATION_POLL = 30_000; // 30s — notifications
+
+// Retry config: 3s, 6s, 10s — handles actor initialization race
+const ACTOR_RETRY_OPTIONS = {
+  retry: 3,
+  retryDelay: (attempt: number) => Math.min(3000 * (attempt + 1), 10000),
+};
 
 // Page-visibility guard: stop polling when the tab is hidden
 function pollingOptions(interval: number) {
@@ -60,6 +80,7 @@ function mapPaymentOrder(
     BookingUpfront: "booking_initial",
     BookingBalance: "booking_final",
     CourseEnrollment: "course_enrollment",
+    CertificateDownload: "certificate_download",
   };
   return {
     id: String(p.id),
@@ -76,6 +97,7 @@ function mapPaymentOrder(
 }
 
 // ── Map backend CourseEnrollment → local CourseEnrollment ─────────────────────
+// Enrollment is always free; paymentStatus reflects certificate download payment only
 function mapEnrollment(e: BackendCourseEnrollment): CourseEnrollment {
   const rawStatus =
     typeof e.paymentStatus === "string"
@@ -89,23 +111,39 @@ function mapEnrollment(e: BackendCourseEnrollment): CourseEnrollment {
     status = "overdue";
   }
 
+  // Enrollment is free; paymentStatus refers to certificate download payment
+  // "Pending" means no cert payment yet (not_required until course complete)
   const paymentStatus: CourseEnrollment["paymentStatus"] =
     rawStatus === "FullyPaid"
       ? "paid"
       : rawStatus === "PartiallyPaid"
         ? "initiated"
-        : "pending";
+        : rawStatus === "Overdue"
+          ? "pending"
+          : "not_required";
 
   return {
-    id: String(e.id),
-    courseId: String(e.courseId),
-    studentId: e.userId.toString(),
+    id: String(e.id ?? 0),
+    courseId: String(e.courseId ?? 0),
+    studentId: e.userId?.toString() ?? "",
     enrolledAt: e.enrolledAt,
     status,
-    progress: Number(e.progress),
+    progress: Number(e.progress ?? 0),
     paymentStatus,
     certificateCode: e.certificateCode,
     completedAt: e.completedAt,
+  };
+}
+
+// ── Map backend Certificate → local Certificate ───────────────────────────────
+function mapCertificate(c: import("../backend.d.ts").Certificate): Certificate {
+  return {
+    code: c.code,
+    studentName: c.studentName,
+    courseName: c.courseName,
+    issuedAt: c.issuedAt,
+    isValid: c.verified,
+    enrollmentId: c.enrollmentId,
   };
 }
 
@@ -258,6 +296,7 @@ export function useAdminCourses() {
     initialData: [],
     staleTime: 0,
     ...pollingOptions(LIVE_POLL_INTERVAL),
+    ...ACTOR_RETRY_OPTIONS,
   });
 }
 
@@ -431,6 +470,7 @@ export function useMyBookings() {
     initialData: [] as BookingRequest[],
     staleTime: 0,
     ...pollingOptions(DASHBOARD_POLL),
+    ...ACTOR_RETRY_OPTIONS,
   });
 }
 
@@ -444,6 +484,7 @@ export function useMyEnrollments() {
       if (!actor) return [];
       try {
         const raw = await actor.getMyEnrollments();
+        if (!Array.isArray(raw)) return [];
         return raw.map(mapEnrollment);
       } catch {
         return [];
@@ -453,6 +494,7 @@ export function useMyEnrollments() {
     initialData: [] as CourseEnrollment[],
     staleTime: 0,
     ...pollingOptions(DASHBOARD_POLL),
+    ...ACTOR_RETRY_OPTIONS,
   });
 }
 
@@ -475,6 +517,7 @@ export function useMyPayments() {
     initialData: [] as PaymentOrder[],
     staleTime: 0,
     ...pollingOptions(DASHBOARD_POLL),
+    ...ACTOR_RETRY_OPTIONS,
   });
 }
 
@@ -664,6 +707,126 @@ export function useAdminStats() {
     initialData: null,
     staleTime: 0,
     ...pollingOptions(DASHBOARD_POLL),
+    ...ACTOR_RETRY_OPTIONS,
+  });
+}
+
+/** Admin dashboard aggregated data — single source of truth for the admin overview */
+export function useAdminDashboardData() {
+  const { actor } = useActor(createActor);
+
+  return useQuery<AdminDashboardData | null>({
+    queryKey: ["adminDashboardData"],
+    queryFn: async (): Promise<AdminDashboardData | null> => {
+      if (!actor) return null;
+      try {
+        const [analytics, pendingUsers, courses, activity] = await Promise.all([
+          actor.getAnalytics().catch(() => null),
+          actor.listPendingUsers().catch(() => [] as PublicProfile[]),
+          actor.getAllAdminCourses().catch(() => [] as AdminCourse[]),
+          actor.getRecentActivity().catch(() => [] as ActivityEvent[]),
+        ]);
+        return {
+          analytics: analytics
+            ? mapAnalytics(analytics)
+            : {
+                totalBookings: 0,
+                pendingBookings: 0,
+                confirmedBookings: 0,
+                completedBookings: 0,
+                totalRevenue: 0,
+                totalStudents: 0,
+                totalCourseEnrollments: 0,
+                recentActivity: [],
+              },
+          pendingUsersCount: pendingUsers.length,
+          totalCourses: courses.length,
+          recentActivityCount: activity.length,
+        };
+      } catch {
+        return null;
+      }
+    },
+    enabled: !!actor,
+    initialData: null,
+    staleTime: 0,
+    ...pollingOptions(DASHBOARD_POLL),
+    ...ACTOR_RETRY_OPTIONS,
+  });
+}
+
+/** Admin: all enrollments with student/course name resolution */
+export function useAdminEnrollments() {
+  const { actor } = useActor(createActor);
+
+  return useQuery<AdminEnrollmentView[]>({
+    queryKey: ["adminEnrollments"],
+    queryFn: async (): Promise<AdminEnrollmentView[]> => {
+      if (!actor) return [];
+      try {
+        const [enrollments, users, courses] = await Promise.all([
+          actor
+            .getAllEnrollments()
+            .catch(() => [] as import("../backend.d.ts").CourseEnrollment[]),
+          actor.getAllUsers().catch(() => [] as PublicProfile[]),
+          actor.getAllAdminCourses().catch(() => [] as AdminCourse[]),
+        ]);
+
+        const userMap = new Map<string, string>();
+        for (const u of users) {
+          userMap.set(u.id.toString(), u.name);
+        }
+
+        const courseMap = new Map<string, string>();
+        for (const c of courses) {
+          courseMap.set(String(c.id), c.title);
+        }
+
+        return enrollments.map((e) => {
+          const mapped = mapEnrollment(e);
+          return {
+            id: mapped.id,
+            studentId: mapped.studentId,
+            studentName: userMap.get(mapped.studentId) ?? "Unknown Student",
+            courseId: mapped.courseId,
+            courseName: courseMap.get(mapped.courseId) ?? "Unknown Course",
+            progress: mapped.progress,
+            status: mapped.status,
+            enrolledAt: mapped.enrolledAt,
+            certificateCode: mapped.certificateCode,
+          };
+        });
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!actor,
+    initialData: [],
+    staleTime: 0,
+    ...pollingOptions(DASHBOARD_POLL),
+    ...ACTOR_RETRY_OPTIONS,
+  });
+}
+
+/** Admin: all bookings with client name resolution */
+export function useAdminBookings() {
+  const { actor } = useActor(createActor);
+
+  return useQuery<import("../backend.d.ts").BookingRequest[]>({
+    queryKey: ["adminBookings"],
+    queryFn: async () => {
+      if (!actor) return [];
+      try {
+        return await actor.getAllBookings();
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!actor,
+    initialData: [],
+    staleTime: 0,
+    ...pollingOptions(DASHBOARD_POLL),
+    ...ACTOR_RETRY_OPTIONS,
   });
 }
 
@@ -684,6 +847,7 @@ export function useAdminAllPayments() {
     initialData: [] as PaymentOrder[],
     staleTime: 0,
     ...pollingOptions(DASHBOARD_POLL),
+    ...ACTOR_RETRY_OPTIONS,
   });
 }
 
@@ -704,6 +868,7 @@ export function useAdminAllBookings() {
     initialData: [],
     staleTime: 0,
     ...pollingOptions(DASHBOARD_POLL),
+    ...ACTOR_RETRY_OPTIONS,
   });
 }
 
@@ -724,6 +889,7 @@ export function useAdminAllUsers() {
     initialData: [],
     staleTime: 0,
     ...pollingOptions(USERS_POLL),
+    ...ACTOR_RETRY_OPTIONS,
   });
 }
 
@@ -741,6 +907,7 @@ export function useAdminRecentActivity() {
       }
     },
     enabled: !!actor,
+    ...ACTOR_RETRY_OPTIONS,
     initialData: [],
     staleTime: 0,
     ...pollingOptions(ACTIVITY_POLL),
@@ -760,6 +927,7 @@ export function useConfirmBooking() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["allBookings"] });
       qc.invalidateQueries({ queryKey: ["adminAllBookings"] });
+      qc.invalidateQueries({ queryKey: ["adminBookings"] });
       qc.invalidateQueries({ queryKey: ["myBookings"] });
     },
   });
@@ -782,6 +950,7 @@ export function useRejectBooking() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["allBookings"] });
       qc.invalidateQueries({ queryKey: ["adminAllBookings"] });
+      qc.invalidateQueries({ queryKey: ["adminBookings"] });
       qc.invalidateQueries({ queryKey: ["myBookings"] });
     },
   });
@@ -806,6 +975,7 @@ export function useRescheduleBooking() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["allBookings"] });
       qc.invalidateQueries({ queryKey: ["adminAllBookings"] });
+      qc.invalidateQueries({ queryKey: ["adminBookings"] });
       qc.invalidateQueries({ queryKey: ["myBookings"] });
       qc.invalidateQueries({ queryKey: ["bookingsByDate"] });
     },
@@ -970,6 +1140,7 @@ export function useAdminPendingUsers() {
     initialData: [],
     staleTime: 0,
     ...pollingOptions(DASHBOARD_POLL),
+    ...ACTOR_RETRY_OPTIONS,
   });
 }
 
@@ -984,6 +1155,7 @@ export function useApproveUser() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["adminPendingUsers"] });
       qc.invalidateQueries({ queryKey: ["adminAllUsers"] });
+      qc.invalidateQueries({ queryKey: ["adminDashboardData"] });
     },
   });
 }
@@ -999,6 +1171,7 @@ export function useRejectUser() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["adminPendingUsers"] });
       qc.invalidateQueries({ queryKey: ["adminAllUsers"] });
+      qc.invalidateQueries({ queryKey: ["adminDashboardData"] });
     },
   });
 }
@@ -1031,6 +1204,7 @@ export interface CertificateResult {
   courseName: string;
   issuedAt: bigint;
   isValid: boolean;
+  enrollmentId?: bigint;
 }
 
 export function useGetCertificate(code: string) {
@@ -1049,6 +1223,7 @@ export function useGetCertificate(code: string) {
           courseName: cert.courseName,
           issuedAt: cert.issuedAt,
           isValid: cert.verified,
+          enrollmentId: cert.enrollmentId,
         };
       } catch {
         return null;
@@ -1074,6 +1249,80 @@ export function useVerifyCertificate(code: string) {
     },
     enabled: !!actor && !isFetching && !!code,
     staleTime: 60_000,
+  });
+}
+
+/** Generate certificate for a completed enrollment (requires payment done first) */
+export function useGenerateCertificate() {
+  const { actor } = useActor(createActor);
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (enrollmentId: bigint): Promise<Certificate> => {
+      if (!actor) throw new Error("Actor not ready");
+      const cert = await actor.generateCertificate(enrollmentId);
+      return mapCertificate(cert);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["myEnrollments"] });
+      qc.invalidateQueries({ queryKey: ["myCertificate"] });
+    },
+  });
+}
+
+/** Check if certificate download payment is done for a given enrollment */
+export function useIsCertificatePaymentDone(enrollmentId: bigint | null) {
+  const { actor, isFetching } = useActor(createActor);
+  const { isAuthenticated } = useAuth();
+
+  return useQuery<boolean>({
+    queryKey: ["isCertPaymentDone", String(enrollmentId)],
+    queryFn: async (): Promise<boolean> => {
+      if (!actor || isFetching || !enrollmentId) return false;
+      try {
+        // Check payments list for a CertificateDownload payment linked to this enrollment
+        const payments = await actor.getMyPayments();
+        const refId = `cert_enrollment_${String(enrollmentId)}`;
+        return payments.some(
+          (p) =>
+            (String(p.paymentType) === "CertificateDownload" ||
+              p.referenceId === refId) &&
+            String(p.status) === "Paid",
+        );
+      } catch {
+        return false;
+      }
+    },
+    enabled: isAuthenticated && !!actor && !isFetching && !!enrollmentId,
+    initialData: false,
+    staleTime: 0,
+    ...pollingOptions(DASHBOARD_POLL),
+  });
+}
+
+/** Get student's certificate for a given enrollment by certificate code */
+export function useGetMyCertificate(enrollmentId: bigint | null) {
+  const { actor, isFetching } = useActor(createActor);
+  const { isAuthenticated } = useAuth();
+
+  return useQuery<Certificate | null>({
+    queryKey: ["myCertificate", String(enrollmentId)],
+    queryFn: async (): Promise<Certificate | null> => {
+      if (!actor || isFetching || !enrollmentId) return null;
+      try {
+        const enrollment = await actor.getEnrollmentById(enrollmentId);
+        if (!enrollment?.certificateCode) return null;
+        const cert = await actor.getCertificate(enrollment.certificateCode);
+        if (!cert) return null;
+        return mapCertificate(cert);
+      } catch {
+        return null;
+      }
+    },
+    enabled: isAuthenticated && !!actor && !isFetching && !!enrollmentId,
+    initialData: null,
+    staleTime: 0,
+    ...pollingOptions(DASHBOARD_POLL),
   });
 }
 
@@ -1179,6 +1428,7 @@ export function useAdminCreateUser() {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["adminAllUsers"] });
       qc.invalidateQueries({ queryKey: ["adminPendingUsers"] });
+      qc.invalidateQueries({ queryKey: ["adminDashboardData"] });
     },
   });
 }
@@ -1191,19 +1441,19 @@ export function useAdminDeleteUser() {
   return useMutation({
     mutationFn: async (userId: import("../backend.d.ts").UserId) => {
       if (!actor) throw new Error("Actor not ready");
-      // Use manageUser with "suspend" action as "delete" equivalent
-      // If backend supports "delete" action, use it; otherwise suspend
-      const result = await actor.manageUser(userId, "suspend");
+      // Use deleteUser (proper backend method)
+      const result = await actor.deleteUser(userId);
       return result;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["adminAllUsers"] });
       qc.invalidateQueries({ queryKey: ["adminPendingUsers"] });
+      qc.invalidateQueries({ queryKey: ["adminDashboardData"] });
     },
   });
 }
 
-// ── Course Enrollment mutation ─────────────────────────────────────────────────
+// ── Course Enrollment mutation (free, idempotent) ─────────────────────────────
 
 export function useEnrollCourse() {
   const { actor } = useActor(createActor);
@@ -1212,13 +1462,27 @@ export function useEnrollCourse() {
   return useMutation({
     mutationFn: async (courseId: number): Promise<CourseEnrollment> => {
       if (!actor) throw new Error("Actor not ready");
+      // Enrollment is always free — no payment required
       const raw = await actor.enrollCourse(BigInt(courseId));
       return mapEnrollment(raw);
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
+      // Invalidate all enrollment-related queries to ensure fresh data
       qc.invalidateQueries({ queryKey: ["myEnrollments"] });
       qc.invalidateQueries({ queryKey: ["courses"] });
       qc.invalidateQueries({ queryKey: ["adminAllProgress"] });
+      qc.invalidateQueries({ queryKey: ["adminEnrollments"] });
+      qc.invalidateQueries({ queryKey: ["adminDashboardData"] });
+      // Also invalidate lessons for this specific course so they load immediately
+      if (data?.courseId) {
+        qc.invalidateQueries({ queryKey: ["lessons", Number(data.courseId)] });
+        qc.invalidateQueries({
+          queryKey: ["lessonProgress", Number(data.courseId)],
+        });
+        qc.invalidateQueries({
+          queryKey: ["courseProgress", Number(data.courseId)],
+        });
+      }
     },
   });
 }
@@ -1288,7 +1552,9 @@ export function useLessons(courseId: number | null) {
     queryFn: async () => {
       if (!actor || isFetching || !courseId) return [];
       try {
+        // getLessons only requires enrollment, no payment gate
         const raw = await actor.getLessons(BigInt(courseId));
+        if (!Array.isArray(raw)) return [];
         return raw.map(mapLesson).sort((a, b) => a.order - b.order);
       } catch {
         return [];
@@ -1298,6 +1564,7 @@ export function useLessons(courseId: number | null) {
     initialData: [],
     staleTime: 0,
     ...pollingOptions(LESSON_POLL),
+    ...ACTOR_RETRY_OPTIONS,
   });
 }
 
@@ -1321,6 +1588,7 @@ export function useCourseProgress(courseId: number | null) {
     initialData: null,
     staleTime: 0,
     ...pollingOptions(DASHBOARD_POLL),
+    ...ACTOR_RETRY_OPTIONS,
   });
 }
 
@@ -1334,6 +1602,7 @@ export function useLessonProgress(courseId: number | null) {
       if (!actor || isFetching || !courseId) return [];
       try {
         const raw = await actor.getLessonProgressForCourse(BigInt(courseId));
+        if (!Array.isArray(raw)) return [];
         return raw.map(mapLessonProgress);
       } catch {
         return [];
@@ -1343,6 +1612,7 @@ export function useLessonProgress(courseId: number | null) {
     initialData: [],
     staleTime: 0,
     ...pollingOptions(DASHBOARD_POLL),
+    ...ACTOR_RETRY_OPTIONS,
   });
 }
 
@@ -1356,10 +1626,9 @@ export function useMarkVideoWatched() {
       const raw = await actor.markVideoWatched(BigInt(lessonId));
       return mapLessonProgress(raw);
     },
-    onSuccess: (_, lessonId) => {
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["lessonProgress"] });
       qc.invalidateQueries({ queryKey: ["courseProgress"] });
-      void lessonId;
     },
   });
 }
@@ -1399,6 +1668,9 @@ export function useSubmitQuiz() {
   });
 }
 
+/** Alias for useSubmitQuiz — contract compatibility */
+export const useSubmitQuizAnswers = useSubmitQuiz;
+
 // ── Admin: All Course Progress ────────────────────────────────────────────────
 
 export function useAdminAllProgress() {
@@ -1419,6 +1691,54 @@ export function useAdminAllProgress() {
     initialData: [],
     staleTime: 0,
     ...pollingOptions(DASHBOARD_POLL),
+  });
+}
+
+// ── Admin: All Enrollments (enriched with studentName, courseName) ─────────────
+
+export interface AdminEnrollmentRecord {
+  id: string;
+  studentName: string;
+  studentEmail: string;
+  courseName: string;
+  courseId: string;
+  progress: number;
+  paymentStatus: string;
+  enrolledAt: bigint;
+  completedAt?: bigint;
+  certificateCode?: string;
+}
+
+export function useAdminGetAllEnrollments() {
+  const { actor } = useActor(createActor);
+
+  return useQuery<AdminEnrollmentRecord[]>({
+    queryKey: ["adminGetAllEnrollments"],
+    queryFn: async (): Promise<AdminEnrollmentRecord[]> => {
+      if (!actor) return [];
+      try {
+        const raw = await actor.getAdminEnrollments();
+        return raw.map((e) => ({
+          id: String(e.id),
+          studentName: e.studentName ?? "Unknown",
+          studentEmail: e.studentEmail ?? "",
+          courseName: e.courseName ?? "Unknown Course",
+          courseId: String(e.courseId),
+          progress: Number(e.progress ?? 0),
+          paymentStatus: String(e.paymentStatus),
+          enrolledAt: e.enrolledAt,
+          completedAt: e.completedAt,
+          certificateCode: e.certificateCode,
+        }));
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!actor,
+    initialData: [],
+    staleTime: 0,
+    ...pollingOptions(DASHBOARD_POLL),
+    ...ACTOR_RETRY_OPTIONS,
   });
 }
 
@@ -1691,5 +2011,176 @@ export function useTestStripeConnection() {
         message: String(result?.err ?? "Connection failed"),
       };
     },
+  });
+}
+
+// ── Actor warmup / ping ────────────────────────────────────────────────────────
+
+export function usePing() {
+  const { actor, isFetching } = useActor(createActor);
+
+  return useQuery<boolean>({
+    queryKey: ["ping"],
+    queryFn: async () => {
+      if (!actor || isFetching) return false;
+      try {
+        const a = actor as unknown as AnyActor;
+        if (a.ping) {
+          await a.ping();
+        }
+        return true;
+      } catch {
+        return true; // actor exists even if ping not available
+      }
+    },
+    enabled: !!actor && !isFetching,
+    staleTime: 30_000,
+    retry: 3,
+    retryDelay: (attempt) => Math.min(1000 * (attempt + 1), 5000),
+  });
+}
+
+// ── Bulk get user profiles ────────────────────────────────────────────────────
+
+export function useBulkGetUserProfiles(userIds: string[]) {
+  const { actor, isFetching } = useActor(createActor);
+
+  return useQuery<BulkProfileResult[]>({
+    queryKey: ["bulkUserProfiles", userIds.join(",")],
+    queryFn: async (): Promise<BulkProfileResult[]> => {
+      if (!actor || isFetching || userIds.length === 0) return [];
+      try {
+        const a = actor as unknown as AnyActor;
+        if (!a.bulkGetUserProfiles) {
+          // Fall back to individual lookups
+          const users = await actor.getAllUsers();
+          const idSet = new Set(userIds);
+          return users
+            .filter((u) => idSet.has(u.id.toString()))
+            .map((u) => ({
+              userId: u.id.toString(),
+              name: u.name ?? "",
+              email: u.email ?? "",
+              phone: u.phone ?? "",
+              role: String(u.role),
+              status: String(u.status),
+            }));
+        }
+        const raw = await a.bulkGetUserProfiles(userIds);
+        return (raw as PublicProfile[]).map((u) => ({
+          userId: u.id.toString(),
+          name: u.name ?? "",
+          email: u.email ?? "",
+          phone: u.phone ?? "",
+          role: String(u.role),
+          status: String(u.status),
+        }));
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!actor && !isFetching && userIds.length > 0,
+    initialData: [],
+    staleTime: USERS_POLL,
+  });
+}
+
+// ── Update course mode ────────────────────────────────────────────────────────
+
+export function useUpdateCourseMode() {
+  const { actor } = useActor(createActor);
+  const qc = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      courseId,
+      mode,
+    }: {
+      courseId: bigint;
+      mode: "online" | "offline" | "hybrid";
+    }) => {
+      if (!actor) throw new Error("Actor not ready");
+      const a = actor as unknown as AnyActor;
+      if (a.updateCourseMode) {
+        return a.updateCourseMode(courseId, mode);
+      }
+      // Fall back to adminUpdateCourse
+      const courses = await actor.getAllAdminCourses();
+      const course = courses.find((c) => c.id === courseId);
+      if (!course) throw new Error("Course not found");
+      // Build a valid AdminCourseInput with the new mode
+      const updatedInput = {
+        title: course.title,
+        description: course.description,
+        category: course.category,
+        mode: mode as import("../backend").CourseMode,
+        duration: course.duration,
+        price: course.price,
+        prerequisites: course.prerequisites,
+        imageData: new Uint8Array(0),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        status: { Active: null } as any,
+      };
+      return actor.adminUpdateCourse(courseId, updatedInput);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["adminCourses"] });
+      qc.invalidateQueries({ queryKey: ["courses"] });
+    },
+  });
+}
+
+// ── Get enrollments by course ────────────────────────────────────────────────
+
+export function useGetEnrollmentsByCourse(courseId: number | null) {
+  const { actor, isFetching } = useActor(createActor);
+
+  return useQuery<EnrollmentsByCourseEntry[]>({
+    queryKey: ["enrollmentsByCourse", courseId],
+    queryFn: async (): Promise<EnrollmentsByCourseEntry[]> => {
+      if (!actor || isFetching || !courseId) return [];
+      try {
+        const a = actor as unknown as AnyActor;
+        if (a.getEnrollmentsByCourse) {
+          const raw = await a.getEnrollmentsByCourse(BigInt(courseId));
+          return (
+            raw as Array<{
+              id: bigint;
+              userId: bigint;
+              studentName?: string;
+              progress: bigint;
+              paymentStatus: unknown;
+              completedAt?: bigint;
+              enrolledAt: bigint;
+            }>
+          ).map((e) => ({
+            enrollmentId: String(e.id),
+            studentId: e.userId.toString(),
+            studentName: e.studentName ?? "Unknown Student",
+            progress: Number(e.progress ?? 0),
+            status: e.completedAt != null ? "completed" : ("active" as const),
+            enrolledAt: e.enrolledAt,
+          }));
+        }
+        // Fall back to admin enrollments filtered by courseId
+        const all = await actor.getAdminEnrollments();
+        return all
+          .filter((e) => String(e.courseId) === String(courseId))
+          .map((e) => ({
+            enrollmentId: String(e.id),
+            studentId: String(e.courseId),
+            studentName: e.studentName ?? "Unknown Student",
+            progress: Number(e.progress ?? 0),
+            status: e.completedAt != null ? "completed" : ("active" as const),
+            enrolledAt: e.enrolledAt,
+          }));
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!actor && !isFetching && !!courseId,
+    initialData: [],
+    staleTime: 0,
+    ...pollingOptions(DASHBOARD_POLL),
   });
 }

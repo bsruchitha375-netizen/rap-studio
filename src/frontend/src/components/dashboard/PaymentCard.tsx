@@ -1,48 +1,57 @@
 import { Badge } from "@/components/ui/badge";
 import { Calendar, CheckCircle, CreditCard, Hash, XCircle } from "lucide-react";
 import { motion } from "motion/react";
-import type { PaymentOrder, PaymentStatus, PaymentType } from "../../types";
+import type { PaymentOrder } from "../../types";
 
 interface PaymentCardProps {
   payment: PaymentOrder;
   index?: number;
 }
 
+type LocalPaymentStatus = PaymentOrder["status"];
+
 const STATUS_CONFIG: Record<
-  PaymentStatus,
+  LocalPaymentStatus,
   { label: string; className: string; icon: React.ReactNode }
 > = {
   pending: {
     label: "Pending",
-    className: "bg-yellow-500/20 text-yellow-300 border-yellow-500/30",
-    icon: <span className="w-2 h-2 rounded-full bg-yellow-400 animate-pulse" />,
+    className:
+      "bg-amber-500/20 text-amber-700 border-amber-500/30 dark:text-amber-300",
+    icon: <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />,
   },
   initiated: {
     label: "Initiated",
-    className: "bg-blue-400/20 text-blue-300 border-blue-400/30",
+    className:
+      "bg-blue-400/20 text-blue-700 border-blue-400/30 dark:text-blue-300",
     icon: <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />,
   },
   paid: {
     label: "Paid",
-    className: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
-    icon: <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />,
+    className:
+      "bg-emerald-500/20 text-emerald-700 border-emerald-500/30 dark:text-emerald-300",
+    icon: (
+      <CheckCircle className="w-3.5 h-3.5 text-emerald-500 dark:text-emerald-400" />
+    ),
   },
   failed: {
     label: "Failed",
-    className: "bg-red-500/20 text-red-300 border-red-500/30",
-    icon: <XCircle className="w-3.5 h-3.5 text-red-400" />,
+    className: "bg-red-500/20 text-red-700 border-red-500/30 dark:text-red-400",
+    icon: <XCircle className="w-3.5 h-3.5 text-red-500 dark:text-red-400" />,
   },
   refunded: {
     label: "Refunded",
-    className: "bg-purple-500/20 text-purple-300 border-purple-500/30",
-    icon: <span className="w-2 h-2 rounded-full bg-purple-400" />,
+    className:
+      "bg-violet-500/20 text-violet-700 border-violet-500/30 dark:text-violet-300",
+    icon: <span className="w-2 h-2 rounded-full bg-violet-400" />,
   },
 };
 
-const TYPE_LABELS: Record<PaymentType, string> = {
+const TYPE_LABELS: Record<string, string> = {
   booking_initial: "Booking Deposit",
   booking_final: "Booking Balance",
   course_enrollment: "Course Enrollment",
+  certificate_download: "Certificate Download",
 };
 
 function formatDate(ts: bigint): string {
@@ -54,21 +63,24 @@ function formatDate(ts: bigint): string {
 }
 
 function formatAmount(a: number): string {
-  // amounts may be stored in paise
-  const val = a >= 100 ? a / 100 : a;
+  const val = a >= 10000 ? a / 100 : a;
   return `₹${val.toLocaleString("en-IN")}`;
 }
 
 export function PaymentCard({ payment, index = 0 }: PaymentCardProps) {
   const statusCfg = STATUS_CONFIG[payment.status] ?? STATUS_CONFIG.pending;
-  const typeLabel = TYPE_LABELS[payment.paymentType] ?? payment.paymentType;
+  const typeLabel =
+    TYPE_LABELS[payment.paymentType] ??
+    String(payment.paymentType).replace(/_/g, " ");
+  const refId = payment.stripeSessionId ?? payment.referenceId;
 
   return (
     <motion.div
       initial={{ opacity: 0, x: -12 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.35, delay: index * 0.07 }}
-      className="rounded-xl border border-border/50 bg-card p-4 flex items-center gap-4 hover:border-primary/30 transition-smooth shadow-subtle"
+      className="rounded-xl border border-border/50 bg-card p-4 flex items-center gap-4 hover:border-primary/30 transition-all duration-300"
+      style={{ backdropFilter: "blur(10px)" }}
       data-ocid={`payment-card.${index + 1}`}
     >
       {/* Icon */}
@@ -84,9 +96,9 @@ export function PaymentCard({ payment, index = 0 }: PaymentCardProps) {
         <CreditCard
           className={`w-5 h-5 ${
             payment.status === "paid"
-              ? "text-emerald-400"
+              ? "text-emerald-500 dark:text-emerald-400"
               : payment.status === "failed"
-                ? "text-red-400"
+                ? "text-red-500 dark:text-red-400"
                 : "text-primary"
           }`}
         />
@@ -95,7 +107,7 @@ export function PaymentCard({ payment, index = 0 }: PaymentCardProps) {
       {/* Info */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-          <span className="text-sm font-semibold text-foreground">
+          <span className="text-sm font-semibold text-foreground capitalize">
             {typeLabel}
           </span>
           <Badge className={`text-[10px] border ${statusCfg.className}`}>
@@ -110,17 +122,17 @@ export function PaymentCard({ payment, index = 0 }: PaymentCardProps) {
             <Calendar className="w-3 h-3" />
             {formatDate(payment.createdAt)}
           </span>
-          {(payment.razorpayOrderId ?? payment.stripeSessionId) && (
+          {refId && (
             <span className="flex items-center gap-1 font-mono">
               <Hash className="w-3 h-3" />
-              <span className="truncate max-w-28">
-                {payment.razorpayOrderId ?? payment.stripeSessionId}
-              </span>
+              <span className="truncate max-w-28">{refId}</span>
             </span>
           )}
-          <span className="font-mono text-[10px] text-muted-foreground/50">
-            Ref: {payment.referenceId}
-          </span>
+          {payment.referenceId && (
+            <span className="font-mono text-[10px] text-muted-foreground/50">
+              Ref: {payment.referenceId}
+            </span>
+          )}
         </div>
       </div>
 
@@ -129,16 +141,16 @@ export function PaymentCard({ payment, index = 0 }: PaymentCardProps) {
         <p
           className={`text-lg font-bold font-display ${
             payment.status === "paid"
-              ? "text-emerald-400"
+              ? "text-emerald-600 dark:text-emerald-400"
               : payment.status === "failed"
-                ? "text-red-400"
+                ? "text-red-600 dark:text-red-400"
                 : "text-primary"
           }`}
         >
           {formatAmount(payment.amount)}
         </p>
         {payment.paidAt && (
-          <p className="text-[10px] text-emerald-400/70 mt-0.5">
+          <p className="text-[10px] text-emerald-600/70 dark:text-emerald-400/70 mt-0.5">
             Paid {formatDate(payment.paidAt)}
           </p>
         )}

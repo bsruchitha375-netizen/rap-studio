@@ -8,7 +8,7 @@ import { toast } from "sonner";
 type RegisterRole = "client" | "student";
 
 interface RegistrationFormProps {
-  /** Called on successful client registration (switches to sign-in tab) */
+  /** Called on successful client registration — switches to sign-in tab */
   onClientSuccess: (email: string) => void;
 }
 
@@ -89,12 +89,13 @@ interface FormErrors {
   phone?: string;
   password?: string;
   confirmPassword?: string;
+  address?: string;
+  emergencyContact?: string;
 }
 
 const INPUT_CLASS = "input-field w-full";
-const INPUT_WITH_ICON: React.CSSProperties = { paddingLeft: "2.6rem" };
+const INPUT_ICON_STYLE: React.CSSProperties = { paddingLeft: "2.6rem" };
 
-// Only two public registration roles
 const ROLE_OPTIONS: {
   role: RegisterRole;
   label: string;
@@ -118,6 +119,33 @@ const ROLE_OPTIONS: {
   },
 ];
 
+function FieldIcon({ children }: { children: React.ReactNode }) {
+  return (
+    <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10 text-muted-foreground">
+      {children}
+    </span>
+  );
+}
+
+function FieldError({ msg, ocid }: { msg?: string; ocid?: string }) {
+  return (
+    <AnimatePresence>
+      {msg && (
+        <motion.p
+          initial={{ opacity: 0, y: -4, height: 0 }}
+          animate={{ opacity: 1, y: 0, height: "auto" }}
+          exit={{ opacity: 0, y: -4, height: 0 }}
+          className="text-xs flex items-center gap-1 text-destructive pt-0.5"
+          role="alert"
+          data-ocid={ocid}
+        >
+          ⚠ {msg}
+        </motion.p>
+      )}
+    </AnimatePresence>
+  );
+}
+
 export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
   const { register, loading: authLoading, isActorReady } = useAuth();
 
@@ -128,6 +156,7 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [address, setAddress] = useState("");
+  const [emergencyContact, setEmergencyContact] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [photoBytes, setPhotoBytes] = useState<Uint8Array | null>(null);
@@ -167,8 +196,20 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
       e.password = "Password must be at least 6 characters";
     if (password !== confirmPassword)
       e.confirmPassword = "Passwords do not match";
+    if (!address.trim()) e.address = "Address is required";
+    if (selectedRole === "student" && !emergencyContact.trim())
+      e.emergencyContact = "Emergency contact is required for students";
     return e;
-  }, [name, email, phone, password, confirmPassword]);
+  }, [
+    name,
+    email,
+    phone,
+    password,
+    confirmPassword,
+    address,
+    emergencyContact,
+    selectedRole,
+  ]);
 
   const handlePhotoFile = (file: File) => {
     if (!file.type.startsWith("image/")) {
@@ -200,6 +241,7 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
     setPassword("");
     setConfirmPassword("");
     setAddress("");
+    setEmergencyContact("");
     setPhotoBytes(null);
     setPhotoPreview(null);
     setCourseType("Online");
@@ -242,18 +284,19 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
 
     if (result.success) {
       if (result.isPending) {
-        // Student / Staff / Receptionist → show correct post-registration pending message
         resetForm();
+        // Show success message — NOT the approval warning. Approval warning is only on login attempt.
         setPendingBanner(
-          "Account created! Your account is awaiting admin approval. You will be notified once your account is reviewed and approved.",
+          "Your account has been created successfully! It is currently awaiting admin approval. You will be able to sign in once the admin reviews your registration.",
         );
       } else {
-        // Client → instant access, switch to sign-in
         toast.success("Welcome! Your account is ready. You can now sign in.");
         onClientSuccess(email.trim().toLowerCase());
       }
     } else {
-      const errMsg = result.error || "Registration failed. Please try again.";
+      const errMsg =
+        (result as { success: false; error?: string }).error ??
+        "Registration failed. Please try again.";
       if (
         errMsg.toLowerCase().includes("already") ||
         errMsg.toLowerCase().includes("exists")
@@ -278,7 +321,7 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
       data-ocid="registration-form"
       noValidate
     >
-      {/* Pending approval banner */}
+      {/* Post-registration success banner (NEVER the approval warning — that only shows on login) */}
       <AnimatePresence>
         {pendingBanner && (
           <motion.div
@@ -288,34 +331,31 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
             transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
             className="rounded-xl p-4 flex items-start gap-3 border"
             style={{
-              background: "oklch(var(--accent) / 0.08)",
-              borderColor: "oklch(var(--accent) / 0.45)",
+              background: "oklch(var(--primary) / 0.08)",
+              borderColor: "oklch(var(--primary) / 0.5)",
             }}
             aria-live="polite"
-            data-ocid="register.pending_banner"
+            data-ocid="register.success_banner"
           >
             <span className="text-xl shrink-0 mt-0.5">✅</span>
             <div>
-              <p
-                className="font-bold text-sm mb-1"
-                style={{ color: "oklch(var(--accent))" }}
-              >
-                Account Created — Awaiting Approval
+              <p className="font-bold text-sm mb-1 text-primary">
+                Account Created Successfully!
               </p>
               <p className="text-xs leading-relaxed text-foreground/80">
                 {pendingBanner}
               </p>
               <p className="text-xs mt-2 font-medium text-muted-foreground">
-                Once approved, you can sign in using the{" "}
+                Once approved, sign in using the{" "}
                 <strong className="text-foreground">Already Registered</strong>{" "}
-                panel.
+                panel on the right.
               </p>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* Role Selector — Client and Student ONLY */}
+      {/* Role Selector */}
       <div>
         <p className="text-xs font-semibold text-muted-foreground mb-2 uppercase tracking-wider">
           I am registering as a
@@ -380,8 +420,6 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
             );
           })}
         </div>
-
-        {/* Student info note — brief info only, NOT the approval message */}
         <AnimatePresence>
           {selectedRole === "student" && (
             <motion.p
@@ -397,8 +435,8 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
             >
               <span>🎓</span>
               <span>
-                <strong>Student</strong> — enrol in courses, earn certificates
-                &amp; track your progress.
+                <strong>Student</strong> accounts require admin approval before
+                you can sign in.
               </span>
             </motion.p>
           )}
@@ -414,7 +452,7 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
           Full Name <span className="text-destructive">*</span>
         </label>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10 text-muted-foreground">
+          <FieldIcon>
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -430,7 +468,7 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
                 d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z"
               />
             </svg>
-          </span>
+          </FieldIcon>
           <input
             id="reg-name"
             type="text"
@@ -441,20 +479,12 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
               if (errors.name) setErrors((p) => ({ ...p, name: undefined }));
             }}
             className={INPUT_CLASS}
-            style={{ ...INPUT_WITH_ICON, ...getErrorBorder(!!errors.name) }}
+            style={{ ...INPUT_ICON_STYLE, ...getErrorBorder(!!errors.name) }}
             autoComplete="name"
             data-ocid="register.name.input"
           />
         </div>
-        {errors.name && (
-          <p
-            className="text-xs flex items-center gap-1 text-destructive"
-            role="alert"
-            data-ocid="register.name.field_error"
-          >
-            ⚠ {errors.name}
-          </p>
-        )}
+        <FieldError msg={errors.name} ocid="register.name.field_error" />
       </div>
 
       {/* Email */}
@@ -469,7 +499,7 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
           </span>
         </label>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10 text-muted-foreground">
+          <FieldIcon>
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -485,7 +515,7 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
                 d="M21.75 6.75v10.5a2.25 2.25 0 0 1-2.25 2.25h-15a2.25 2.25 0 0 1-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0 0 19.5 4.5h-15a2.25 2.25 0 0 0-2.25 2.25m19.5 0v.243a2.25 2.25 0 0 1-1.07 1.916l-7.5 4.615a2.25 2.25 0 0 1-2.36 0L3.32 8.91a2.25 2.25 0 0 1-1.07-1.916V6.75"
               />
             </svg>
-          </span>
+          </FieldIcon>
           <input
             id="reg-email"
             type="email"
@@ -496,20 +526,12 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
               if (errors.email) setErrors((p) => ({ ...p, email: undefined }));
             }}
             className={INPUT_CLASS}
-            style={{ ...INPUT_WITH_ICON, ...getErrorBorder(!!errors.email) }}
+            style={{ ...INPUT_ICON_STYLE, ...getErrorBorder(!!errors.email) }}
             autoComplete="email"
             data-ocid="register.email.input"
           />
         </div>
-        {errors.email && (
-          <p
-            className="text-xs flex items-center gap-1 text-destructive"
-            role="alert"
-            data-ocid="register.email.field_error"
-          >
-            ⚠ {errors.email}
-          </p>
-        )}
+        <FieldError msg={errors.email} ocid="register.email.field_error" />
       </div>
 
       {/* Mobile */}
@@ -559,15 +581,7 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
             data-ocid="register.phone.input"
           />
         </div>
-        {errors.phone && (
-          <p
-            className="text-xs flex items-center gap-1 text-destructive"
-            role="alert"
-            data-ocid="register.phone.field_error"
-          >
-            ⚠ {errors.phone}
-          </p>
-        )}
+        <FieldError msg={errors.phone} ocid="register.phone.field_error" />
       </div>
 
       {/* Password */}
@@ -579,7 +593,7 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
           Password <span className="text-destructive">*</span>
         </label>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10 text-muted-foreground">
+          <FieldIcon>
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -595,7 +609,7 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
                 d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25Z"
               />
             </svg>
-          </span>
+          </FieldIcon>
           <input
             id="reg-password"
             type={showPassword ? "text" : "password"}
@@ -608,7 +622,7 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
             }}
             className={INPUT_CLASS}
             style={{
-              ...INPUT_WITH_ICON,
+              ...INPUT_ICON_STYLE,
               paddingRight: "2.75rem",
               ...getErrorBorder(!!errors.password),
             }}
@@ -653,15 +667,10 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
             </p>
           </div>
         )}
-        {errors.password && (
-          <p
-            className="text-xs flex items-center gap-1 text-destructive"
-            role="alert"
-            data-ocid="register.password.field_error"
-          >
-            ⚠ {errors.password}
-          </p>
-        )}
+        <FieldError
+          msg={errors.password}
+          ocid="register.password.field_error"
+        />
       </div>
 
       {/* Confirm Password */}
@@ -673,7 +682,7 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
           Confirm Password <span className="text-destructive">*</span>
         </label>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none z-10 text-muted-foreground">
+          <FieldIcon>
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -689,7 +698,7 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
                 d="M9 12.75 11.25 15 15 9.75M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"
               />
             </svg>
-          </span>
+          </FieldIcon>
           <input
             id="reg-confirm"
             type={showConfirm ? "text" : "password"}
@@ -702,7 +711,7 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
             }}
             className={INPUT_CLASS}
             style={{
-              ...INPUT_WITH_ICON,
+              ...INPUT_ICON_STYLE,
               paddingRight: "4.5rem",
               ...getErrorBorder(!!errors.confirmPassword),
             }}
@@ -726,27 +735,19 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
             <EyeIcon show={showConfirm} />
           </button>
         </div>
-        {errors.confirmPassword && (
-          <p
-            className="text-xs flex items-center gap-1 text-destructive"
-            role="alert"
-            data-ocid="register.confirm_password.field_error"
-          >
-            ⚠ {errors.confirmPassword}
-          </p>
-        )}
+        <FieldError
+          msg={errors.confirmPassword}
+          ocid="register.confirm_password.field_error"
+        />
       </div>
 
-      {/* Address (optional) */}
+      {/* Address — Required */}
       <div className="space-y-1">
         <label
           htmlFor="reg-address"
           className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider"
         >
-          Address{" "}
-          <span className="font-normal normal-case text-muted-foreground/60">
-            (optional)
-          </span>
+          Address <span className="text-destructive">*</span>
         </label>
         <div className="relative">
           <span className="absolute left-3 top-3.5 pointer-events-none z-10 text-muted-foreground">
@@ -776,7 +777,11 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
             placeholder="Your full address"
             value={address}
             rows={2}
-            onChange={(e) => setAddress(e.target.value)}
+            onChange={(e) => {
+              setAddress(e.target.value);
+              if (errors.address)
+                setErrors((p) => ({ ...p, address: undefined }));
+            }}
             className={INPUT_CLASS}
             style={{
               paddingLeft: "2.6rem",
@@ -784,13 +789,75 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
               paddingBottom: "0.6rem",
               resize: "none",
               minHeight: "3.5rem",
+              ...getErrorBorder(!!errors.address),
             }}
             data-ocid="register.address.textarea"
           />
         </div>
+        <FieldError msg={errors.address} ocid="register.address.field_error" />
       </div>
 
-      {/* Profile Photo */}
+      {/* Emergency Contact — Student only */}
+      <AnimatePresence>
+        {selectedRole === "student" && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
+            className="overflow-hidden space-y-1"
+          >
+            <label
+              htmlFor="reg-emergency"
+              className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider"
+            >
+              Emergency Contact <span className="text-destructive">*</span>
+            </label>
+            <div className="relative">
+              <FieldIcon>
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={1.5}
+                  className="w-4 h-4"
+                  aria-hidden="true"
+                >
+                  <title>Emergency</title>
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 0 0 2.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 0 1-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 0 0-1.091-.852H4.5A2.25 2.25 0 0 0 2.25 4.5v2.25Z"
+                  />
+                </svg>
+              </FieldIcon>
+              <input
+                id="reg-emergency"
+                type="text"
+                placeholder="Parent/Guardian name & phone"
+                value={emergencyContact}
+                onChange={(e) => {
+                  setEmergencyContact(e.target.value);
+                  if (errors.emergencyContact)
+                    setErrors((p) => ({ ...p, emergencyContact: undefined }));
+                }}
+                className={INPUT_CLASS}
+                style={{
+                  ...INPUT_ICON_STYLE,
+                  ...getErrorBorder(!!errors.emergencyContact),
+                }}
+                data-ocid="register.emergency_contact.input"
+              />
+            </div>
+            <FieldError
+              msg={errors.emergencyContact}
+              ocid="register.emergency_contact.field_error"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Profile Photo (optional) */}
       <div>
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
           Profile Photo{" "}
@@ -854,7 +921,7 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
         </button>
       </div>
 
-      {/* Student-specific fields */}
+      {/* Student-specific: Course Options */}
       <AnimatePresence>
         {selectedRole === "student" && (
           <motion.div
@@ -866,7 +933,7 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
           >
             <div className="rounded-xl border border-accent/30 bg-muted/30 p-3 space-y-3">
               <p className="text-xs font-bold uppercase tracking-widest flex items-center gap-2 text-accent">
-                <span>🎓</span> Student Course Options
+                <span>🎓</span> Student Course Preferences
               </p>
               {/* Course Type */}
               <div>
@@ -975,7 +1042,7 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
         )}
       </AnimatePresence>
 
-      {/* Backend warmup */}
+      {/* Backend warmup indicator */}
       {!isActorReady && (
         <p className="text-xs text-center flex items-center justify-center gap-1.5 text-primary/70">
           <svg
@@ -1003,7 +1070,7 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
         </p>
       )}
 
-      {/* Submit */}
+      {/* Submit button */}
       <motion.button
         type="submit"
         disabled={isDisabled}
@@ -1066,7 +1133,7 @@ export function RegistrationForm({ onClientSuccess }: RegistrationFormProps) {
                 d="M18 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0ZM3 19.235v-.11a6.375 6.375 0 0 1 12.75 0v.109A12.318 12.318 0 0 1 9.374 21c-2.331 0-4.512-.645-6.374-1.766Z"
               />
             </svg>
-            Create My Account
+            Create My {selectedRole === "client" ? "Client" : "Student"} Account
           </>
         )}
       </motion.button>

@@ -10,10 +10,7 @@ import { toast } from "sonner";
 function QuizProgressBar({
   answered,
   total,
-}: {
-  answered: number;
-  total: number;
-}) {
+}: { answered: number; total: number }) {
   const pct = total > 0 ? Math.round((answered / total) * 100) : 0;
   return (
     <div className="space-y-1.5">
@@ -85,7 +82,6 @@ function AnswerOption({
         cursor: disabled ? "default" : "pointer",
       }}
     >
-      {/* Radio circle */}
       <span
         className="mt-0.5 w-5 h-5 rounded-full border-2 flex items-center justify-center shrink-0 transition-all duration-200"
         style={{
@@ -103,7 +99,6 @@ function AnswerOption({
           />
         )}
       </span>
-      {/* Option label + text */}
       <span className="flex-1 min-w-0 leading-snug">
         <span
           className="font-bold text-xs mr-1.5"
@@ -156,7 +151,6 @@ function ScoreScreen({
       }}
       data-ocid="quiz.result_screen"
     >
-      {/* Big score circle */}
       <div className="flex flex-col items-center gap-3">
         <motion.div
           initial={{ scale: 0, rotate: -15 }}
@@ -185,8 +179,6 @@ function ScoreScreen({
         >
           {pct}%
         </motion.div>
-
-        {/* Pass / Fail badge */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -221,7 +213,6 @@ function ScoreScreen({
         </motion.div>
       </div>
 
-      {/* Score text */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -250,7 +241,6 @@ function ScoreScreen({
         </p>
       </motion.div>
 
-      {/* Actions */}
       <motion.div
         initial={{ opacity: 0, y: 8 }}
         animate={{ opacity: 1, y: 0 }}
@@ -290,11 +280,7 @@ function CompletedState({
   score,
   total,
   onContinue,
-}: {
-  score?: number;
-  total: number;
-  onContinue: () => void;
-}) {
+}: { score?: number; total: number; onContinue: () => void }) {
   const pct =
     score != null && total > 0 ? Math.round((score / total) * 100) : null;
 
@@ -377,7 +363,7 @@ export function QuizEngine({
   const allAnswered =
     safeQuestions.length > 0 && answeredCount === safeQuestions.length;
 
-  // ── Empty: no questions ──
+  // ── No questions ──
   if (safeQuestions.length === 0) {
     return (
       <motion.div
@@ -391,8 +377,8 @@ export function QuizEngine({
           Quiz Not Yet Available
         </h3>
         <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-          The instructor hasn&apos;t added quiz questions for this lesson yet.
-          Please check back later.
+          The instructor hasn't added quiz questions for this lesson yet. Please
+          check back later.
         </p>
       </motion.div>
     );
@@ -505,7 +491,6 @@ export function QuizEngine({
         </Badge>
       </div>
 
-      {/* Gold progress bar */}
       <QuizProgressBar answered={answeredCount} total={safeQuestions.length} />
 
       {/* Question cards */}
@@ -532,7 +517,6 @@ export function QuizEngine({
               }}
               data-ocid={`quiz.question.${qi + 1}`}
             >
-              {/* Question header */}
               <div className="flex items-start gap-2.5">
                 <span
                   className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold shrink-0 mt-0.5"
@@ -556,8 +540,6 @@ export function QuizEngine({
                   {q.question ?? ""}
                 </p>
               </div>
-
-              {/* Answer options */}
               <div className="space-y-2 pl-9">
                 {(q.options ?? []).map((opt, oi) => (
                   <AnswerOption
@@ -599,7 +581,6 @@ export function QuizEngine({
             </span>
           )}
         </div>
-
         <AnimatePresence mode="wait">
           {allAnswered && (
             <motion.div

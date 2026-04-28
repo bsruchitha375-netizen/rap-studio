@@ -3,7 +3,11 @@
 export interface StripeCheckoutState {
   sessionId: string;
   referenceId: string;
-  paymentType: "booking_initial" | "booking_final" | "course_enrollment";
+  paymentType:
+    | "booking_initial"
+    | "booking_final"
+    | "course_enrollment"
+    | "certificate_download";
   amount: number;
   name: string;
 }
@@ -143,6 +147,15 @@ export type EnrollmentStatus =
   | "completed"
   | "certificate_blocked";
 
+// Enrollment is always free; paymentStatus reflects certificate download payment only
+export type PaymentStatus =
+  | "pending"
+  | "initiated"
+  | "paid"
+  | "failed"
+  | "refunded"
+  | "not_required";
+
 export interface CourseEnrollment {
   id: string;
   courseId: string;
@@ -150,6 +163,7 @@ export interface CourseEnrollment {
   enrolledAt: bigint;
   status: EnrollmentStatus;
   progress: number;
+  /** paymentStatus for certificate download (enrollment itself is always free) */
   paymentStatus: PaymentStatus;
   certificateCode?: string;
   completedAt?: bigint;
@@ -157,16 +171,11 @@ export interface CourseEnrollment {
 
 // ─── Payments ────────────────────────────────────────────────────────────────
 
-export type PaymentStatus =
-  | "pending"
-  | "initiated"
-  | "paid"
-  | "failed"
-  | "refunded";
 export type PaymentType =
   | "booking_initial"
   | "booking_final"
-  | "course_enrollment";
+  | "course_enrollment"
+  | "certificate_download";
 
 export interface PaymentOrder {
   id: string;
@@ -177,7 +186,7 @@ export interface PaymentOrder {
   referenceId: string;
   paymentType: PaymentType;
   amount: number;
-  status: PaymentStatus;
+  status: "pending" | "initiated" | "paid" | "failed" | "refunded";
   checkoutUrl?: string;
   createdAt: bigint;
   paidAt?: bigint;
@@ -196,6 +205,7 @@ export interface Certificate {
   courseName: string;
   issuedAt: bigint;
   isValid: boolean;
+  enrollmentId?: bigint;
 }
 
 // ─── Feedback ────────────────────────────────────────────────────────────────
@@ -298,4 +308,70 @@ export interface RecentActivity {
   type: string;
   description: string;
   timestamp: bigint;
+}
+
+// ─── Admin Dashboard aggregated data ─────────────────────────────────────────
+
+export interface AdminDashboardData {
+  analytics: BookingStats;
+  pendingUsersCount: number;
+  totalCourses: number;
+  recentActivityCount: number;
+}
+
+// ─── Admin Enrollment view ────────────────────────────────────────────────────
+
+export interface AdminEnrollmentView {
+  id: string;
+  studentId: string;
+  studentName: string;
+  courseId: string;
+  courseName: string;
+  progress: number;
+  status: EnrollmentStatus;
+  enrolledAt: bigint;
+  certificateCode?: string;
+}
+
+// ─── Actor readiness context ──────────────────────────────────────────────────
+
+export interface ActorReadyState {
+  isReady: boolean;
+  isWarming: boolean;
+}
+
+// ─── Ping / backend status ────────────────────────────────────────────────────
+
+export interface PingResponse {
+  status: "ok" | "warming";
+  timestamp?: bigint;
+}
+
+// ─── Bulk user profiles ───────────────────────────────────────────────────────
+
+export interface BulkProfileResult {
+  userId: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  status: string;
+}
+
+// ─── Course mode update ───────────────────────────────────────────────────────
+
+export interface CourseModeUpdate {
+  courseId: bigint;
+  mode: "online" | "offline" | "hybrid";
+}
+
+// ─── Enrollments by course (admin) ───────────────────────────────────────────
+
+export interface EnrollmentsByCourseEntry {
+  enrollmentId: string;
+  studentId: string;
+  studentName: string;
+  progress: number;
+  status: EnrollmentStatus;
+  enrolledAt: bigint;
 }

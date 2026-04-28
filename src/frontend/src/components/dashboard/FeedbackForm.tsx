@@ -36,7 +36,7 @@ function StarRating({
             transition={{ duration: 0.15 }}
             aria-label={`${star} star${star > 1 ? "s" : ""}`}
             className={`text-3xl transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary rounded ${
-              active ? "text-yellow-400" : "text-muted-foreground/40"
+              active ? "text-amber-400" : "text-muted-foreground/40"
             }`}
             onMouseEnter={() => setHovered(star)}
             onMouseLeave={() => setHovered(0)}
@@ -63,7 +63,6 @@ export function FeedbackForm({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Close on Escape key
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === "Escape") onClose();
@@ -98,6 +97,7 @@ export function FeedbackForm({
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
+      data-ocid="feedback.dialog"
     >
       <motion.div
         initial={{ opacity: 0, scale: 0.93, y: 20 }}
@@ -127,13 +127,13 @@ export function FeedbackForm({
             onClick={onClose}
             aria-label="Close feedback form"
             className="w-8 h-8 flex items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted/40 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            data-ocid="feedback.close_button"
           >
             ✕
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {/* Star picker */}
           <div className="flex flex-col items-center gap-2 py-2">
             <StarRating value={rating} onChange={setRating} />
             <AnimatePresence mode="wait">
@@ -143,7 +143,7 @@ export function FeedbackForm({
                   initial={{ opacity: 0, y: -4 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 4 }}
-                  className="text-sm font-medium text-yellow-400"
+                  className="text-sm font-medium text-amber-500 dark:text-amber-400"
                 >
                   {STAR_LABELS[rating]}
                 </motion.p>
@@ -151,7 +151,6 @@ export function FeedbackForm({
             </AnimatePresence>
           </div>
 
-          {/* Comment */}
           <div className="space-y-1.5">
             <label
               htmlFor="feedback-comment"
@@ -173,15 +172,14 @@ export function FeedbackForm({
               }
               rows={3}
               maxLength={500}
-              className="resize-none text-black dark:text-foreground"
-              data-ocid="feedback-comment-input"
+              className="resize-none text-foreground bg-background border-input"
+              data-ocid="feedback.textarea"
             />
             <p className="text-[10px] text-muted-foreground/60 text-right">
               {comment.length}/500
             </p>
           </div>
 
-          {/* Error */}
           <AnimatePresence>
             {error && (
               <motion.p
@@ -190,13 +188,13 @@ export function FeedbackForm({
                 exit={{ opacity: 0 }}
                 className="text-xs text-destructive bg-destructive/10 border border-destructive/30 rounded-lg px-3 py-2"
                 role="alert"
+                data-ocid="feedback.error_state"
               >
                 {error}
               </motion.p>
             )}
           </AnimatePresence>
 
-          {/* Actions */}
           <div className="flex gap-3 pt-1">
             <Button
               type="button"
@@ -204,7 +202,7 @@ export function FeedbackForm({
               className="flex-1 border-border/50 text-muted-foreground hover:text-foreground"
               onClick={onClose}
               disabled={isSubmitting}
-              data-ocid="feedback-cancel-btn"
+              data-ocid="feedback.cancel_button"
             >
               Cancel
             </Button>
@@ -212,7 +210,7 @@ export function FeedbackForm({
               type="submit"
               disabled={isSubmitting || rating === 0}
               className="flex-1 btn-primary-luxury gap-2"
-              data-ocid="feedback-submit-btn"
+              data-ocid="feedback.submit_button"
             >
               {isSubmitting ? (
                 <>

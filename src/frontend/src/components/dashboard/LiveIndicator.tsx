@@ -32,10 +32,13 @@ export function LiveIndicator({
   }, []);
 
   return (
-    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground/70">
-      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse flex-shrink-0" />
+    <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+      <span className="relative flex h-2 w-2">
+        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-400" />
+      </span>
       <span>
-        {label ? `${label} · ` : ""}
+        {label ? `${label} · ` : "Live · "}
         {secs > 0 ? `${secs}s ago` : "Just now"} · {Math.round(pollMs / 1000)}s
         refresh
       </span>

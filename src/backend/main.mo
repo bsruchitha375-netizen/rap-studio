@@ -5,10 +5,6 @@ import MixinAuthorization "mo:caffeineai-authorization/MixinAuthorization";
 import MixinObjectStorage "mo:caffeineai-object-storage/Mixin";
 
 
-
-
-
-
 import CmsPayTypes "types/cms-multiservice-payments";
 import CmsPayMixin "mixins/cms-multiservice-payments-api";
 
@@ -35,9 +31,6 @@ import NotificationsMixin "mixins/notifications-api";
 import FeedbackMixin "mixins/feedback-api";
 import AdminMixin "mixins/admin-api";
 import StaffMixin "mixins/staff-api";
-
-
-
 
 
 actor {
@@ -74,30 +67,30 @@ actor {
   // ── Service bookings ──────────────────────────────────────────────────────
   let bookings = List.empty<ServiceTypes.BookingRequest>();
   let nextBookingId : Common.Counter = { var value = 1 };
-  include ServicesMixin(accessControlState, profiles, bookings, nextBookingId, adminServices, nextAdminServiceId, notifications, nextNotifId);
+  include ServicesMixin(accessControlState, profiles, bookings, nextBookingId, adminServices, nextAdminServiceId, notifications, nextNotifId, activityLog);
+
+  // ── Course enrollments — declared before PaymentsMixin so it can update paymentStatus ──
+  let enrollments = List.empty<CourseTypes.CourseEnrollment>();
+  let nextEnrollmentId : Common.Counter = { var value = 1 };
 
   // ── Payments (Stripe) ─────────────────────────────────────────────────────
   let paymentOrders = List.empty<PaymentTypes.PaymentOrder>();
   let nextPaymentId : Common.Counter = { var value = 1 };
   let stripeConfig : PaymentTypes.StripeConfig = { var publishableKey = ""; var secretKey = "" };
-  include PaymentsMixin(accessControlState, profiles, paymentOrders, nextPaymentId, bookings, whatsappLogs, nextWhatsAppLogId, notifications, nextNotifId, stripeConfig);
+  include PaymentsMixin(accessControlState, profiles, paymentOrders, nextPaymentId, bookings, enrollments, whatsappLogs, nextWhatsAppLogId, notifications, nextNotifId, stripeConfig, activityLog);
 
   // ── Admin-added courses ───────────────────────────────────────────────────
   let adminCourses = List.empty<CourseTypes.AdminCourse>();
   let nextAdminCourseId : Common.Counter = { var value = 1000 };
 
-  // ── Course enrollments ────────────────────────────────────────────────────
-  let enrollments = List.empty<CourseTypes.CourseEnrollment>();
-  let nextEnrollmentId : Common.Counter = { var value = 1 };
-
-  // ── Lessons, quizzes, and progress (new) ─────────────────────────────────
+  // ── Lessons, quizzes, and progress ───────────────────────────────────────
   let lessons = List.empty<CourseTypes.Lesson>();
   let nextLessonId : Common.Counter = { var value = 1 };
   let nextQuizQuestionId : Common.Counter = { var value = 1 };
   let lessonProgress = List.empty<CourseTypes.LessonProgress>();
   let courseProgress = List.empty<CourseTypes.CourseLessonProgress>();
 
-  include CoursesMixin(accessControlState, profiles, enrollments, paymentOrders, nextEnrollmentId, adminCourses, nextAdminCourseId, lessons, nextLessonId, nextQuizQuestionId, lessonProgress, courseProgress);
+  include CoursesMixin(accessControlState, profiles, enrollments, paymentOrders, nextEnrollmentId, adminCourses, nextAdminCourseId, lessons, nextLessonId, nextQuizQuestionId, lessonProgress, courseProgress, activityLog);
 
   // ── Certificates ──────────────────────────────────────────────────────────
   let certificates = List.empty<CertTypes.Certificate>();
@@ -129,5 +122,5 @@ actor {
   include StaffMixin(accessControlState, profiles, workAssignments, nextAssignmentId);
 
   // ── Admin dashboard ───────────────────────────────────────────────────────
-  include AdminMixin(accessControlState, profiles, emailIndex, phoneIndex, bookings, paymentOrders, enrollments, feedbacks, emailLogs, cmsStore, multiBookings, activityLog);
+  include AdminMixin(accessControlState, profiles, emailIndex, phoneIndex, bookings, paymentOrders, enrollments, adminCourses, lessonProgress, courseProgress, feedbacks, emailLogs, cmsStore, multiBookings, activityLog);
 };

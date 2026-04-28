@@ -1,11 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useActor } from "@caffeineai/core-infrastructure";
@@ -18,16 +14,19 @@ import {
   ChevronDown,
   ChevronUp,
   Clock,
-  Eye,
   FileText,
   Images,
   Loader2,
   LogOut,
+  Moon,
+  Pencil,
+  Sun,
   Upload,
   User,
   X,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { useTheme } from "next-themes";
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ExternalBlob, createActor } from "../backend";
@@ -42,7 +41,7 @@ import { useAuth, useUserProfile } from "../hooks/useAuth";
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 const POLL_MS = 5_000;
-const MAX_FILE_BYTES = 50 * 1024 * 1024; // 50 MB
+const MAX_FILE_BYTES = 50 * 1024 * 1024;
 const ACCEPTED_MIME_PREFIXES = ["image/", "video/", "application/pdf"];
 
 function pollingOptions(ms: number) {
@@ -54,7 +53,6 @@ function pollingOptions(ms: number) {
 function useMyAssignedWork() {
   const { actor, isFetching } = useActor(createActor);
   const { isAuthenticated } = useAuth();
-
   return useQuery<WorkAssignment[]>({
     queryKey: ["myAssignedWork"],
     queryFn: async () => {
@@ -72,41 +70,15 @@ function useMyAssignedWork() {
   });
 }
 
-function useMyUploadedWork() {
-  const { actor, isFetching } = useActor(createActor);
-  const { isAuthenticated } = useAuth();
-
-  return useQuery<WorkAssignment[]>({
-    queryKey: ["myUploadedWork"],
-    queryFn: async () => {
-      if (!actor) return [];
-      try {
-        return await actor.getMyUploadedWork();
-      } catch {
-        return [];
-      }
-    },
-    enabled: isAuthenticated && !!actor && !isFetching,
-    initialData: [] as WorkAssignment[],
-    staleTime: POLL_MS,
-    ...pollingOptions(POLL_MS),
-  });
-}
-
 function useSubmitDeliverable() {
   const { actor } = useActor(createActor);
   const qc = useQueryClient();
-
   return useMutation({
     mutationFn: async ({
       assignmentId,
       fileUrl,
       fileName,
-    }: {
-      assignmentId: bigint;
-      fileUrl: string;
-      fileName: string;
-    }) => {
+    }: { assignmentId: bigint; fileUrl: string; fileName: string }) => {
       if (!actor) throw new Error("Actor not ready");
       return actor.submitDeliverable(assignmentId, fileUrl, fileName);
     },
@@ -142,10 +114,6 @@ function formatTimestamp(ts: bigint): string {
   });
 }
 
-function isImageFile(fileName: string): boolean {
-  return /\.(jpg|jpeg|png|gif|webp|avif|svg)$/i.test(fileName);
-}
-
 // ── UploadZone ────────────────────────────────────────────────────────────────
 
 interface UploadZoneProps {
@@ -163,10 +131,10 @@ function UploadZone({ assignmentId, onUploaded }: UploadZoneProps) {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const validateFile = useCallback((f: File): string | null => {
-    const accepted = ACCEPTED_MIME_PREFIXES.some((p) => f.type.startsWith(p));
-    if (!accepted) return "Only images, videos, and PDF files are accepted.";
+    if (!ACCEPTED_MIME_PREFIXES.some((p) => f.type.startsWith(p)))
+      return "Only images, videos, and PDF files are accepted.";
     if (f.size > MAX_FILE_BYTES)
-      return `File must be under 50 MB (this file is ${(f.size / 1024 / 1024).toFixed(1)} MB).`;
+      return `File must be under 50 MB (${(f.size / 1024 / 1024).toFixed(1)} MB).`;
     return null;
   }, []);
 
@@ -205,34 +173,27 @@ function UploadZone({ assignmentId, onUploaded }: UploadZoneProps) {
     }
     setIsUploading(true);
     setProgress(0);
-
     try {
-      // Build ExternalBlob with real upload progress from object-storage extension
       const bytes = new Uint8Array(await file.arrayBuffer());
       const blob = ExternalBlob.fromBytes(bytes).withUploadProgress(
-        (pct: number) => setProgress(Math.round(pct * 0.9)), // 0-90% for upload
+        (pct: number) => setProgress(Math.round(pct * 0.9)),
       );
-
       const fileTypeValue: FileType = file.type.startsWith("image/")
         ? ("Photo" as FileType)
         : ("Video" as FileType);
-
       const mediaResult = await actor.uploadMedia({
         title: file.name,
         serviceCategory: "staff_deliverable",
         blob,
         fileType: fileTypeValue,
       });
-
       setProgress(95);
-
       const fileUrl = mediaResult.blob.getDirectURL();
       await submitDeliverable.mutateAsync({
         assignmentId,
         fileUrl,
         fileName: file.name,
       });
-
       setProgress(100);
       toast.success("Deliverable uploaded and submitted!");
       setFile(null);
@@ -249,7 +210,6 @@ function UploadZone({ assignmentId, onUploaded }: UploadZoneProps) {
 
   return (
     <div className="space-y-3 mt-3">
-      {/* Drop zone */}
       <motion.button
         type="button"
         animate={
@@ -285,7 +245,6 @@ function UploadZone({ assignmentId, onUploaded }: UploadZoneProps) {
           className="hidden"
           onChange={handleFileChange}
         />
-
         {file ? (
           <div className="flex items-center justify-center gap-3">
             <FileText className="w-5 h-5 text-primary shrink-0" />
@@ -326,20 +285,18 @@ function UploadZone({ assignmentId, onUploaded }: UploadZoneProps) {
         )}
       </motion.button>
 
-      {/* Progress bar */}
       {isUploading && (
         <div>
           <div className="flex justify-between text-xs mb-1.5">
             <span className="text-muted-foreground">Uploading…</span>
-            <span style={{ color: "oklch(0.82 0.2 70)" }}>{progress}%</span>
+            <span className="text-primary">{progress}%</span>
           </div>
           <div className="h-1.5 rounded-full bg-muted/40 overflow-hidden">
             <motion.div
               initial={{ width: 0 }}
               animate={{ width: `${progress}%` }}
               transition={{ ease: "linear" }}
-              className="h-full rounded-full"
-              style={{ background: "oklch(0.72 0.14 82)" }}
+              className="h-full rounded-full bg-primary"
             />
           </div>
         </div>
@@ -349,7 +306,7 @@ function UploadZone({ assignmentId, onUploaded }: UploadZoneProps) {
         type="button"
         onClick={handleUpload}
         disabled={!file || isUploading}
-        className="w-full btn-primary-luxury gap-2"
+        className="w-full gap-2 btn-primary-luxury"
         data-ocid="upload.submit_button"
       >
         {isUploading ? (
@@ -368,17 +325,22 @@ function UploadZone({ assignmentId, onUploaded }: UploadZoneProps) {
   );
 }
 
-// ── AssignmentCard ─────────────────────────────────────────────────────────────
+// ── WorkItemCard ───────────────────────────────────────────────────────────────
 
-interface AssignmentCardProps {
+interface WorkItemCardProps {
   assignment: WorkAssignment;
   index: number;
+  showUpload?: boolean;
 }
 
-function AssignmentCard({ assignment, index }: AssignmentCardProps) {
+function WorkItemCard({
+  assignment,
+  index,
+  showUpload = false,
+}: WorkItemCardProps) {
   const [expanded, setExpanded] = useState(false);
   const qc = useQueryClient();
-  const statusStr = String(assignment.status);
+  const statusStr = String(assignment.status ?? "Assigned");
 
   return (
     <motion.div
@@ -391,23 +353,22 @@ function AssignmentCard({ assignment, index }: AssignmentCardProps) {
         backdropFilter: "blur(12px)",
         border: `1px solid ${expanded ? "oklch(0.72 0.14 82 / 0.4)" : "oklch(0.22 0.018 275 / 0.5)"}`,
       }}
-      data-ocid={`staff-assignment.item.${index + 1}`}
+      data-ocid={`work-item.item.${index + 1}`}
     >
-      {/* Header row — clickable to expand */}
       <button
         type="button"
         className="w-full p-5 text-left flex items-start justify-between gap-3 hover:bg-primary/5 transition-colors"
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
-        data-ocid={`staff-assignment.expand_button.${index + 1}`}
+        data-ocid={`work-item.expand_button.${index + 1}`}
       >
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1 flex-wrap">
             <span className="font-semibold text-foreground capitalize text-sm">
-              {assignment.sessionType}
+              {String(assignment.sessionType ?? "")}
             </span>
             <Badge
-              className={`text-[10px] border px-2 py-0.5 ${statusColor(assignment.status)}`}
+              className={`text-[10px] border px-2 py-0.5 ${statusColor(statusStr)}`}
             >
               {statusStr.replace(/([A-Z])/g, " $1").trim()}
             </Badge>
@@ -415,16 +376,16 @@ function AssignmentCard({ assignment, index }: AssignmentCardProps) {
           <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
             <span className="flex items-center gap-1">
               <User className="w-3 h-3" />
-              {assignment.clientName}
+              {String(assignment.clientName ?? "—")}
             </span>
             <span className="flex items-center gap-1">
               <Calendar className="w-3 h-3" />
-              {assignment.sessionDate}
+              {String(assignment.sessionDate ?? "—")}
             </span>
             <span className="flex items-center gap-1">
               <FileText className="w-3 h-3" />
-              {assignment.deliverables.length} file
-              {assignment.deliverables.length !== 1 ? "s" : ""}
+              {(assignment.deliverables ?? []).length} file
+              {(assignment.deliverables ?? []).length !== 1 ? "s" : ""}
             </span>
           </div>
         </div>
@@ -435,7 +396,6 @@ function AssignmentCard({ assignment, index }: AssignmentCardProps) {
         )}
       </button>
 
-      {/* Expanded details + upload */}
       <AnimatePresence initial={false}>
         {expanded && (
           <motion.div
@@ -456,27 +416,25 @@ function AssignmentCard({ assignment, index }: AssignmentCardProps) {
                     Notes
                   </p>
                   <p className="text-sm text-foreground/80">
-                    {assignment.notes}
+                    {String(assignment.notes)}
                   </p>
                 </div>
               )}
-
-              {/* Existing deliverables list */}
-              {assignment.deliverables.length > 0 && (
+              {(assignment.deliverables ?? []).length > 0 && (
                 <div>
                   <p className="text-xs text-muted-foreground mb-2 uppercase tracking-wider">
                     Submitted Files
                   </p>
                   <div className="space-y-2">
-                    {assignment.deliverables.map((d, di) => (
+                    {(assignment.deliverables ?? []).map((d, di) => (
                       <div
                         key={`${String(assignment.id)}-d-${di}`}
                         className="flex items-center gap-2 p-2.5 rounded-lg bg-muted/20 border border-border/30"
-                        data-ocid={`staff-deliverable.item.${di + 1}`}
+                        data-ocid={`work-deliverable.item.${di + 1}`}
                       >
                         <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-400" />
                         <span className="text-sm text-foreground truncate flex-1 min-w-0">
-                          {d.fileName}
+                          {d.fileName ?? ""}
                         </span>
                         <span className="text-xs text-muted-foreground shrink-0">
                           {formatTimestamp(d.submittedAt)}
@@ -486,9 +444,7 @@ function AssignmentCard({ assignment, index }: AssignmentCardProps) {
                   </div>
                 </div>
               )}
-
-              {/* Upload zone — hidden when Approved */}
-              {statusStr !== "Approved" ? (
+              {showUpload && statusStr !== "Approved" ? (
                 <div>
                   <p className="text-xs text-muted-foreground mb-0.5 uppercase tracking-wider">
                     Upload New Deliverable
@@ -501,7 +457,7 @@ function AssignmentCard({ assignment, index }: AssignmentCardProps) {
                     }}
                   />
                 </div>
-              ) : (
+              ) : showUpload && statusStr === "Approved" ? (
                 <div
                   className="flex items-center gap-2 p-3 rounded-lg border"
                   style={{
@@ -509,18 +465,12 @@ function AssignmentCard({ assignment, index }: AssignmentCardProps) {
                     borderColor: "oklch(0.72 0.14 82 / 0.3)",
                   }}
                 >
-                  <CheckCircle2
-                    className="w-4 h-4 shrink-0"
-                    style={{ color: "oklch(0.72 0.14 82)" }}
-                  />
-                  <p
-                    className="text-sm font-medium"
-                    style={{ color: "oklch(0.82 0.2 70)" }}
-                  >
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-primary" />
+                  <p className="text-sm font-medium text-primary">
                     Work approved — no further uploads needed.
                   </p>
                 </div>
-              )}
+              ) : null}
             </div>
           </motion.div>
         )}
@@ -529,7 +479,189 @@ function AssignmentCard({ assignment, index }: AssignmentCardProps) {
   );
 }
 
+// ── Profile Tab ────────────────────────────────────────────────────────────────
+
+interface ProfileTabProps {
+  name: string;
+  user: { email?: string; phone?: string; name?: string } | null;
+  profile:
+    | {
+        email?: string;
+        phone?: string;
+        address?: string;
+        status?: string;
+        role?: string;
+      }
+    | null
+    | undefined;
+}
+
+function ProfileTab({ name, user, profile }: ProfileTabProps) {
+  const [editing, setEditing] = useState(false);
+  const [displayName, setDisplayName] = useState(name);
+
+  const fields = [
+    { label: "Full Name", value: displayName, icon: User },
+    {
+      label: "Email",
+      value: profile?.email ?? user?.email ?? "—",
+      icon: FileText,
+    },
+    {
+      label: "Phone",
+      value: profile?.phone ?? user?.phone ?? "—",
+      icon: Calendar,
+    },
+    { label: "Role", value: "Staff", icon: Briefcase },
+    {
+      label: "Status",
+      value: String(profile?.status ?? "Active"),
+      icon: CheckCircle2,
+    },
+    { label: "Address", value: profile?.address ?? "—", icon: Images },
+  ];
+
+  const initials = displayName
+    .split(" ")
+    .map((w: string) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      {/* Avatar card */}
+      <div
+        className="flex flex-col items-center py-8 mb-6 rounded-2xl"
+        style={{
+          background: "oklch(0.12 0.014 275 / 0.6)",
+          border: "1px solid oklch(0.22 0.018 275 / 0.4)",
+          backdropFilter: "blur(12px)",
+        }}
+      >
+        <div
+          className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold font-display mb-3"
+          style={{
+            background:
+              "linear-gradient(135deg, oklch(0.7 0.22 70 / 0.25), oklch(0.7 0.22 70 / 0.08))",
+            border: "2px solid oklch(0.7 0.22 70 / 0.5)",
+            color: "oklch(0.82 0.2 70)",
+          }}
+        >
+          {initials || <User className="w-8 h-8" />}
+        </div>
+        <h2 className="text-xl font-display font-bold text-foreground">
+          {displayName}
+        </h2>
+        <p className="text-xs text-muted-foreground mt-1">
+          RAP Studio · Staff Member
+        </p>
+        <Badge
+          className="mt-2 text-[10px] border"
+          style={{
+            background: "oklch(0.7 0.22 70 / 0.15)",
+            color: "oklch(0.82 0.2 70)",
+            borderColor: "oklch(0.7 0.22 70 / 0.35)",
+          }}
+        >
+          Staff
+        </Badge>
+      </div>
+
+      {/* Info grid */}
+      <div
+        className="rounded-2xl overflow-hidden mb-4"
+        style={{
+          background: "oklch(0.12 0.014 275 / 0.5)",
+          border: "1px solid oklch(0.22 0.018 275 / 0.4)",
+          backdropFilter: "blur(10px)",
+        }}
+      >
+        {fields.map((f, i) => {
+          const Icon = f.icon;
+          return (
+            <div
+              key={f.label}
+              className={`flex items-center gap-4 px-5 py-3.5 ${i < fields.length - 1 ? "border-b border-border/20" : ""}`}
+            >
+              <div
+                className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0"
+                style={{ background: "oklch(0.72 0.14 82 / 0.12)" }}
+              >
+                <Icon className="w-4 h-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                  {f.label}
+                </p>
+                {editing && f.label === "Full Name" ? (
+                  <Input
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    className="mt-0.5 h-7 text-sm"
+                    data-ocid="profile.name_input"
+                  />
+                ) : (
+                  <p className="text-sm text-foreground font-medium truncate">
+                    {f.value}
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <Button
+        type="button"
+        variant={editing ? "default" : "outline"}
+        className={`w-full gap-2 ${editing ? "btn-primary-luxury" : ""}`}
+        onClick={() => setEditing((v) => !v)}
+        data-ocid="profile.edit_button"
+      >
+        {editing ? (
+          <>
+            <CheckCircle2 className="w-4 h-4" />
+            Save Changes
+          </>
+        ) : (
+          <>
+            <Pencil className="w-4 h-4" />
+            Edit Profile
+          </>
+        )}
+      </Button>
+    </motion.div>
+  );
+}
+
 // ── StaffDashboard ─────────────────────────────────────────────────────────────
+
+function StaffThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="gap-1.5 text-xs border-border/40 text-white/80 border-white/20 hover:text-foreground hover:border-border"
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      aria-label="Toggle theme"
+      data-ocid="staff-dashboard.theme_toggle"
+    >
+      {theme === "dark" ? (
+        <Sun className="w-3.5 h-3.5" />
+      ) : (
+        <Moon className="w-3.5 h-3.5" />
+      )}
+      {theme === "dark" ? "Light" : "Dark"}
+    </Button>
+  );
+}
 
 export function StaffDashboard() {
   const { isAuthenticated, user, logout } = useAuth();
@@ -541,13 +673,7 @@ export function StaffDashboard() {
     isLoading: assignmentsLoading,
     dataUpdatedAt,
   } = useMyAssignedWork();
-
-  const { data: submittedWork = [], isLoading: submittedLoading } =
-    useMyUploadedWork();
-
-  const [activeTab, setActiveTab] = useState("assignments");
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [filterAssignmentId, setFilterAssignmentId] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState("work");
 
   const name = profile?.name ?? user?.name ?? "Staff Member";
   const initials = name
@@ -557,23 +683,15 @@ export function StaffDashboard() {
     .toUpperCase()
     .slice(0, 2);
 
-  // Flatten all deliverables from submitted work
-  const allDeliverables = submittedWork.flatMap((a) =>
-    a.deliverables.map((d, di) => ({
-      key: `${String(a.id)}-${di}`,
-      fileName: d.fileName,
-      fileUrl: d.fileUrl,
-      submittedAt: d.submittedAt,
-      assignment: a,
-    })),
-  );
-
-  const filteredDeliverables =
-    filterAssignmentId === "all"
-      ? allDeliverables
-      : allDeliverables.filter(
-          (d) => String(d.assignment.id) === filterAssignmentId,
-        );
+  const assignedCount = assignments.filter(
+    (a) => String(a.status ?? "") === "Assigned",
+  ).length;
+  const inProgressCount = assignments.filter(
+    (a) => String(a.status ?? "") === "InProgress",
+  ).length;
+  const completedCount = assignments.filter((a) =>
+    ["Delivered", "Approved"].includes(String(a.status ?? "")),
+  ).length;
 
   function handleLogout() {
     logout();
@@ -598,17 +716,6 @@ export function StaffDashboard() {
     );
   }
 
-  // Stat counts
-  const assignedCount = assignments.filter(
-    (a) => String(a.status) === "Assigned",
-  ).length;
-  const inProgressCount = assignments.filter(
-    (a) => String(a.status) === "InProgress",
-  ).length;
-  const completedCount = assignments.filter(
-    (a) => String(a.status) === "Delivered" || String(a.status) === "Approved",
-  ).length;
-
   return (
     <Layout>
       {/* ── Header ── */}
@@ -626,7 +733,6 @@ export function StaffDashboard() {
             transition={{ duration: 0.45 }}
             className="flex items-start justify-between gap-4 flex-wrap"
           >
-            {/* Identity */}
             <div className="flex items-center gap-4">
               <motion.div
                 initial={{ scale: 0.85 }}
@@ -672,7 +778,6 @@ export function StaffDashboard() {
               </div>
             </div>
 
-            {/* Stat chips + logout */}
             <div className="flex items-center gap-3 flex-wrap">
               {[
                 {
@@ -711,7 +816,7 @@ export function StaffDashboard() {
                   </div>
                 </div>
               ))}
-
+              <StaffThemeToggle />
               <Button
                 type="button"
                 variant="outline"
@@ -741,12 +846,12 @@ export function StaffDashboard() {
               style={{ background: "oklch(0.12 0.014 275 / 0.6)" }}
             >
               <TabsTrigger
-                value="assignments"
+                value="work"
                 className="gap-1.5"
-                data-ocid="staff-dashboard.tab.assignments"
+                data-ocid="staff-dashboard.tab.work"
               >
                 <Briefcase className="w-4 h-4" />
-                My Assignments
+                My Work
                 {assignments.length > 0 && (
                   <Badge
                     className="ml-1 text-xs border-0 h-4 px-1.5"
@@ -760,27 +865,24 @@ export function StaffDashboard() {
                 )}
               </TabsTrigger>
               <TabsTrigger
-                value="submitted"
+                value="upload"
                 className="gap-1.5"
-                data-ocid="staff-dashboard.tab.submitted"
+                data-ocid="staff-dashboard.tab.upload"
               >
-                <Images className="w-4 h-4" />
-                Submitted Work
-                {allDeliverables.length > 0 && (
-                  <Badge
-                    className="ml-1 text-xs border-0 h-4 px-1.5"
-                    style={{
-                      background: "oklch(0.65 0.2 290 / 0.25)",
-                      color: "oklch(0.75 0.18 290)",
-                    }}
-                  >
-                    {allDeliverables.length}
-                  </Badge>
-                )}
+                <Upload className="w-4 h-4" />
+                Upload Deliverables
+              </TabsTrigger>
+              <TabsTrigger
+                value="profile"
+                className="gap-1.5"
+                data-ocid="staff-dashboard.tab.profile"
+              >
+                <User className="w-4 h-4" />
+                Profile
               </TabsTrigger>
             </TabsList>
 
-            {activeTab === "assignments" && (
+            {activeTab === "work" && (
               <LiveIndicator
                 updatedAt={dataUpdatedAt}
                 pollMs={POLL_MS}
@@ -789,11 +891,11 @@ export function StaffDashboard() {
             )}
           </div>
 
-          {/* ── Assignments tab ── */}
-          <TabsContent value="assignments">
+          {/* ── My Work Tab ── */}
+          <TabsContent value="work">
             <AnimatePresence mode="wait">
               <motion.div
-                key="assignments"
+                key="work"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
@@ -810,7 +912,7 @@ export function StaffDashboard() {
                     initial={{ opacity: 0, scale: 0.97 }}
                     animate={{ opacity: 1, scale: 1 }}
                     className="text-center py-20"
-                    data-ocid="staff-assignment.empty_state"
+                    data-ocid="work.empty_state"
                   >
                     <div
                       className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
@@ -825,7 +927,7 @@ export function StaffDashboard() {
                       />
                     </div>
                     <h3 className="font-semibold text-foreground mb-1">
-                      No assignments yet
+                      No work assigned yet
                     </h3>
                     <p className="text-sm text-muted-foreground max-w-xs mx-auto">
                       Your assigned sessions will appear here once the admin
@@ -835,10 +937,11 @@ export function StaffDashboard() {
                 ) : (
                   <div className="space-y-3">
                     {assignments.map((assignment, i) => (
-                      <AssignmentCard
+                      <WorkItemCard
                         key={String(assignment.id)}
                         assignment={assignment}
                         index={i}
+                        showUpload={false}
                       />
                     ))}
                   </div>
@@ -847,64 +950,33 @@ export function StaffDashboard() {
             </AnimatePresence>
           </TabsContent>
 
-          {/* ── Submitted work tab ── */}
-          <TabsContent value="submitted">
+          {/* ── Upload Deliverables Tab ── */}
+          <TabsContent value="upload">
             <AnimatePresence mode="wait">
               <motion.div
-                key="submitted"
+                key="upload"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.28 }}
               >
-                {/* Filter pills */}
-                {submittedWork.length > 0 && (
-                  <div className="flex items-center gap-2 mb-5 flex-wrap">
-                    <span className="text-xs text-muted-foreground uppercase tracking-wider">
-                      Filter:
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => setFilterAssignmentId("all")}
-                      className={`text-xs px-3 py-1 rounded-full border transition-colors ${
-                        filterAssignmentId === "all"
-                          ? "border-primary/40 bg-primary/15 text-primary"
-                          : "border-border/40 text-muted-foreground hover:border-primary/30"
-                      }`}
-                      data-ocid="staff-submitted.filter.all"
-                    >
-                      All ({allDeliverables.length})
-                    </button>
-                    {submittedWork.map((a) => (
-                      <button
-                        key={String(a.id)}
-                        type="button"
-                        onClick={() => setFilterAssignmentId(String(a.id))}
-                        className={`text-xs px-3 py-1 rounded-full border transition-colors capitalize ${
-                          filterAssignmentId === String(a.id)
-                            ? "border-primary/40 bg-primary/15 text-primary"
-                            : "border-border/40 text-muted-foreground hover:border-primary/30"
-                        }`}
-                        data-ocid="staff-submitted.filter.assignment"
-                      >
-                        {a.sessionType} · {a.sessionDate}
-                      </button>
+                <p className="text-xs text-muted-foreground mb-4 uppercase tracking-wider">
+                  Select an assignment to upload files for
+                </p>
+                {assignmentsLoading ? (
+                  <div className="space-y-3">
+                    {[1, 2].map((i) => (
+                      <Skeleton key={i} className="h-20 rounded-xl" />
                     ))}
                   </div>
-                )}
-
-                {submittedLoading ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {[1, 2, 3, 4, 5, 6].map((i) => (
-                      <Skeleton key={i} className="aspect-square rounded-xl" />
-                    ))}
-                  </div>
-                ) : filteredDeliverables.length === 0 ? (
+                ) : assignments.filter(
+                    (a) => String(a.status ?? "") !== "Approved",
+                  ).length === 0 ? (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.97 }}
                     animate={{ opacity: 1, scale: 1 }}
                     className="text-center py-20"
-                    data-ocid="staff-submitted.empty_state"
+                    data-ocid="upload.empty_state"
                   >
                     <div
                       className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4"
@@ -919,138 +991,49 @@ export function StaffDashboard() {
                       />
                     </div>
                     <h3 className="font-semibold text-foreground mb-1">
-                      No submitted work yet
+                      No pending uploads
                     </h3>
                     <p className="text-sm text-muted-foreground max-w-xs mx-auto">
-                      Upload deliverables from your assignments — they'll appear
-                      here after submission.
+                      All assigned work has been delivered, or no assignments
+                      are pending.
                     </p>
                   </motion.div>
                 ) : (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    {filteredDeliverables.map((item, i) => {
-                      const isImg = isImageFile(item.fileName);
-                      const isPdf = item.fileName
-                        .toLowerCase()
-                        .endsWith(".pdf");
-                      const canPreview =
-                        item.fileUrl.startsWith("http") && isImg;
-
-                      return (
-                        <motion.div
-                          key={item.key}
-                          initial={{ opacity: 0, scale: 0.94 }}
-                          animate={{ opacity: 1, scale: 1 }}
-                          transition={{ delay: i * 0.05 }}
-                          className="group rounded-xl overflow-hidden relative aspect-square border cursor-pointer"
-                          style={{
-                            background: "oklch(0.12 0.014 275 / 0.5)",
-                            borderColor: "oklch(0.22 0.018 275 / 0.5)",
-                          }}
-                          onClick={() =>
-                            canPreview
-                              ? setPreviewUrl(item.fileUrl)
-                              : toast.info(
-                                  "Preview not available for this file type.",
-                                )
-                          }
-                          data-ocid={`staff-submitted.item.${i + 1}`}
-                        >
-                          {/* Thumbnail */}
-                          {canPreview ? (
-                            <img
-                              src={item.fileUrl}
-                              alt={item.fileName}
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center gap-2 p-3">
-                              {isPdf ? (
-                                <FileText
-                                  className="w-10 h-10"
-                                  style={{
-                                    color: "oklch(0.72 0.14 82 / 0.6)",
-                                  }}
-                                />
-                              ) : (
-                                <Images
-                                  className="w-10 h-10"
-                                  style={{
-                                    color: "oklch(0.65 0.2 290 / 0.6)",
-                                  }}
-                                />
-                              )}
-                              <span className="text-xs text-muted-foreground/70 text-center line-clamp-2 break-all">
-                                {item.fileName}
-                              </span>
-                            </div>
-                          )}
-
-                          {/* Hover overlay */}
-                          <div
-                            className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-all duration-200 flex flex-col items-center justify-center gap-1.5 p-3"
-                            style={{
-                              background: "oklch(0.07 0.01 270 / 0.88)",
-                            }}
-                          >
-                            <p className="text-xs font-semibold text-foreground text-center line-clamp-2 break-all">
-                              {item.fileName}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground capitalize">
-                              {item.assignment.sessionType}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground">
-                              {formatTimestamp(item.submittedAt)}
-                            </p>
-                            {canPreview && (
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                className="h-7 px-2 text-xs gap-1 mt-1"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setPreviewUrl(item.fileUrl);
-                                }}
-                                data-ocid={`staff-submitted.preview_button.${i + 1}`}
-                              >
-                                <Eye className="w-3 h-3" />
-                                View
-                              </Button>
-                            )}
-                          </div>
-                        </motion.div>
-                      );
-                    })}
+                  <div className="space-y-3">
+                    {assignments
+                      .filter((a) => String(a.status ?? "") !== "Approved")
+                      .map((assignment, i) => (
+                        <WorkItemCard
+                          key={String(assignment.id)}
+                          assignment={assignment}
+                          index={i}
+                          showUpload={true}
+                        />
+                      ))}
                   </div>
                 )}
               </motion.div>
             </AnimatePresence>
           </TabsContent>
+
+          {/* ── Profile Tab ── */}
+          <TabsContent value="profile">
+            <ProfileTab
+              name={name}
+              user={
+                user
+                  ? {
+                      email: (user as { email?: string }).email,
+                      phone: (user as { phone?: string }).phone,
+                      name: (user as { name?: string }).name,
+                    }
+                  : null
+              }
+              profile={profile}
+            />
+          </TabsContent>
         </Tabs>
       </div>
-
-      {/* ── Image preview dialog ── */}
-      <Dialog
-        open={!!previewUrl}
-        onOpenChange={(open) => !open && setPreviewUrl(null)}
-      >
-        <DialogContent
-          className="max-w-3xl p-2"
-          data-ocid="staff-preview.dialog"
-        >
-          <DialogHeader className="sr-only">
-            <DialogTitle>File Preview</DialogTitle>
-          </DialogHeader>
-          {previewUrl && (
-            <img
-              src={previewUrl}
-              alt="Deliverable preview"
-              className="w-full h-auto rounded-lg max-h-[80vh] object-contain"
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </Layout>
   );
 }

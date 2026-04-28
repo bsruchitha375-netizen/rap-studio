@@ -30,14 +30,13 @@ export function ServicesPage() {
             "radial-gradient(ellipse 80% 60% at 50% 0%, oklch(0.22 0.08 82 / 0.35), transparent 65%), oklch(0.07 0.01 270)",
         }}
       >
-        {/* Background image overlay */}
+        {/* Pure CSS decorative grid pattern — no external image */}
         <div
-          className="absolute inset-0 opacity-[0.06]"
+          className="absolute inset-0 opacity-[0.04]"
           style={{
             backgroundImage:
-              "url('https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=1200&q=40')",
-            backgroundSize: "cover",
-            backgroundPosition: "center",
+              "linear-gradient(oklch(0.72 0.14 82 / 0.3) 1px, transparent 1px), linear-gradient(90deg, oklch(0.72 0.14 82 / 0.3) 1px, transparent 1px)",
+            backgroundSize: "60px 60px",
           }}
         />
 

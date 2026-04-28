@@ -10,6 +10,7 @@ import UserTypes "../types/users";
 import UserLib "../lib/users";
 import ServiceLib "../lib/services";
 import NotifLib "../lib/notifications";
+import AnalyticsLib "../lib/analytics";
 
 mixin (
   accessControlState : AccessControl.AccessControlState,
@@ -20,6 +21,7 @@ mixin (
   nextAdminServiceId : Common.Counter,
   notifications : List.List<NotifTypes.NotificationRecord>,
   nextNotifId : Common.Counter,
+  activityLog : List.List<AnalyticsLib.LoginEvent>,
 ) {
   // Public — merges static + admin-added service categories
   public query func getServiceCategories() : async [ServiceTypes.ServiceCategory] {
@@ -54,6 +56,10 @@ mixin (
       case (?p) { p.name };
       case null { caller.toText() };
     };
+    let userRole = switch (profiles.get(caller)) {
+      case (?p) { p.role };
+      case null { #Client };
+    };
     let notifId = nextNotifId.value;
     nextNotifId.value += 1;
     ignore NotifLib.createNotification(
@@ -64,6 +70,8 @@ mixin (
       #GeneralInfo,
       Time.now(),
     );
+    // Log booking activity for admin dashboard
+    AnalyticsLib.recordBookingEvent(activityLog, caller, userName, userRole, booking.id, input.serviceId);
     booking;
   };
 

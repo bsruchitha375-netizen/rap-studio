@@ -66,7 +66,7 @@ module {
     let charsArr = chars.toArray();
     let blobBytes = input.encodeUtf8();
     let bList = List.empty<Nat>();
-    for (byte in blobBytes.vals()) {
+    for (byte in blobBytes.values()) {
       bList.add(byte.toNat());
     };
     let bArr = bList.toArray();

@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useNavigate } from "@tanstack/react-router";
@@ -7,34 +8,29 @@ import {
   Bell,
   Calendar,
   Camera,
+  CheckCircle2,
   CreditCard,
   LogOut,
+  MapPin,
+  Moon,
+  Pencil,
+  Phone,
   Star,
+  Sun,
   User,
 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
+import { useTheme } from "next-themes";
 import { useState } from "react";
+import type { BookingRequest as BackendBookingRequest } from "../backend.d.ts";
 import { BookingCard } from "../components/dashboard/BookingCard";
 import { FeedbackForm } from "../components/dashboard/FeedbackForm";
 import { LiveIndicator } from "../components/dashboard/LiveIndicator";
 import { PaymentCard } from "../components/dashboard/PaymentCard";
 import { Layout } from "../components/layout/Layout";
 import { useAuth, useUserProfile } from "../hooks/useAuth";
-import {
-  useMyBookings,
-  useMyNotifications,
-  useMyPayments,
-} from "../hooks/useBackend";
+import { useMyBookings, useMyPayments } from "../hooks/useBackend";
 import type { FeedbackRecord } from "../types";
-
-function formatRelativeTime(ts: bigint): string {
-  const ms = Number(ts) / 1_000_000;
-  const diff = Date.now() - ms;
-  if (diff < 60000) return "Just now";
-  if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-  if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-  return `${Math.floor(diff / 86400000)}d ago`;
-}
 
 function renderStars(rating: number) {
   return (
@@ -46,7 +42,7 @@ function renderStars(rating: number) {
         <span
           key={s}
           style={{
-            color: s <= rating ? "oklch(0.8 0.2 70)" : "oklch(0.3 0.02 280)",
+            color: s <= rating ? "oklch(0.8 0.2 70)" : "oklch(0.4 0.02 280)",
           }}
         >
           ★
@@ -63,6 +59,171 @@ async function addFeedback(
   return { ok: true };
 }
 
+function ThemeToggleBtn() {
+  const { theme, setTheme } = useTheme();
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      size="sm"
+      className="gap-1.5 text-xs border-white/20 text-white/80 hover:text-foreground hover:border-border"
+      onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+      aria-label="Toggle theme"
+      data-ocid="client-dashboard.theme_toggle"
+    >
+      {theme === "dark" ? (
+        <Sun className="w-3.5 h-3.5" />
+      ) : (
+        <Moon className="w-3.5 h-3.5" />
+      )}
+      {theme === "dark" ? "Light" : "Dark"}
+    </Button>
+  );
+}
+
+interface ClientProfileTabProps {
+  name: string;
+  user: { email?: string; phone?: string; name?: string } | null;
+  profile:
+    | {
+        email?: string;
+        phone?: string;
+        address?: string;
+        status?: string;
+        role?: string;
+      }
+    | null
+    | undefined;
+}
+
+function ClientProfileTab({ name, user, profile }: ClientProfileTabProps) {
+  const [editing, setEditing] = useState(false);
+  const [displayName, setDisplayName] = useState(name);
+  const initials = displayName
+    .split(" ")
+    .map((w: string) => w[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+
+  const fields = [
+    { label: "Full Name", value: displayName, isName: true, icon: User },
+    { label: "Email", value: profile?.email ?? user?.email ?? "—", icon: Bell },
+    {
+      label: "Phone",
+      value: profile?.phone ?? user?.phone ?? "—",
+      icon: Phone,
+    },
+    { label: "Role", value: "Client", icon: Camera },
+    {
+      label: "Status",
+      value: String(profile?.status ?? "Active"),
+      icon: CheckCircle2,
+    },
+    { label: "Address", value: profile?.address ?? "—", icon: MapPin },
+  ];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.3 }}
+    >
+      <div
+        className="flex flex-col items-center py-8 mb-6 rounded-2xl"
+        style={{
+          background:
+            "linear-gradient(135deg, oklch(0.14 0.02 280 / 0.8), oklch(0.12 0.014 275 / 0.6))",
+          border: "1px solid oklch(0.7 0.22 70 / 0.2)",
+          backdropFilter: "blur(14px)",
+        }}
+      >
+        <div
+          className="w-20 h-20 rounded-full flex items-center justify-center text-2xl font-bold font-display mb-3"
+          style={{
+            background:
+              "linear-gradient(135deg, oklch(0.7 0.22 70 / 0.25), oklch(0.7 0.22 70 / 0.1))",
+            border: "2px solid oklch(0.7 0.22 70 / 0.5)",
+            color: "oklch(0.82 0.2 70)",
+          }}
+        >
+          {initials || <User className="w-8 h-8" />}
+        </div>
+        <h2 className="text-xl font-display font-bold text-white">
+          {displayName}
+        </h2>
+        <p className="text-xs text-white/50 mt-1">RAP Studio · Client</p>
+        <Badge
+          className="mt-2 text-[10px] border"
+          style={{
+            background: "oklch(0.7 0.22 70 / 0.15)",
+            color: "oklch(0.82 0.2 70)",
+            borderColor: "oklch(0.7 0.22 70 / 0.35)",
+          }}
+        >
+          Client
+        </Badge>
+      </div>
+
+      <div
+        className="rounded-2xl overflow-hidden mb-4 bg-card border border-border/40"
+        style={{ backdropFilter: "blur(10px)" }}
+      >
+        {fields.map((f, i) => {
+          const Icon = f.icon;
+          return (
+            <div
+              key={f.label}
+              className={`flex items-center gap-4 px-5 py-3.5 ${i < fields.length - 1 ? "border-b border-border/20" : ""}`}
+            >
+              <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-primary/10">
+                <Icon className="w-4 h-4 text-primary" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                  {f.label}
+                </p>
+                {editing && f.isName ? (
+                  <Input
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    className="mt-0.5 h-7 text-sm bg-background border-input text-foreground"
+                    data-ocid="client-profile.name_input"
+                  />
+                ) : (
+                  <p className="text-sm text-foreground font-medium truncate">
+                    {f.value}
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <Button
+        type="button"
+        variant={editing ? "default" : "outline"}
+        className={`w-full gap-2 ${editing ? "btn-primary-luxury" : ""}`}
+        onClick={() => setEditing((v) => !v)}
+        data-ocid="client-profile.edit_button"
+      >
+        {editing ? (
+          <>
+            <CheckCircle2 className="w-4 h-4" />
+            Save Changes
+          </>
+        ) : (
+          <>
+            <Pencil className="w-4 h-4" />
+            Edit Profile
+          </>
+        )}
+      </Button>
+    </motion.div>
+  );
+}
+
 export function ClientDashboard() {
   const { isAuthenticated, user, logout } = useAuth();
   const { data: profile } = useUserProfile();
@@ -76,7 +237,6 @@ export function ClientDashboard() {
     isLoading: paymentsLoading,
     dataUpdatedAt: paymentsUpdatedAt,
   } = useMyPayments();
-  const { data: notifications = [] } = useMyNotifications();
   const [activeTab, setActiveTab] = useState("bookings");
   const [submittedFeedback, setSubmittedFeedback] = useState<
     Record<string, FeedbackRecord>
@@ -84,7 +244,6 @@ export function ClientDashboard() {
   const [feedbackOpen, setFeedbackOpen] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const unreadCount = notifications.filter((n) => !n.isRead).length;
   const name = profile?.name ?? user?.name ?? "there";
   const initials = name
     .split(" ")
@@ -127,7 +286,6 @@ export function ClientDashboard() {
 
   return (
     <Layout>
-      {/* Dashboard Header */}
       <div
         className="border-b border-border/20"
         style={{
@@ -143,7 +301,6 @@ export function ClientDashboard() {
             className="flex items-center justify-between gap-4 flex-wrap"
           >
             <div className="flex items-center gap-4">
-              {/* Avatar */}
               <div
                 className="w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold font-display flex-shrink-0"
                 style={{
@@ -158,10 +315,7 @@ export function ClientDashboard() {
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-0.5 flex-wrap">
-                  <p
-                    className="text-xs uppercase tracking-widest"
-                    style={{ color: "oklch(0.7 0.22 70 / 0.7)" }}
-                  >
+                  <p className="text-xs uppercase tracking-widest text-amber-300/70">
                     Client Portal
                   </p>
                   <Badge
@@ -175,26 +329,28 @@ export function ClientDashboard() {
                     Client
                   </Badge>
                 </div>
-                <h1 className="text-2xl font-display font-bold text-foreground">
+                <h1 className="text-2xl font-display font-bold text-white">
                   Welcome back,{" "}
                   <span style={{ color: "oklch(0.82 0.2 70)" }}>{name}</span>
                 </h1>
-                <p className="text-xs text-muted-foreground mt-0.5">
+                <p className="text-xs text-white/60 mt-0.5">
                   Manage your bookings and sessions with RAP Studio
                 </p>
               </div>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="gap-2 text-xs border-border/40 hover:border-destructive/40 hover:text-destructive"
-              onClick={handleLogout}
-              data-ocid="client-dashboard.logout_button"
-            >
-              <LogOut className="w-3.5 h-3.5" />
-              Sign Out
-            </Button>
+            <div className="flex items-center gap-2 flex-wrap">
+              <ThemeToggleBtn />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-2 text-xs border-white/20 text-white/80 hover:border-destructive/40 hover:text-destructive"
+                onClick={handleLogout}
+                data-ocid="client-dashboard.logout_button"
+              >
+                <LogOut className="w-3.5 h-3.5" /> Sign Out
+              </Button>
+            </div>
           </motion.div>
         </div>
       </div>
@@ -203,20 +359,16 @@ export function ClientDashboard() {
         <Tabs
           value={activeTab}
           onValueChange={setActiveTab}
-          data-ocid="client-dashboard.tab"
+          data-ocid="client-dashboard.tabs"
         >
           <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
-            <TabsList
-              className="border border-border/50"
-              style={{ background: "oklch(var(--card) / 0.5)" }}
-            >
+            <TabsList className="border border-border/50 bg-card/50">
               <TabsTrigger
                 value="bookings"
                 className="gap-2"
                 data-ocid="client-dashboard.bookings.tab"
               >
-                <Camera className="w-4 h-4" />
-                My Bookings
+                <Camera className="w-4 h-4" /> My Bookings
                 {bookings.length > 0 && (
                   <Badge className="ml-1 text-xs bg-primary/20 text-primary border-0 h-4 px-1">
                     {bookings.length}
@@ -228,8 +380,7 @@ export function ClientDashboard() {
                 className="gap-2"
                 data-ocid="client-dashboard.payments.tab"
               >
-                <CreditCard className="w-4 h-4" />
-                Payments
+                <CreditCard className="w-4 h-4" /> My Payments
                 {payments.length > 0 && (
                   <Badge className="ml-1 text-xs bg-primary/20 text-primary border-0 h-4 px-1">
                     {payments.length}
@@ -237,21 +388,13 @@ export function ClientDashboard() {
                 )}
               </TabsTrigger>
               <TabsTrigger
-                value="notifications"
+                value="profile"
                 className="gap-2"
-                data-ocid="client-dashboard.notifications.tab"
+                data-ocid="client-dashboard.profile.tab"
               >
-                <Bell className="w-4 h-4" />
-                Alerts
-                {unreadCount > 0 && (
-                  <Badge className="ml-1 text-xs bg-destructive/80 text-white border-0 h-4 px-1">
-                    {unreadCount}
-                  </Badge>
-                )}
+                <User className="w-4 h-4" /> Profile
               </TabsTrigger>
             </TabsList>
-
-            {/* Live indicator */}
             {activeTab === "bookings" && (
               <LiveIndicator
                 updatedAt={bookingsUpdatedAt}
@@ -268,7 +411,6 @@ export function ClientDashboard() {
             )}
           </div>
 
-          {/* Bookings Tab */}
           <TabsContent value="bookings">
             <AnimatePresence mode="wait">
               <motion.div
@@ -288,29 +430,17 @@ export function ClientDashboard() {
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="flex flex-col items-center py-20 text-muted-foreground rounded-2xl"
-                    style={{
-                      background: "oklch(var(--card) / 0.3)",
-                      border: "1px dashed oklch(var(--border) / 0.5)",
-                    }}
+                    className="flex flex-col items-center py-20 text-muted-foreground rounded-2xl bg-card/30"
+                    style={{ border: "1px dashed oklch(var(--border) / 0.5)" }}
                     data-ocid="bookings.empty_state"
                   >
-                    <div
-                      className="w-20 h-20 rounded-full mb-5 flex items-center justify-center"
-                      style={{
-                        background: "oklch(0.7 0.22 70 / 0.1)",
-                        border: "1px solid oklch(0.7 0.22 70 / 0.3)",
-                      }}
-                    >
-                      <Calendar
-                        className="w-8 h-8"
-                        style={{ color: "oklch(0.7 0.22 70)" }}
-                      />
+                    <div className="w-20 h-20 rounded-full mb-5 flex items-center justify-center bg-primary/10 border border-primary/30">
+                      <Calendar className="w-8 h-8 text-primary" />
                     </div>
                     <p className="text-lg font-display font-semibold text-foreground mb-2">
                       No bookings yet
                     </p>
-                    <p className="text-sm opacity-60 mb-6">
+                    <p className="text-sm text-muted-foreground mb-6">
                       Book your first photography session today!
                     </p>
                     <a
@@ -324,17 +454,20 @@ export function ClientDashboard() {
                 ) : (
                   <div className="space-y-4">
                     {bookings.map((booking, i) => {
-                      const bookingKey = String(booking.id);
+                      const bookingKey = String(booking.id ?? i);
                       const fb = submittedFeedback[bookingKey];
                       const isCompleted =
-                        String(booking.status).toLowerCase() === "completed";
+                        String(booking.status ?? "").toLowerCase() ===
+                        "completed";
                       return (
                         <div
                           key={bookingKey}
                           data-ocid={`booking.item.${i + 1}`}
                         >
                           <BookingCard
-                            booking={booking}
+                            booking={
+                              booking as unknown as BackendBookingRequest
+                            }
                             showPayButton
                             index={i}
                           />
@@ -347,14 +480,11 @@ export function ClientDashboard() {
                             >
                               {fb ? (
                                 <div
-                                  className="flex items-center gap-2 text-sm glass-effect border border-border/40 rounded-lg px-3 py-1.5 w-fit"
+                                  className="flex items-center gap-2 text-sm bg-card border border-border/40 rounded-lg px-3 py-1.5 w-fit"
                                   data-ocid="feedback.success_state"
                                 >
                                   {renderStars(fb.rating)}
-                                  <span
-                                    className="text-xs font-medium"
-                                    style={{ color: "oklch(0.65 0.18 150)" }}
-                                  >
+                                  <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
                                     Thank you for your feedback!
                                   </span>
                                 </div>
@@ -363,16 +493,11 @@ export function ClientDashboard() {
                                   type="button"
                                   size="sm"
                                   variant="outline"
-                                  className="text-xs gap-1 h-7"
-                                  style={{
-                                    borderColor: "oklch(0.7 0.22 70 / 0.4)",
-                                    color: "oklch(0.7 0.22 70)",
-                                  }}
+                                  className="text-xs gap-1 h-7 text-primary border-primary/40"
                                   onClick={() => setFeedbackOpen(bookingKey)}
                                   data-ocid="booking.feedback_button"
                                 >
-                                  <Star className="w-3 h-3" />
-                                  Leave Feedback ★
+                                  <Star className="w-3 h-3" /> Leave Feedback ★
                                 </Button>
                               )}
                             </motion.div>
@@ -386,7 +511,6 @@ export function ClientDashboard() {
             </AnimatePresence>
           </TabsContent>
 
-          {/* Payments Tab */}
           <TabsContent value="payments">
             <AnimatePresence mode="wait">
               <motion.div
@@ -404,29 +528,17 @@ export function ClientDashboard() {
                   </div>
                 ) : payments.length === 0 ? (
                   <div
-                    className="flex flex-col items-center py-20 text-muted-foreground rounded-2xl"
-                    style={{
-                      background: "oklch(var(--card) / 0.3)",
-                      border: "1px dashed oklch(var(--border) / 0.5)",
-                    }}
+                    className="flex flex-col items-center py-20 text-muted-foreground rounded-2xl bg-card/30"
+                    style={{ border: "1px dashed oklch(var(--border) / 0.5)" }}
                     data-ocid="payments.empty_state"
                   >
-                    <div
-                      className="w-20 h-20 rounded-full mb-5 flex items-center justify-center"
-                      style={{
-                        background: "oklch(0.7 0.22 70 / 0.1)",
-                        border: "1px solid oklch(0.7 0.22 70 / 0.3)",
-                      }}
-                    >
-                      <CreditCard
-                        className="w-8 h-8"
-                        style={{ color: "oklch(0.7 0.22 70)" }}
-                      />
+                    <div className="w-20 h-20 rounded-full mb-5 flex items-center justify-center bg-primary/10 border border-primary/30">
+                      <CreditCard className="w-8 h-8 text-primary" />
                     </div>
                     <p className="text-lg font-display font-semibold text-foreground mb-1">
                       No payments yet
                     </p>
-                    <p className="text-sm opacity-60 mb-6">
+                    <p className="text-sm text-muted-foreground mb-6">
                       Your payment history will appear here.
                     </p>
                     <a
@@ -441,7 +553,7 @@ export function ClientDashboard() {
                   <div className="space-y-3" data-ocid="payments.list">
                     {payments.map((payment, i) => (
                       <PaymentCard
-                        key={String(payment.id)}
+                        key={String(payment.id ?? i)}
                         payment={payment}
                         index={i}
                       />
@@ -452,84 +564,28 @@ export function ClientDashboard() {
             </AnimatePresence>
           </TabsContent>
 
-          {/* Notifications Tab */}
-          <TabsContent value="notifications">
+          <TabsContent value="profile">
             <AnimatePresence mode="wait">
               <motion.div
-                key="notifications"
+                key="profile"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
                 transition={{ duration: 0.3 }}
               >
-                {notifications.length === 0 ? (
-                  <div
-                    className="flex flex-col items-center py-20 text-muted-foreground rounded-2xl"
-                    style={{
-                      background: "oklch(var(--card) / 0.3)",
-                      border: "1px dashed oklch(var(--border) / 0.5)",
-                    }}
-                    data-ocid="notifications.empty_state"
-                  >
-                    <Bell className="w-14 h-14 mb-4 opacity-30" />
-                    <p className="text-lg font-display font-semibold text-foreground">
-                      All caught up!
-                    </p>
-                    <p className="text-sm opacity-60">
-                      No notifications at this time.
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {notifications.map((n, i) => (
-                      <motion.div
-                        key={n.id}
-                        initial={{ opacity: 0, x: -12 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: i * 0.06 }}
-                        className="rounded-xl p-4 transition-smooth"
-                        style={{
-                          background: n.isRead
-                            ? "oklch(var(--card) / 0.4)"
-                            : "oklch(0.7 0.22 70 / 0.06)",
-                          border: n.isRead
-                            ? "1px solid oklch(var(--border) / 0.4)"
-                            : "1px solid oklch(0.7 0.22 70 / 0.3)",
-                        }}
-                        data-ocid={`notification.item.${i + 1}`}
-                      >
-                        <div className="flex items-start gap-3">
-                          {!n.isRead && (
-                            <span
-                              className="w-2 h-2 rounded-full mt-1.5 flex-shrink-0"
-                              style={{ background: "oklch(0.7 0.22 70)" }}
-                            />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-foreground">
-                              {n.title}
-                            </p>
-                            <p className="text-xs text-muted-foreground mt-0.5">
-                              {n.message}
-                            </p>
-                            <p className="text-[10px] text-muted-foreground/50 mt-1">
-                              {formatRelativeTime(n.createdAt)}
-                            </p>
-                          </div>
-                          <Badge
-                            className={`text-xs capitalize ${
-                              n.isRead
-                                ? "bg-muted/40 text-muted-foreground border-border/30"
-                                : "bg-primary/20 text-primary border-primary/30"
-                            }`}
-                          >
-                            {n.isRead ? "Read" : "New"}
-                          </Badge>
-                        </div>
-                      </motion.div>
-                    ))}
-                  </div>
-                )}
+                <ClientProfileTab
+                  name={name}
+                  user={
+                    user
+                      ? {
+                          email: (user as { email?: string }).email,
+                          phone: (user as { phone?: string }).phone,
+                          name: (user as { name?: string }).name,
+                        }
+                      : null
+                  }
+                  profile={profile}
+                />
               </motion.div>
             </AnimatePresence>
           </TabsContent>

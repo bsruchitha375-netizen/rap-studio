@@ -20,7 +20,9 @@ mixin (
   paymentOrders : List.List<PaymentTypes.PaymentOrder>,
   nextCertId : Common.Counter,
 ) {
-  // Student — generate certificate after full ₹5 payment and 100% progress
+  /// Student — generate/download certificate.
+  /// Requires: all lessons complete (progress=100) AND #CertificateDownload payment confirmed.
+  /// Enrollment itself is FREE — payment is ONLY required at this final certificate download step.
   public shared ({ caller }) func generateCertificate(
     enrollmentId : Common.EnrollmentId,
   ) : async CertTypes.Certificate {
@@ -31,29 +33,34 @@ mixin (
     if (enrollment.userId != caller) {
       Runtime.trap("Not your enrollment");
     };
-    // Check payment is fully paid
+    // Check all lessons are complete
+    if (enrollment.progress < 100) {
+      Runtime.trap("Course not yet completed — watch all videos and pass all quizzes first");
+    };
+    // Check payment for certificate download (#CertificateDownload type)
     let paid = PaymentLib.isVerifiedAndPaidForReference(
       paymentOrders,
       enrollmentId.toText(),
-      #CourseEnrollment,
+      #CertificateDownload,
     );
     if (not paid) {
-      Runtime.trap("Full payment of ₹5 required to issue certificate");
+      Runtime.trap("Certificate download payment required — please complete the ₹5 certificate fee first");
     };
     let callerProfile = switch (UserLib.getProfile(profiles, caller)) {
       case null { Runtime.trap("Profile not found") };
       case (?p) { p };
     };
-    let course = switch (CourseLib.getCourseById(enrollment.courseId)) {
-      case null { Runtime.trap("Course not found") };
-      case (?c) { c };
+    // Try to get course title — check both static and admin courses
+    let courseTitle = switch (CourseLib.getCourseById(enrollment.courseId)) {
+      case (?c) { c.title };
+      case null { "Course #" # enrollment.courseId.toText() };
     };
     let cert = CertLib.generateCertificate(
       certificates,
       nextCertId.value,
       enrollment,
       callerProfile.name,
-      course.title,
+      courseTitle,
     );
     nextCertId.value += 1;
     // Mark certificate code on enrollment
@@ -61,13 +68,36 @@ mixin (
     cert;
   };
 
-  // Public — anyone can look up a certificate by code
+  /// Public — anyone can look up a certificate by code
   public query func getCertificate(code : Text) : async ?CertTypes.Certificate {
     CertLib.getCertificateByCode(certificates, code);
   };
 
-  // Public — QR code verification endpoint
+  /// Public — QR code verification endpoint
   public query func verifyCertificate(code : Text) : async Bool {
     CertLib.verifyCertificate(certificates, code);
+  };
+
+  /// Student — check if certificate download payment is done for an enrollment.
+  /// Frontend uses this to know whether to show "Pay for Certificate" or "Download" button.
+  public query ({ caller }) func isCertificatePaymentDone(enrollmentId : Common.EnrollmentId) : async Bool {
+    PaymentLib.isVerifiedAndPaidForReference(
+      paymentOrders,
+      enrollmentId.toText(),
+      #CertificateDownload,
+    );
+  };
+
+  /// Get certificate for an enrollment (if already issued).
+  public query ({ caller }) func getMyCertificate(enrollmentId : Common.EnrollmentId) : async ?CertTypes.Certificate {
+    switch (CourseLib.getEnrollmentById(enrollments, enrollmentId)) {
+      case null { null };
+      case (?e) {
+        if (e.userId != caller and not UserLib.isRole(profiles, caller, #Admin)) {
+          return null;
+        };
+        CertLib.getCertificateByEnrollment(certificates, enrollmentId);
+      };
+    };
   };
 };

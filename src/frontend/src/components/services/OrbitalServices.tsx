@@ -16,58 +16,17 @@ const RING_CONFIGS = [
   { radius: 315, count: 7, speed: 120 },
 ];
 
-const SERVICE_IMAGES: Record<string, string> = {
-  "couple-shoot":
-    "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=80&q=70",
-  "single-shoot":
-    "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=80&q=70",
-  "wedding-shoot":
-    "https://images.unsplash.com/photo-1519741347686-c1e0aadf4611?w=80&q=70",
-  "fashion-shoot":
-    "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=80&q=70",
-  "corporate-shoot":
-    "https://images.unsplash.com/photo-1507679799987-c73779587ccf?w=80&q=70",
-  "product-commercial":
-    "https://images.unsplash.com/photo-1491553895911-0055eca6402d?w=80&q=70",
-  "event-shoot":
-    "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=80&q=70",
-  drone:
-    "https://images.unsplash.com/photo-1527977966376-1c8408f9f108?w=80&q=70",
-  "real-estate":
-    "https://images.unsplash.com/photo-1560518883-ce09059eeffa?w=80&q=70",
-  automobile:
-    "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=80&q=70",
-  videography:
-    "https://images.unsplash.com/photo-1601520493833-ab2a1c8c6e22?w=80&q=70",
-  "short-films":
-    "https://images.unsplash.com/photo-1485846234645-a62644f84728?w=80&q=70",
-  "youtube-content":
-    "https://images.unsplash.com/photo-1611162617474-5b21e879e113?w=80&q=70",
-  ads: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=80&q=70",
-  animation:
-    "https://images.unsplash.com/photo-1535016120720-40c646be5580?w=80&q=70",
-  "social-media":
-    "https://images.unsplash.com/photo-1611162616305-c69b3fa7fbe0?w=80&q=70",
-  podcast:
-    "https://images.unsplash.com/photo-1590602847861-f357a9332bbc?w=80&q=70",
-  "audio-production":
-    "https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=80&q=70",
-  "family-shoot":
-    "https://images.unsplash.com/photo-1478476868527-002ae3f3e159?w=80&q=70",
-  "kids-baby-shoot":
-    "https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?w=80&q=70",
-  "travel-destination":
-    "https://images.unsplash.com/photo-1500534314209-a25ddb2bd429?w=80&q=70",
-  "creative-artistic":
-    "https://images.unsplash.com/photo-1513364776144-60967b0f800f?w=80&q=70",
-  "fitness-lifestyle":
-    "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=80&q=70",
-  "pet-photography":
-    "https://images.unsplash.com/photo-1587300003388-59208cc962cb?w=80&q=70",
-};
-
-const DEFAULT_IMAGE =
-  "https://images.unsplash.com/photo-1554048612-b6a482bc67e5?w=80&q=70";
+// CSS gradient colors per service ring — no external images
+const PLANET_COLORS = [
+  "oklch(0.7 0.22 70)", // gold
+  "oklch(0.7 0.2 290)", // violet
+  "oklch(0.7 0.2 190)", // teal
+  "oklch(0.7 0.2 30)", // orange
+  "oklch(0.7 0.2 145)", // green
+  "oklch(0.7 0.2 250)", // blue
+  "oklch(0.7 0.2 80)", // amber
+  "oklch(0.7 0.2 320)", // pink
+];
 
 function calcPlanets(): OrbitalPlanet[] {
   const planets: OrbitalPlanet[] = [];
@@ -139,7 +98,7 @@ export function OrbitalServices() {
           ))}
         </div>
 
-        {/* Orbital rings with glow */}
+        {/* Orbital rings */}
         {RING_CONFIGS.map((ring, idx) => (
           <div
             key={ring.radius}
@@ -187,13 +146,13 @@ export function OrbitalServices() {
           </span>
         </motion.div>
 
-        {/* Planets */}
-        {PLANETS.map((planet) => {
+        {/* Planets — emoji only, no external images */}
+        {PLANETS.map((planet, pIdx) => {
           const px = center + planet.x * scale;
           const py = center + planet.y * scale;
           const isHovered = hoveredId === planet.service.id;
           const planetSize = isMobile ? 44 : 58;
-          const imgSrc = SERVICE_IMAGES[planet.service.id] ?? DEFAULT_IMAGE;
+          const color = PLANET_COLORS[pIdx % PLANET_COLORS.length];
 
           return (
             <motion.div
@@ -213,40 +172,29 @@ export function OrbitalServices() {
                   params: { serviceId: planet.service.id },
                 })
               }
-              data-ocid={`orbital-planet-${planet.service.id}`}
+              data-ocid={`orbital.planet.${String(pIdx + 1)}`}
             >
+              {/* Planet circle — CSS gradient, no image */}
               <motion.div
-                className="relative flex items-center justify-center rounded-full overflow-hidden"
+                className="relative flex items-center justify-center rounded-full"
                 style={{
                   width: planetSize,
                   height: planetSize,
+                  background: isHovered
+                    ? `${color.replace(")", " / 0.22)")}`
+                    : `${color.replace(")", " / 0.12)")}`,
                   border: isHovered
-                    ? "2px solid oklch(0.82 0.18 88)"
-                    : "1.5px solid oklch(0.28 0.016 275)",
+                    ? `2px solid ${color.replace(")", " / 0.8)")}`
+                    : `1.5px solid ${color.replace(")", " / 0.35)")}`,
                   boxShadow: isHovered
-                    ? "0 0 18px oklch(0.72 0.14 82 / 0.8), 0 0 36px oklch(0.72 0.14 82 / 0.35)"
+                    ? `0 0 18px ${color.replace(")", " / 0.7)")}, 0 0 36px ${color.replace(")", " / 0.3)")}`
                     : "0 2px 10px oklch(0 0 0 / 0.45)",
                   transition: "all 0.2s ease",
                 }}
               >
-                <img
-                  src={imgSrc}
-                  alt={planet.service.name}
-                  loading="lazy"
-                  className="absolute inset-0 w-full h-full object-cover"
-                  style={{
-                    filter: isHovered
-                      ? "brightness(1.15) saturate(1.1)"
-                      : "brightness(0.78) saturate(0.85)",
-                    transition: "filter 0.2s ease",
-                  }}
-                />
                 <span
                   className="relative z-10 drop-shadow-lg"
-                  style={{
-                    fontSize: isMobile ? 14 : 18,
-                    filter: "drop-shadow(0 1px 3px rgba(0,0,0,0.9))",
-                  }}
+                  style={{ fontSize: isMobile ? 16 : 20 }}
                 >
                   {planet.service.emoji}
                 </span>

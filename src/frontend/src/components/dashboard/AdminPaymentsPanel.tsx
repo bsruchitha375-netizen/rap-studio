@@ -1,3 +1,9 @@
+/**
+ * AdminPaymentsPanel — uses getAdminPaymentDashboard() which returns enriched
+ * AdminPaymentEntry[] with clientName, bookingId, enrollmentId, and the nested
+ * PaymentOrder. Falls back gracefully to getAllPayments() if the dashboard
+ * endpoint is unavailable.
+ */
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -25,28 +31,72 @@ import { motion } from "motion/react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { createActor } from "../../backend";
-import type { PaymentOrderExtended } from "../../backend.d";
+import type { AdminPaymentEntry as BackendAdminPaymentEntry } from "../../backend.d";
 import { LiveIndicator } from "./LiveIndicator";
 
-// ─── Enriched type ─────────────────────────────────────────────────────────────
-interface AdminPaymentEntry extends PaymentOrderExtended {
-  clientName?: string;
-  serviceNames?: string[];
+// ─── Flattened display entry ───────────────────────────────────────────────────
+interface DisplayPayment {
+  id: bigint;
+  clientName: string;
+  referenceId: string;
+  paymentType: string;
+  amount: bigint;
+  status: string;
+  createdAt: bigint;
+  paidAt?: bigint;
+  stripeSessionId?: string;
+  stripePaymentIntentId?: string;
+  verified: boolean;
+}
+
+function flattenEntry(e: BackendAdminPaymentEntry): DisplayPayment {
+  const o = e.order;
+  return {
+    id: o.id,
+    clientName: e.clientName ?? "—",
+    referenceId: o.referenceId ?? "",
+    paymentType: String(o.paymentType),
+    amount: o.amount ?? BigInt(0),
+    status: String(o.status),
+    createdAt: o.createdAt ?? BigInt(0),
+    paidAt: o.paidAt,
+    stripeSessionId: o.stripeSessionId,
+    stripePaymentIntentId: o.stripePaymentIntentId,
+    verified: o.signatureVerified ?? false,
+  };
 }
 
 // ─── Data hook — 5s polling ────────────────────────────────────────────────────
 function useAdminPaymentDashboard() {
   const { actor } = useActor(createActor);
 
-  return useQuery<AdminPaymentEntry[]>({
+  return useQuery<DisplayPayment[]>({
     queryKey: ["adminPaymentDashboard"],
     queryFn: async () => {
       if (!actor) return [];
       try {
-        const raw = await actor.getAdminPayments();
-        return raw as AdminPaymentEntry[];
+        const raw = await actor.getAdminPaymentDashboard();
+        return raw.map(flattenEntry);
       } catch {
-        return [];
+        // fallback: raw payment list
+        try {
+          const raw2 = await actor.getAllPayments();
+          return raw2.map((p) => ({
+            id: p.id,
+            clientName: "—",
+            referenceId: p.referenceId ?? "",
+            paymentType: String(p.paymentType),
+            amount: p.amount ?? BigInt(0),
+            status: String(p.status),
+            createdAt: p.createdAt ?? BigInt(0),
+            paidAt: p.paidAt,
+            stripeSessionId: p.stripeSessionId,
+            stripePaymentIntentId: p.stripePaymentIntentId,
+            verified: p.signatureVerified ?? false,
+          }));
+        } catch {
+          return [];
+        }
       }
     },
     enabled: !!actor,
@@ -110,7 +160,7 @@ function isRefunded(s: string) {
   return s === "refunded" || s === "Refunded";
 }
 
-// ─── Confirmation dialog ────────────────────────────────────────────────────────
+// ─── Action dialog ──────────────────────────────────────────────────────────────
 type ActionType = "confirm" | "refund" | "adjust";
 
 interface ActionDialogProps {
@@ -249,7 +299,7 @@ export function AdminPaymentsPanel() {
   const [dialog, setDialog] = useState<{
     open: boolean;
     type: ActionType;
-    payment: AdminPaymentEntry | null;
+    payment: DisplayPayment | null;
   }>({ open: false, type: "confirm", payment: null });
   const [localStatuses, setLocalStatuses] = useState<Record<string, string>>(
     {},
@@ -266,7 +316,7 @@ export function AdminPaymentsPanel() {
     return s.toLowerCase() === filter.toLowerCase();
   });
 
-  function openDialog(type: ActionType, payment: AdminPaymentEntry) {
+  function openDialog(type: ActionType, payment: DisplayPayment) {
     setDialog({ open: true, type, payment });
   }
   function closeDialog() {
@@ -304,7 +354,9 @@ export function AdminPaymentsPanel() {
           );
           toast.success(`Amount adjusted to ₹${newAmount} for payment #${pid}`);
         }
-        queryClient.invalidateQueries({ queryKey: ["adminPaymentDashboard"] });
+        void queryClient.invalidateQueries({
+          queryKey: ["adminPaymentDashboard"],
+        });
       } else {
         if (dialog.type === "confirm")
           setLocalStatuses((prev) => ({ ...prev, [pid]: "Paid" }));
@@ -435,7 +487,7 @@ export function AdminPaymentsPanel() {
       {/* Table header (desktop) */}
       <div className="hidden lg:grid grid-cols-[60px_1fr_140px_120px_100px_110px_auto] gap-3 px-4 py-2.5 rounded-xl bg-muted/40 border border-border text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
         <span>ID</span>
-        <span>Client / Service</span>
+        <span>Client / Type</span>
         <span>Order Ref</span>
         <span>Amount</span>
         <span>Status</span>
@@ -458,7 +510,6 @@ export function AdminPaymentsPanel() {
           filtered.map((payment, i) => {
             const pid = String(payment.id);
             const status = localStatuses[pid] ?? payment.status;
-            const verified = !!payment.razorpayPaymentId;
 
             return (
               <motion.div
@@ -480,7 +531,7 @@ export function AdminPaymentsPanel() {
                       >
                         {status}
                       </Badge>
-                      {verified && (
+                      {payment.verified && (
                         <span className="flex items-center gap-1 text-[10px] text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0.5 rounded-full font-medium">
                           <ShieldCheck className="w-3 h-3" />
                           Verified
@@ -488,21 +539,20 @@ export function AdminPaymentsPanel() {
                       )}
                     </div>
 
-                    {payment.clientName && (
-                      <p className="text-sm font-semibold text-foreground">
-                        {payment.clientName}
-                        {payment.serviceNames?.length
-                          ? ` — ${payment.serviceNames[0]}`
-                          : ""}
-                      </p>
-                    )}
+                    <p className="text-sm font-semibold text-foreground">
+                      {payment.clientName}
+                    </p>
 
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {TYPE_LABELS[payment.paymentType] ?? payment.paymentType}
-                      {" • "}
-                      <span className="font-mono text-foreground/70">
-                        {payment.referenceId}
-                      </span>
+                      {payment.referenceId ? (
+                        <>
+                          {" • "}
+                          <span className="font-mono text-foreground/70">
+                            {payment.referenceId}
+                          </span>
+                        </>
+                      ) : null}
                     </p>
 
                     <div className="flex items-center gap-3 mt-1.5 flex-wrap">

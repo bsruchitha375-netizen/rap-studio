@@ -22,7 +22,7 @@ const FAQ_RESPONSES: Array<{ keywords: string[]; response: string }> = [
   {
     keywords: ["book", "booking", "appointment", "schedule", "reserve"],
     response:
-      "📅 To book a service: 1) Choose your service category, 2) Select date, time slot & location, 3) Submit your request. Our receptionist will review it, and admin will send you a Razorpay payment link for ₹2 to confirm. After delivery, pay the remaining ₹3.",
+      "📅 To book a service: 1) Choose your service category, 2) Select date, time slot & location, 3) Submit your request. Our receptionist will review it, and admin will send you a Stripe payment link to confirm. After delivery, pay the balance.",
   },
   {
     keywords: ["course", "learn", "class", "training", "education", "workshop"],
@@ -77,9 +77,9 @@ const FAQ_RESPONSES: Array<{ keywords: string[]; response: string }> = [
       "📆 Our public calendar shows slot availability — no client details are ever shown for privacy. Choose from Morning, Afternoon, Evening, Night, Half Day, or Full Day time slots when booking!",
   },
   {
-    keywords: ["payment", "razorpay", "pay", "refund"],
+    keywords: ["payment", "stripe", "razorpay", "pay", "refund"],
     response:
-      "💳 We use Razorpay for secure payments (Credit/Debit cards, UPI, Net Banking). For bookings: pay ₹2 upfront to confirm, ₹3 after delivery. For courses: full ₹5 payment required for certificate.",
+      "💳 We use Stripe for secure payments (Credit/Debit cards, UPI, Net Banking). For bookings: pay the initial deposit to confirm, balance after delivery. For courses: full payment required for certificate.",
   },
   {
     keywords: ["gallery", "work", "sample"],

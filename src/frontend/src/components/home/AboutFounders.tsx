@@ -1,4 +1,4 @@
-import { Camera, Instagram, Linkedin } from "lucide-react";
+import { Instagram, Linkedin, Mail } from "lucide-react";
 import { motion, useInView } from "motion/react";
 import { useRef } from "react";
 
@@ -6,43 +6,48 @@ interface Founder {
   name: string;
   initials: string;
   title: string;
+  role: string;
   specialty: string;
   bio: string;
   color: string;
-  avatar: string;
-  instagram?: string;
+  bgGradient: string;
+  email?: string;
 }
 
 const FOUNDERS: Founder[] = [
   {
     name: "Ruchitha B S",
-    initials: "RBS",
+    initials: "R",
     title: "Co-Founder & Lead Photographer",
+    role: "Co-founder",
     specialty: "Wedding & Portrait Photography",
     bio: "With an eye for intimate moments and timeless emotions, Ruchitha turns weddings and portraits into visual poetry.",
     color: "oklch(0.7 0.22 70)",
-    avatar:
-      "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&h=400&fit=crop&face",
+    bgGradient:
+      "linear-gradient(135deg, oklch(0.22 0.05 70), oklch(0.16 0.03 75))",
+    email: "ruchithabs550@gmail.com",
   },
   {
     name: "Ashitha S",
-    initials: "AS",
+    initials: "A",
     title: "Co-Founder & Creative Director",
+    role: "Co-founder",
     specialty: "Fashion & Commercial Photography",
     bio: "Ashitha blends editorial finesse with bold commercial instinct — crafting images that stop scrolls and win campaigns.",
-    color: "oklch(0.78 0.18 290)",
-    avatar:
-      "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=400&h=400&fit=crop&face",
+    color: "oklch(0.72 0.2 290)",
+    bgGradient:
+      "linear-gradient(135deg, oklch(0.22 0.05 290), oklch(0.16 0.03 280))",
   },
   {
     name: "Prarthana R",
-    initials: "PR",
+    initials: "P",
     title: "Co-Founder & Cinematographer",
+    role: "Co-founder",
     specialty: "Videography & Short Films",
     bio: "Prarthana's cinematic vision breathes life into stories — from award-winning short films to deeply moving wedding videos.",
-    color: "oklch(0.72 0.18 190)",
-    avatar:
-      "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?w=400&h=400&fit=crop&face",
+    color: "oklch(0.66 0.18 180)",
+    bgGradient:
+      "linear-gradient(135deg, oklch(0.22 0.05 180), oklch(0.16 0.03 175))",
   },
 ];
 
@@ -68,7 +73,7 @@ export function AboutFounders() {
         }}
       />
 
-      {/* Light leak effect top */}
+      {/* Gold light leak top */}
       <motion.div
         className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-64 pointer-events-none"
         animate={{ opacity: [0.04, 0.12, 0.04] }}
@@ -83,19 +88,37 @@ export function AboutFounders() {
           filter: "blur(30px)",
         }}
       />
-      {/* Light leak bottom-right */}
+
+      {/* Teal glow bottom-left */}
       <motion.div
-        className="absolute bottom-0 right-0 w-96 h-96 pointer-events-none"
-        animate={{ opacity: [0.03, 0.09, 0.03] }}
+        className="absolute bottom-0 left-0 w-96 h-96 pointer-events-none"
+        animate={{ opacity: [0.03, 0.1, 0.03] }}
         transition={{
           duration: 10,
           repeat: Number.POSITIVE_INFINITY,
           ease: "easeInOut",
-          delay: 4,
+          delay: 3,
         }}
         style={{
           background:
-            "radial-gradient(circle, oklch(0.68 0.2 290 / 0.5) 0%, transparent 70%)",
+            "radial-gradient(circle, oklch(0.66 0.18 180 / 0.35) 0%, transparent 70%)",
+          filter: "blur(50px)",
+        }}
+      />
+
+      {/* Violet glow bottom-right */}
+      <motion.div
+        className="absolute bottom-0 right-0 w-80 h-80 pointer-events-none"
+        animate={{ opacity: [0.03, 0.09, 0.03] }}
+        transition={{
+          duration: 11,
+          repeat: Number.POSITIVE_INFINITY,
+          ease: "easeInOut",
+          delay: 5,
+        }}
+        style={{
+          background:
+            "radial-gradient(circle, oklch(0.68 0.2 290 / 0.3) 0%, transparent 70%)",
           filter: "blur(50px)",
         }}
       />
@@ -147,40 +170,57 @@ export function AboutFounders() {
               <div
                 className="w-full rounded-2xl overflow-hidden border transition-smooth group-hover:-translate-y-2"
                 style={{
-                  borderColor: `${founder.color}30`,
-                  background: "oklch(0.14 0.02 280 / 0.8)",
+                  borderColor: `${founder.color.replace(")", " / 0.28)")}`,
+                  background: "oklch(0.14 0.02 280 / 0.9)",
                   boxShadow: "0 8px 40px oklch(0 0 0 / 0.3)",
                 }}
               >
-                {/* Photo area */}
-                <div className="relative h-72 overflow-hidden">
-                  <motion.img
-                    src={founder.avatar}
-                    alt={`${founder.name} - ${founder.title}`}
-                    className="w-full h-full object-cover object-top"
-                    loading="lazy"
-                    whileHover={{ scale: 1.06 }}
-                    transition={{ duration: 0.7, ease: "easeOut" }}
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = "none";
-                    }}
-                  />
-                  {/* Gradient overlay */}
+                {/* Top colored bar */}
+                <div
+                  className="h-1 w-full"
+                  style={{
+                    background: `linear-gradient(90deg, ${founder.color.replace(")", " / 0.8)")}, ${founder.color.replace(")", " / 0.3)")})`,
+                  }}
+                />
+
+                {/* Avatar area */}
+                <div
+                  className="relative h-56 flex items-center justify-center overflow-hidden"
+                  style={{ background: founder.bgGradient }}
+                >
+                  {/* Decorative background pattern */}
                   <div
-                    className="absolute inset-0"
+                    className="absolute inset-0 opacity-12"
                     style={{
-                      background:
-                        "linear-gradient(to top, oklch(0.14 0.02 280) 0%, oklch(0.14 0.02 280 / 0.5) 40%, transparent 80%)",
+                      background: `radial-gradient(circle at 30% 40%, ${founder.color.replace(")", " / 0.6)")}, transparent 60%), radial-gradient(circle at 70% 70%, ${founder.color.replace(")", " / 0.4)")}, transparent 50%)`,
                     }}
                   />
-                  {/* Colored top border */}
-                  <div
-                    className="absolute top-0 left-0 right-0 h-0.5"
+
+                  {/* Large initial circle */}
+                  <motion.div
+                    className="relative z-10 flex items-center justify-center rounded-full"
                     style={{
-                      background: `linear-gradient(90deg, transparent, ${founder.color}88, transparent)`,
+                      width: 104,
+                      height: 104,
+                      background: `${founder.color.replace(")", " / 0.15)")}`,
+                      border: `3px solid ${founder.color.replace(")", " / 0.55)")}`,
+                      boxShadow: `0 0 36px ${founder.color.replace(")", " / 0.45)")}, inset 0 0 18px ${founder.color.replace(")", " / 0.1)")}`,
                     }}
-                  />
+                    whileHover={{ scale: 1.08 }}
+                    transition={{ duration: 0.35 }}
+                  >
+                    <span
+                      className="font-display font-black"
+                      style={{
+                        fontSize: 42,
+                        fontFamily: "var(--font-display)",
+                        color: founder.color,
+                        textShadow: `0 0 24px ${founder.color.replace(")", " / 0.65)")}`,
+                      }}
+                    >
+                      {founder.initials}
+                    </span>
+                  </motion.div>
 
                   {/* Animated shine on hover */}
                   <motion.div
@@ -190,40 +230,10 @@ export function AboutFounders() {
                         "linear-gradient(105deg, transparent 35%, oklch(0.9 0.01 280 / 0.07) 50%, transparent 65%)",
                     }}
                   />
-
-                  {/* Photo coming soon overlay — shown if image fails to load */}
-                  <div
-                    className="absolute inset-0 flex flex-col items-center justify-center gap-2 opacity-0"
-                    id={`photo-fallback-${index}`}
-                    style={{
-                      background:
-                        "linear-gradient(135deg, oklch(0.14 0.02 280), oklch(0.18 0.025 285))",
-                    }}
-                  >
-                    <Camera
-                      size={32}
-                      style={{ color: founder.color, opacity: 0.5 }}
-                    />
-                    <span
-                      style={{
-                        color: founder.color,
-                        fontSize: "12px",
-                        opacity: 0.7,
-                      }}
-                    >
-                      {founder.initials}
-                    </span>
-                    <span
-                      style={{ color: "oklch(0.4 0.01 280)", fontSize: "10px" }}
-                    >
-                      Photo Coming Soon
-                    </span>
-                  </div>
                 </div>
 
                 {/* Info */}
                 <div className="p-5 pb-6">
-                  {/* Name */}
                   <h3
                     className="text-xl font-bold text-foreground mb-1"
                     style={{ fontFamily: "var(--font-display)" }}
@@ -231,9 +241,8 @@ export function AboutFounders() {
                     {founder.name}
                   </h3>
 
-                  {/* Title */}
                   <p
-                    className="text-sm font-semibold mb-1"
+                    className="text-sm font-semibold mb-0.5"
                     style={{ color: founder.color }}
                   >
                     {founder.title}
@@ -241,61 +250,54 @@ export function AboutFounders() {
 
                   {/* Specialty tag */}
                   <div
-                    className="inline-block px-3 py-1 rounded-full text-xs mb-3"
+                    className="inline-block px-3 py-1 rounded-full text-xs mt-2 mb-4"
                     style={{
-                      background: `${founder.color}12`,
-                      border: `1px solid ${founder.color}30`,
+                      background: `${founder.color.replace(")", " / 0.1)")}`,
+                      border: `1px solid ${founder.color.replace(")", " / 0.35)")}`,
                       color: founder.color,
                     }}
                   >
                     {founder.specialty}
                   </div>
 
-                  {/* Divider */}
                   <div
-                    className="w-12 h-px mb-3 mx-auto"
-                    style={{ background: `${founder.color}40` }}
+                    className="w-12 h-px mb-4 mx-auto"
+                    style={{
+                      background: `${founder.color.replace(")", " / 0.4)")}`,
+                    }}
                   />
 
-                  {/* Bio */}
                   <p className="text-sm text-muted-foreground leading-relaxed">
                     {founder.bio}
                   </p>
 
                   {/* Social icons */}
-                  <div className="flex items-center justify-center gap-3 mt-4">
-                    <motion.button
-                      type="button"
-                      className="w-8 h-8 rounded-full flex items-center justify-center transition-smooth"
-                      style={{
-                        background: `${founder.color}15`,
-                        border: `1px solid ${founder.color}30`,
-                        color: founder.color,
-                      }}
-                      whileHover={{
-                        scale: 1.15,
-                        background: `${founder.color}25`,
-                      }}
-                      aria-label={`${founder.name} Instagram`}
-                    >
-                      <Instagram size={14} />
-                    </motion.button>
-                    <motion.button
-                      type="button"
-                      className="w-8 h-8 rounded-full flex items-center justify-center transition-smooth"
-                      style={{
-                        background: `${founder.color}15`,
-                        border: `1px solid ${founder.color}30`,
-                        color: founder.color,
-                      }}
-                      whileHover={{
-                        scale: 1.15,
-                        background: `${founder.color}25`,
-                      }}
-                      aria-label={`${founder.name} LinkedIn`}
-                    >
-                      <Linkedin size={14} />
-                    </motion.button>
+                  <div className="flex items-center justify-center gap-3 mt-5">
+                    {[
+                      { Icon: Instagram, label: "Instagram" },
+                      { Icon: Linkedin, label: "LinkedIn" },
+                      ...(founder.email
+                        ? [{ Icon: Mail, label: "Email" }]
+                        : []),
+                    ].map(({ Icon, label }) => (
+                      <motion.button
+                        key={label}
+                        type="button"
+                        className="w-9 h-9 rounded-full flex items-center justify-center transition-smooth"
+                        style={{
+                          background: `${founder.color.replace(")", " / 0.12)")}`,
+                          border: `1px solid ${founder.color.replace(")", " / 0.3)")}`,
+                          color: founder.color,
+                        }}
+                        whileHover={{
+                          scale: 1.15,
+                          background: `${founder.color.replace(")", " / 0.22)")}`,
+                        }}
+                        aria-label={`${founder.name} ${label}`}
+                      >
+                        <Icon size={14} />
+                      </motion.button>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -304,7 +306,7 @@ export function AboutFounders() {
               <motion.div
                 className="absolute -bottom-4 left-1/2 -translate-x-1/2 w-3/4 h-8 opacity-0 group-hover:opacity-100 transition-smooth pointer-events-none"
                 style={{
-                  background: `radial-gradient(ellipse, ${founder.color}40 0%, transparent 70%)`,
+                  background: `radial-gradient(ellipse, ${founder.color.replace(")", " / 0.4)")}, transparent 70%)`,
                   filter: "blur(12px)",
                 }}
               />
@@ -327,11 +329,6 @@ export function AboutFounders() {
                 "linear-gradient(135deg, oklch(0.14 0.018 280 / 0.8), oklch(0.16 0.022 290 / 0.5))",
             }}
           >
-            <Camera
-              size={28}
-              className="mx-auto mb-4"
-              style={{ color: "oklch(0.7 0.22 70 / 0.6)" }}
-            />
             <p className="text-muted-foreground leading-relaxed text-center mb-8">
               Together, Ruchitha, Ashitha, and Prarthana have built RAP
               Integrated Studio into one of India&apos;s most sought-after

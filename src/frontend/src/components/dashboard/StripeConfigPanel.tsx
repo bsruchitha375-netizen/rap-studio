@@ -126,11 +126,10 @@ export function StripeConfigPanel() {
 
       {/* Info banner */}
       <div
-        className="flex items-start gap-2.5 rounded-xl px-3.5 py-3 border text-xs"
+        className="flex items-start gap-2.5 rounded-xl px-3.5 py-3 border text-xs text-foreground/80"
         style={{
           background: "oklch(0.55 0.25 280 / 0.06)",
           borderColor: "oklch(0.68 0.2 290 / 0.25)",
-          color: "oklch(var(--foreground) / 0.8)",
         }}
       >
         <Shield

@@ -1,19 +1,26 @@
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useNavigate } from "@tanstack/react-router";
 import {
   Award,
   Briefcase,
   Camera,
   CheckCircle2,
   GraduationCap,
+  Search,
   Sliders,
   Video,
   Zap,
 } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
-import { CircularCarousel } from "../components/courses/CircularCarousel";
+import { CourseCard } from "../components/courses/CourseCard";
 import { Layout } from "../components/layout/Layout";
 import { COURSES } from "../data/courses";
+import { useAuth } from "../hooks/useAuth";
+import { useCourses, useMyEnrollments } from "../hooks/useBackend";
 import type { CourseCategory } from "../types";
 
 type TabFilter = "all" | CourseCategory;
@@ -40,23 +47,65 @@ const BENEFITS = [
   },
   {
     icon: CheckCircle2,
-    title: "Accessible for Everyone",
-    desc: "Every course designed for beginners to professionals — no hidden fees, no subscriptions.",
+    title: "Free to Enroll",
+    desc: "All courses are free to enroll. Certificate payment only after full completion.",
+  },
+];
+
+const MODE_LEGEND = [
+  {
+    label: "Online",
+    style: {
+      background: "oklch(0.55 0.18 180)",
+      color: "#fff",
+    },
+  },
+  {
+    label: "Offline",
+    style: {
+      background: "oklch(0.68 0.18 55)",
+      color: "#fff",
+    },
+  },
+  {
+    label: "Hybrid",
+    style: {
+      background: "oklch(0.58 0.24 290)",
+      color: "#fff",
+    },
   },
 ];
 
 export function CoursesPage() {
   const [activeTab, setActiveTab] = useState<TabFilter>("all");
-  const filteredCourses =
-    activeTab === "all"
-      ? COURSES
-      : COURSES.filter((c) => c.category === activeTab);
+  const [searchQuery, setSearchQuery] = useState("");
+  const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
+  const { data: backendCourses = [], isLoading } = useCourses();
+  const { data: enrollments = [] } = useMyEnrollments();
+
+  // Merge static + backend courses (backend overrides when available)
+  const allCourses = backendCourses.length > 0 ? backendCourses : COURSES;
+
+  const filteredCourses = allCourses.filter((c) => {
+    const matchesTab = activeTab === "all" || c.category === activeTab;
+    const matchesSearch =
+      !searchQuery ||
+      (c.title ?? "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (c.description ?? "").toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesTab && matchesSearch;
+  });
+
+  // Map courseId → enrollment for "Continue Learning" navigation
+  const enrolledIds = new Set(enrollments.map((e) => String(e.courseId)));
+  const enrollmentByCourseId = new Map(
+    enrollments.map((e) => [String(e.courseId), e]),
+  );
 
   return (
     <Layout>
-      {/* Hero */}
+      {/* ── Hero ── */}
       <section className="relative min-h-[52vh] flex items-center justify-center overflow-hidden">
-        {/* Background */}
         <div
           className="absolute inset-0"
           style={{
@@ -99,7 +148,7 @@ export function CoursesPage() {
             transition={{ duration: 0.6 }}
           >
             <Badge className="bg-primary/15 text-primary border border-primary/30 mb-6 px-5 py-1.5 text-sm font-semibold shadow-glow-gold">
-              50 Professional Courses
+              50 Professional Courses — All Free to Enroll
             </Badge>
           </motion.div>
 
@@ -115,7 +164,7 @@ export function CoursesPage() {
                 className="bg-clip-text text-transparent"
                 style={{ backgroundImage: "var(--gradient-gold)" }}
               >
-                Photography & Film
+                Photography &amp; Film
               </span>
               <motion.span
                 className="absolute -bottom-1 left-0 right-0 h-0.5 rounded-full"
@@ -133,15 +182,16 @@ export function CoursesPage() {
             transition={{ duration: 0.6, delay: 0.25 }}
             className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8 leading-relaxed"
           >
-            50 studio-crafted courses covering photography, videography,
-            editing, business, and specialized skills — for every level.
+            Enroll free in 50 studio-crafted courses covering photography,
+            videography, editing, business, and specialized skills — for every
+            level.
           </motion.p>
 
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
-            className="flex items-center justify-center gap-10 text-sm text-muted-foreground"
+            className="flex items-center justify-center gap-8 flex-wrap text-sm text-muted-foreground"
           >
             <span className="flex items-center gap-1.5">
               <GraduationCap className="w-4 h-4 text-primary" />
@@ -153,13 +203,31 @@ export function CoursesPage() {
             </span>
             <span className="flex items-center gap-1.5">
               <CheckCircle2 className="w-4 h-4 text-primary" />
-              All Levels Welcome
+              Free to Enroll
             </span>
+          </motion.div>
+
+          {/* Mode legend */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.55 }}
+            className="flex items-center justify-center gap-3 mt-5"
+          >
+            {MODE_LEGEND.map((m) => (
+              <span
+                key={m.label}
+                className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold"
+                style={m.style}
+              >
+                {m.label}
+              </span>
+            ))}
           </motion.div>
         </div>
       </section>
 
-      {/* Category filter tabs */}
+      {/* ── Category filter tabs ── */}
       <section className="sticky top-16 z-30 bg-background/95 backdrop-blur-md border-b border-border/25">
         <div className="container mx-auto px-4">
           <div
@@ -174,17 +242,19 @@ export function CoursesPage() {
                   type="button"
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 whitespace-nowrap flex-shrink-0 ${
-                    isActive
-                      ? "text-primary-foreground shadow-glow-gold"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/30"
-                  }`}
+                  className="relative flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 whitespace-nowrap flex-shrink-0"
                   style={
                     isActive
-                      ? { background: "var(--gradient-gold)" }
-                      : undefined
+                      ? {
+                          background: "var(--gradient-gold)",
+                          color: "oklch(0.1 0.01 262)",
+                          boxShadow: "0 2px 12px oklch(var(--primary) / 0.35)",
+                        }
+                      : {
+                          color: "oklch(var(--muted-foreground))",
+                        }
                   }
-                  data-ocid="courses.filter.tab"
+                  data-ocid={`courses.filter.tab.${tab.id}`}
                 >
                   <Icon className="w-4 h-4" />
                   {tab.label}
@@ -195,35 +265,130 @@ export function CoursesPage() {
         </div>
       </section>
 
-      {/* Circular Carousel */}
-      <section
-        className="py-16 bg-background overflow-hidden"
-        data-ocid="courses.carousel"
-      >
+      {/* ── Search + Grid ── */}
+      <section className="py-12 bg-background" data-ocid="courses.grid.section">
         <div className="container mx-auto px-4">
+          {/* Search bar */}
           <motion.div
-            key={activeTab}
-            initial={{ opacity: 0, scale: 0.97 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 0.35 }}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.4 }}
+            className="max-w-md mx-auto mb-8 relative"
           >
-            <div className="text-center mb-8">
-              <p className="text-muted-foreground text-sm">
-                <span className="text-primary font-semibold">
-                  {filteredCourses.length}
-                </span>{" "}
-                courses
-                {activeTab !== "all" &&
-                  ` in ${TABS.find((t) => t.id === activeTab)?.label ?? activeTab}`}{" "}
-                — drag or use arrows to explore
-              </p>
-            </div>
-            <CircularCarousel courses={filteredCourses} />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+            <Input
+              placeholder="Search courses…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-card/60 border-border/40 focus:border-primary/50 text-foreground placeholder:text-muted-foreground h-11"
+              data-ocid="courses.search_input"
+            />
           </motion.div>
+
+          {/* Count info */}
+          <motion.div
+            key={`${activeTab}-${searchQuery}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.3 }}
+            className="text-center mb-8"
+          >
+            <p className="text-muted-foreground text-sm">
+              <span className="text-primary font-semibold">
+                {filteredCourses.length}
+              </span>{" "}
+              course{filteredCourses.length !== 1 ? "s" : ""}
+              {activeTab !== "all" &&
+                ` in ${TABS.find((t) => t.id === activeTab)?.label ?? activeTab}`}
+              {searchQuery && ` matching "${searchQuery}"`}
+            </p>
+          </motion.div>
+
+          {/* Loading skeletons */}
+          {isLoading && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Skeleton key={i} className="h-96 rounded-2xl" />
+              ))}
+            </div>
+          )}
+
+          {/* Empty state */}
+          {!isLoading && filteredCourses.length === 0 && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center py-20 space-y-4"
+              data-ocid="courses.empty_state"
+            >
+              <div className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto">
+                <GraduationCap className="w-10 h-10 text-primary/60" />
+              </div>
+              <h3 className="font-display text-xl font-bold text-foreground">
+                No courses found
+              </h3>
+              <p className="text-muted-foreground text-sm max-w-sm mx-auto">
+                Try adjusting your search or selecting a different category.
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-primary/30 text-primary hover:bg-primary/10"
+                onClick={() => {
+                  setSearchQuery("");
+                  setActiveTab("all");
+                }}
+              >
+                Clear filters
+              </Button>
+            </motion.div>
+          )}
+
+          {/* Course grid */}
+          {!isLoading && filteredCourses.length > 0 && (
+            <motion.div
+              key={`${activeTab}-${searchQuery}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.35 }}
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
+              data-ocid="courses.list"
+            >
+              {filteredCourses.map((course, index) => {
+                const isEnrolled = enrolledIds.has(String(course.id));
+                const enrollment = enrollmentByCourseId.get(String(course.id));
+                return (
+                  <motion.div
+                    key={course.id}
+                    initial={{ opacity: 0, y: 24 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{
+                      delay: Math.min(index * 0.05, 0.4),
+                      duration: 0.4,
+                    }}
+                    data-ocid={`courses.item.${index + 1}`}
+                  >
+                    <CourseCard
+                      course={course}
+                      isEnrolled={isEnrolled}
+                      enrolledCourseId={
+                        enrollment ? String(enrollment.courseId) : undefined
+                      }
+                      isAuthenticated={isAuthenticated}
+                      index={index}
+                      onViewDetails={() =>
+                        void navigate({ to: `/courses/${course.id}` })
+                      }
+                    />
+                  </motion.div>
+                );
+              })}
+            </motion.div>
+          )}
         </div>
       </section>
 
-      {/* Benefits */}
+      {/* ── Benefits ── */}
       <section className="py-16 bg-muted/15 border-t border-border/15">
         <div className="container mx-auto px-4">
           <motion.div
@@ -240,7 +405,7 @@ export function CoursesPage() {
               <span className="text-primary text-glow-gold">RAP Studio?</span>
             </h2>
             <p className="text-muted-foreground mt-2 max-w-md mx-auto">
-              Studio-quality education at an accessible price point
+              Studio-quality education, accessible to everyone
             </p>
           </motion.div>
 

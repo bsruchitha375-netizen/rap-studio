@@ -10,6 +10,8 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock,
+  Loader2,
+  Lock,
   Play,
   Sliders,
   Star,
@@ -28,6 +30,8 @@ interface CourseDetailProps {
   relatedCourses: Course[];
   isEnrolled?: boolean;
   progress?: number;
+  onEnroll?: () => void;
+  isEnrolling?: boolean;
 }
 
 const CAT_ICONS: Record<CourseCategory, React.ElementType> = {
@@ -59,25 +63,24 @@ const CAT_FALLBACK: Record<CourseCategory, string> = {
     "https://images.unsplash.com/photo-1535016120720-40c646be5580?w=1200&q=80",
 };
 
-// Bold solid mode badges: Online=blue, Offline=orange, Hybrid=purple
 const MODE_STYLES: Record<
   CourseMode,
   { label: string; class: string; badgeCls: string }
 > = {
   online: {
     label: "Online",
-    class: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
-    badgeCls: "bg-blue-600 text-white",
+    class: "bg-teal-500/20 text-teal-300 border-teal-500/30",
+    badgeCls: "bg-teal-500/90 text-white",
   },
   offline: {
     label: "Offline",
-    class: "bg-orange-500/20 text-orange-300 border-orange-500/30",
-    badgeCls: "bg-orange-600 text-white",
+    class: "bg-amber-500/20 text-amber-300 border-amber-500/30",
+    badgeCls: "bg-amber-500/90 text-white",
   },
   hybrid: {
     label: "Hybrid",
-    class: "bg-sky-500/20 text-sky-300 border-sky-500/30",
-    badgeCls: "bg-purple-600 text-white",
+    class: "bg-violet-500/20 text-violet-300 border-violet-500/30",
+    badgeCls: "bg-violet-600/90 text-white",
   },
 };
 
@@ -119,22 +122,37 @@ export function CourseDetail({
   relatedCourses,
   isEnrolled = false,
   progress = 0,
+  onEnroll,
+  isEnrolling = false,
 }: CourseDetailProps) {
   const [enrollOpen, setEnrollOpen] = useState(false);
+
+  const handleEnrollClick = () => {
+    if (onEnroll) {
+      onEnroll();
+    } else {
+      setEnrollOpen(true);
+    }
+  };
   const [heroLoaded, setHeroLoaded] = useState(false);
-  const modeStyle = MODE_STYLES[course.mode];
-  const CatIcon = CAT_ICONS[course.category];
-  const heroImg = course.image ?? CAT_FALLBACK[course.category];
+  const modeStyle = MODE_STYLES[course.mode] ?? MODE_STYLES.online;
+  const CatIcon = CAT_ICONS[course.category] ?? Camera;
+  const heroImg =
+    course.image ?? course.thumbnail ?? CAT_FALLBACK[course.category];
+  const displayPrice = course.price > 0 ? course.price : 5;
+
+  const handleContinueLearning = () => {
+    window.location.href = `/course/${course.id}/learn`;
+  };
 
   return (
     <>
-      {/* Hero Banner with course image */}
+      {/* Hero Banner */}
       <section className="relative pt-24 pb-16 px-4 overflow-hidden">
-        {/* Full-bleed background image */}
         <div className="absolute inset-0 z-0">
           <img
             src={heroImg}
-            alt={course.title}
+            alt={course.title ?? "Course"}
             onLoad={() => setHeroLoaded(true)}
             className="w-full h-full object-cover"
             style={{
@@ -142,9 +160,9 @@ export function CourseDetail({
               transition: "opacity 0.6s ease",
             }}
           />
-          {/* Gradient over image */}
+          {/* Gradient overlay */}
           <div
-            className={`absolute inset-0 bg-gradient-to-b ${CAT_GRADIENT[course.category]} opacity-90`}
+            className={`absolute inset-0 bg-gradient-to-b ${CAT_GRADIENT[course.category] ?? "from-card/90 to-background"} opacity-90`}
           />
           <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-background" />
         </div>
@@ -157,9 +175,8 @@ export function CourseDetail({
           >
             <div className="flex items-center gap-2 mb-4">
               <Badge className="bg-primary/20 text-primary border border-primary/30 capitalize">
-                {course.category}
+                {course.category ?? ""}
               </Badge>
-              {/* Bold solid mode badge */}
               <span
                 className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${modeStyle.badgeCls}`}
               >
@@ -167,34 +184,40 @@ export function CourseDetail({
               </span>
             </div>
             <h1 className="font-display text-4xl md:text-5xl font-bold text-white leading-tight mb-4">
-              {course.title}
+              {course.title ?? ""}
             </h1>
             <p className="text-lg text-white/80 max-w-2xl mb-6">
-              {course.description}
+              {course.description ?? ""}
             </p>
 
             {/* Stats row */}
             <div className="flex flex-wrap gap-6 text-sm text-white/70">
-              <span className="flex items-center gap-1.5">
-                <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
-                <span className="text-white font-semibold">
-                  {course.rating}
+              {course.rating > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
+                  <span className="text-white font-semibold">
+                    {course.rating}
+                  </span>{" "}
+                  rating
                 </span>
-                rating
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Users className="w-4 h-4" />
-                <span className="text-white font-semibold">
-                  {course.totalStudents}
+              )}
+              {course.totalStudents > 0 && (
+                <span className="flex items-center gap-1.5">
+                  <Users className="w-4 h-4" />
+                  <span className="text-white font-semibold">
+                    {course.totalStudents}
+                  </span>{" "}
+                  students
                 </span>
-                students
-              </span>
-              <span className="flex items-center gap-1.5">
-                <Clock className="w-4 h-4" />
-                <span className="text-white font-semibold">
-                  {course.duration}
+              )}
+              {course.duration && (
+                <span className="flex items-center gap-1.5">
+                  <Clock className="w-4 h-4" />
+                  <span className="text-white font-semibold">
+                    {course.duration}
+                  </span>
                 </span>
-              </span>
+              )}
               <span className="flex items-center gap-1.5">
                 <Award className="w-4 h-4 text-primary" />
                 Certificate included
@@ -233,25 +256,27 @@ export function CourseDetail({
                       About This Course
                     </h2>
                     <p className="text-muted-foreground leading-relaxed">
-                      {course.description}
+                      {course.description ?? ""}
                     </p>
                   </div>
 
-                  <div>
-                    <h3 className="text-base font-semibold text-foreground mb-3">
-                      What You'll Learn
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      {course.syllabusHighlights.map((item) => (
-                        <div key={item} className="flex items-start gap-2">
-                          <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                          <span className="text-sm text-foreground/80">
-                            {item}
-                          </span>
-                        </div>
-                      ))}
+                  {(course.syllabusHighlights ?? []).length > 0 && (
+                    <div>
+                      <h3 className="text-base font-semibold text-foreground mb-3">
+                        What You'll Learn
+                      </h3>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {(course.syllabusHighlights ?? []).map((item) => (
+                          <div key={item} className="flex items-start gap-2">
+                            <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                            <span className="text-sm text-foreground/80">
+                              {item}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="bg-muted/20 rounded-2xl p-5 border border-border/30">
                     <h3 className="text-base font-semibold text-foreground mb-2">
@@ -276,13 +301,20 @@ export function CourseDetail({
                   {CURRICULUM_TEMPLATE.map((item) => (
                     <div
                       key={item.week}
-                      className="flex items-start gap-4 p-4 rounded-xl bg-muted/10 border border-border/20
-                        hover:border-border/40 transition-colors"
+                      className={`flex items-start gap-4 p-4 rounded-xl border transition-colors ${
+                        isEnrolled
+                          ? "bg-muted/10 border-border/20 hover:border-border/40"
+                          : "bg-muted/10 border-border/20 opacity-80"
+                      }`}
                     >
                       <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <Play className="w-5 h-5 text-primary" />
+                        {isEnrolled ? (
+                          <Play className="w-5 h-5 text-primary" />
+                        ) : (
+                          <Lock className="w-5 h-5 text-muted-foreground" />
+                        )}
                       </div>
-                      <div>
+                      <div className="flex-1 min-w-0">
                         <p className="text-xs text-primary font-semibold uppercase tracking-wider">
                           {item.week}
                         </p>
@@ -296,6 +328,31 @@ export function CourseDetail({
                       <ChevronRight className="w-4 h-4 text-muted-foreground ml-auto flex-shrink-0 mt-1" />
                     </div>
                   ))}
+                  {!isEnrolled && (
+                    <div className="text-center pt-4">
+                      <p className="text-xs text-muted-foreground mb-3">
+                        Enroll free to unlock all{" "}
+                        <span className="text-primary font-semibold">
+                          {CURRICULUM_TEMPLATE.length}
+                        </span>{" "}
+                        lessons
+                      </p>
+                      <Button
+                        className="h-9 px-6 font-bold text-sm"
+                        style={{
+                          background: "var(--gradient-gold)",
+                          color: "oklch(var(--primary-foreground))",
+                        }}
+                        onClick={handleEnrollClick}
+                        disabled={isEnrolling}
+                        data-ocid="curriculum.enroll_button"
+                      >
+                        {isEnrolling
+                          ? "Enrolling…"
+                          : "Enroll Free — Start Learning"}
+                      </Button>
+                    </div>
+                  )}
                 </motion.div>
               </TabsContent>
 
@@ -306,28 +363,25 @@ export function CourseDetail({
                   transition={{ duration: 0.4 }}
                   className="flex gap-5"
                 >
-                  <div
-                    className="w-20 h-20 rounded-full bg-primary/20 border-2 border-primary/30
-                    flex items-center justify-center flex-shrink-0 text-2xl font-display text-primary"
-                  >
-                    {course.instructor.charAt(0)}
+                  <div className="w-20 h-20 rounded-full bg-primary/20 border-2 border-primary/30 flex items-center justify-center flex-shrink-0 text-2xl font-display text-primary">
+                    {(course.instructor ?? "R").charAt(0)}
                   </div>
                   <div>
                     <h2 className="text-xl font-display font-semibold text-foreground">
-                      {course.instructor}
+                      {course.instructor ?? "RAP Studio"}
                     </h2>
                     <p className="text-primary text-sm font-medium mt-0.5">
                       RAP Studio Expert —{" "}
-                      {course.category.charAt(0).toUpperCase() +
-                        course.category.slice(1)}
+                      {(course.category ?? "").charAt(0).toUpperCase() +
+                        (course.category ?? "").slice(1)}
                     </p>
                     <p className="text-muted-foreground text-sm mt-3 leading-relaxed max-w-lg">
                       A founding member of RAP Integrated Studio with over a
                       decade of professional experience. Specializing in{" "}
-                      {course.category} with credits across weddings, commercial
-                      shoots, and editorial campaigns. Known for a warm teaching
-                      style that makes complex techniques accessible to all
-                      levels.
+                      {course.category ?? "visual arts"} with credits across
+                      weddings, commercial shoots, and editorial campaigns.
+                      Known for a warm teaching style that makes complex
+                      techniques accessible to all levels.
                     </p>
                   </div>
                 </motion.div>
@@ -338,11 +392,19 @@ export function CourseDetail({
           {/* Enrollment card — sticky */}
           <div className="w-full lg:w-72 flex-shrink-0">
             <div className="sticky top-24 rounded-2xl border border-border/50 bg-card overflow-hidden shadow-xl shadow-primary/5">
-              {/* Price header */}
+              {/* Enrollment header */}
               <div className="bg-gradient-to-br from-primary/15 to-card p-5 border-b border-border/30">
-                <p className="text-4xl font-bold text-primary">₹5</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  One-time enrollment fee
+                <div className="flex items-baseline gap-2">
+                  <p
+                    className="text-3xl font-bold"
+                    style={{ color: "oklch(0.78 0.18 82)" }}
+                  >
+                    FREE
+                  </p>
+                  <p className="text-sm text-muted-foreground">to enroll</p>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Certificate: ₹{displayPrice} (after completion)
                 </p>
               </div>
 
@@ -360,15 +422,17 @@ export function CourseDetail({
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Duration</span>
                     <span className="text-foreground font-medium">
-                      {course.duration}
+                      {course.duration ?? "Flexible"}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Students</span>
-                    <span className="text-foreground font-medium">
-                      {course.totalStudents}
-                    </span>
-                  </div>
+                  {course.totalStudents > 0 && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Students</span>
+                      <span className="text-foreground font-medium">
+                        {course.totalStudents}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Certificate</span>
                     <span className="text-primary font-medium text-xs flex items-center gap-1">
@@ -401,7 +465,8 @@ export function CourseDetail({
                     </div>
                     <Button
                       className="w-full bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30"
-                      data-ocid="continue-learning-btn"
+                      onClick={handleContinueLearning}
+                      data-ocid="course-detail.continue_button"
                     >
                       <BookOpen className="w-4 h-4 mr-2" />
                       Continue Learning
@@ -409,11 +474,24 @@ export function CourseDetail({
                   </div>
                 ) : (
                   <Button
-                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90 font-semibold h-11"
-                    onClick={() => setEnrollOpen(true)}
-                    data-ocid="enroll-now-btn"
+                    className="w-full font-bold h-11"
+                    style={{
+                      background: "var(--gradient-gold)",
+                      color: "oklch(var(--primary-foreground))",
+                      boxShadow: "0 4px 20px oklch(var(--primary) / 0.28)",
+                    }}
+                    onClick={handleEnrollClick}
+                    disabled={isEnrolling}
+                    data-ocid="course-detail.enroll_button"
                   >
-                    Enroll Now — ₹5
+                    {isEnrolling ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Enrolling…
+                      </span>
+                    ) : (
+                      "Enroll Free — Start Learning"
+                    )}
                   </Button>
                 )}
 
@@ -432,7 +510,7 @@ export function CourseDetail({
             <h2 className="text-2xl font-display font-bold text-foreground mb-6">
               Related Courses
             </h2>
-            <div className="flex flex-wrap gap-6 justify-start">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {relatedCourses.map((c, i) => (
                 <motion.div
                   key={c.id}
@@ -441,7 +519,12 @@ export function CourseDetail({
                   viewport={{ once: true }}
                   transition={{ delay: i * 0.1, duration: 0.4 }}
                 >
-                  <CourseCard course={c} />
+                  <CourseCard
+                    course={c}
+                    onViewDetails={() => {
+                      window.location.href = `/courses/${c.id}`;
+                    }}
+                  />
                 </motion.div>
               ))}
             </div>

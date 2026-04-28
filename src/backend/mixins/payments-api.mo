@@ -8,6 +8,7 @@ import AccessControl "mo:caffeineai-authorization/access-control";
 import OutCall "mo:caffeineai-http-outcalls/outcall";
 import Common "../types/common";
 import PaymentTypes "../types/payments";
+import CourseTypes "../types/courses";
 import ServiceTypes "../types/services";
 import UserTypes "../types/users";
 import NotifTypes "../types/notifications";
@@ -16,6 +17,7 @@ import PaymentLib "../lib/payments";
 import ServiceLib "../lib/services";
 import NotifLib "../lib/notifications";
 import StripeLib "../lib/stripe";
+import AnalyticsLib "../lib/analytics";
 
 mixin (
   accessControlState : AccessControl.AccessControlState,
@@ -23,11 +25,13 @@ mixin (
   paymentOrders : List.List<PaymentTypes.PaymentOrder>,
   nextPaymentId : Common.Counter,
   bookings : List.List<ServiceTypes.BookingRequest>,
+  enrollments : List.List<CourseTypes.CourseEnrollment>,
   whatsappLogs : List.List<NotifTypes.WhatsAppLog>,
   nextWhatsAppLogId : Common.Counter,
   notifications : List.List<NotifTypes.NotificationRecord>,
   nextNotifId : Common.Counter,
   stripeConfig : PaymentTypes.StripeConfig,
+  activityLog : List.List<AnalyticsLib.LoginEvent>,
 ) {
   // Required transform function for HTTP outcalls — strips non-deterministic headers.
   public query func transform(
@@ -134,7 +138,7 @@ mixin (
       case (?c) { c };
     };
 
-    // Update booking status: PaymentPending → Confirmed
+    // Update booking/enrollment status after payment confirmed
     switch (order.paymentType) {
       case (#BookingUpfront) {
         switch (order.referenceId.toNat()) {
@@ -152,7 +156,29 @@ mixin (
           case null {};
         };
       };
-      case (#CourseEnrollment) {};
+      case (#CourseEnrollment) {
+        // Legacy: update enrollment paymentStatus → #FullyPaid
+        switch (order.referenceId.toNat()) {
+          case (?enrollmentId) {
+            enrollments.mapInPlace(func(e) {
+              if (e.id == enrollmentId) { { e with paymentStatus = #FullyPaid } } else { e };
+            });
+          };
+          case null {};
+        };
+      };
+      case (#CertificateDownload) {
+        // Certificate download payment confirmed — enrollment paymentStatus → #FullyPaid
+        // so certificate issuance gate passes
+        switch (order.referenceId.toNat()) {
+          case (?enrollmentId) {
+            enrollments.mapInPlace(func(e) {
+              if (e.id == enrollmentId) { { e with paymentStatus = #FullyPaid } } else { e };
+            });
+          };
+          case null {};
+        };
+      };
     };
 
     // Log WhatsApp confirmation (email disabled on this platform)
@@ -191,6 +217,13 @@ mixin (
       #PaymentReceipt,
       now,
     );
+
+    // Log payment activity for admin dashboard
+    let logUserRole = switch (profiles.get(caller)) {
+      case (?p) { p.role };
+      case null { #Client };
+    };
+    AnalyticsLib.recordPaymentEvent(activityLog, caller, clientName, logUserRole, confirmed.amount, confirmed.referenceId);
 
     true;
   };
@@ -252,7 +285,7 @@ mixin (
     switch (PaymentLib.adminConfirmPayment(paymentOrders, paymentId, note, now)) {
       case null { false };
       case (?confirmed) {
-        // Update booking status on admin confirm
+        // Update booking/enrollment status on admin confirm
         switch (confirmed.paymentType) {
           case (#BookingUpfront) {
             switch (confirmed.referenceId.toNat()) {
@@ -270,7 +303,26 @@ mixin (
               case null {};
             };
           };
-          case (#CourseEnrollment) {};
+          case (#CourseEnrollment) {
+            switch (confirmed.referenceId.toNat()) {
+              case (?enrollmentId) {
+                enrollments.mapInPlace(func(e) {
+                  if (e.id == enrollmentId) { { e with paymentStatus = #FullyPaid } } else { e };
+                });
+              };
+              case null {};
+            };
+          };
+          case (#CertificateDownload) {
+            switch (confirmed.referenceId.toNat()) {
+              case (?enrollmentId) {
+                enrollments.mapInPlace(func(e) {
+                  if (e.id == enrollmentId) { { e with paymentStatus = #FullyPaid } } else { e };
+                });
+              };
+              case null {};
+            };
+          };
         };
         // Log WhatsApp notification for admin confirm
         let clientPhone = switch (profiles.get(confirmed.userId)) {
@@ -400,9 +452,10 @@ mixin (
   // ── Private helpers ──────────────────────────────────────────────────────
   func paymentTypeToText(pt : PaymentTypes.PaymentType) : Text {
     switch (pt) {
-      case (#BookingUpfront)    { "BookingUpfront" };
-      case (#BookingBalance)    { "BookingBalance" };
-      case (#CourseEnrollment)  { "CourseEnrollment" };
+      case (#BookingUpfront)       { "BookingUpfront" };
+      case (#BookingBalance)       { "BookingBalance" };
+      case (#CourseEnrollment)     { "CourseEnrollment" };
+      case (#CertificateDownload)  { "CertificateDownload" };
     };
   };
 
@@ -421,7 +474,7 @@ mixin (
     var s = "";
     var j = 0;
     for (c in suffix.vals()) {
-      if (j >= size - 4) { s #= Text.fromChar(c) };
+      if (j + 4 >= size) { s #= Text.fromChar(c) };
       j += 1;
     };
     p # "***" # s;

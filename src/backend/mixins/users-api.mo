@@ -36,13 +36,8 @@ mixin (
     };
     switch (UserLib.register(profiles, emailIndex, phoneIndex, caller, email, name, phone, passwordHash, safeRole, address, profilePhoto, studentDetails)) {
       case (#ok(p)) {
-        // Log registration event
-        activityLog.add({
-          userId = p.id;
-          userName = p.name;
-          userRole = p.role;
-          loginAt = Time.now();
-        });
+        // Log registration event (distinct from login event)
+        AnalyticsLib.recordRegistrationEvent(activityLog, p.id, p.name, p.role);
         #ok(UserTypes.toPublic(p));
       };
       case (#err(e)) { #err(e) };
@@ -71,12 +66,7 @@ mixin (
     let result = UserLib.loginByIdentifier(profiles, emailIndex, phoneIndex, loginAttempts, identifier, passwordHash, now);
     switch (result) {
       case (#ok(pub)) {
-        activityLog.add({
-          userId = pub.id;
-          userName = pub.name;
-          userRole = pub.role;
-          loginAt = now;
-        });
+        AnalyticsLib.recordLoginEvent(activityLog, pub.id, pub.name, pub.role);
       };
       case (#err(_)) {};
     };
@@ -121,17 +111,139 @@ mixin (
   };
 
   /// Compatibility shim for authorization extension — creates a minimal profile if none exists.
+  /// Admin role is allowed here so admin can seed their own profile.
   public shared ({ caller }) func saveCallerUserProfile(
     name : Text,
     phone : Text,
     role : UserTypes.UserRole,
   ) : async () {
-    let safeRole : UserTypes.UserRole = switch (role) {
-      case (#Admin) { #Client };
-      case r { r };
-    };
     // Use caller principal as a derived email key so legacy callers still work
     let derivedEmail = caller.toText();
-    ignore UserLib.register(profiles, emailIndex, phoneIndex, caller, derivedEmail, name, phone, "", safeRole, null, null, null);
+    // If profile already exists, skip — don't overwrite
+    switch (profiles.get(caller)) {
+      case (?_) { return };
+      case null {};
+    };
+    // Allow Admin role here — admin seeds their own profile on first login
+    // All other roles follow normal status rules (Admin → Active immediately)
+    let status : UserTypes.UserStatus = switch (role) {
+      case (#Admin or #Client) { #Active };
+      case _ { #Pending };
+    };
+    let profile : UserTypes.UserProfile = {
+      id = caller;
+      email = derivedEmail;
+      name = name;
+      phone = phone;
+      passwordHash = "";
+      role = role;
+      address = null;
+      profilePhoto = null;
+      registeredAt = Time.now();
+      status = status;
+      studentDetails = null;
+    };
+    profiles.add(caller, profile);
+    emailIndex.add(derivedEmail, caller);
+  };
+
+  /// Bootstrap: allows the admin to register themselves with full admin role.
+  /// Only works if no admin profile exists yet for this caller.
+  /// Returns #ok if profile created, #err if already exists.
+  public shared ({ caller }) func bootstrapAdminProfile(
+    name : Text,
+    email : Text,
+    phone : Text,
+    passwordHash : Text,
+  ) : async { #ok : UserTypes.PublicProfile; #err : Text } {
+    // Reject if caller already has a profile
+    switch (profiles.get(caller)) {
+      case (?existing) {
+        // If already admin, just return existing
+        switch (existing.role) {
+          case (#Admin) { return #ok(UserTypes.toPublic(existing)) };
+          case _ { return #err("Profile already exists with non-admin role") };
+        };
+      };
+      case null {};
+    };
+    let normalEmail = if (email == "") { caller.toText() } else { email.toLower() };
+    // Check if email already in use by another user
+    switch (emailIndex.get(normalEmail)) {
+      case (?existingId) {
+        if (existingId != caller) {
+          return #err("Email already registered by another user");
+        };
+      };
+      case null {};
+    };
+    let profile : UserTypes.UserProfile = {
+      id = caller;
+      email = normalEmail;
+      name = name;
+      phone = phone;
+      passwordHash = passwordHash;
+      role = #Admin;
+      address = null;
+      profilePhoto = null;
+      registeredAt = Time.now();
+      status = #Active;
+      studentDetails = null;
+    };
+    profiles.add(caller, profile);
+    emailIndex.add(normalEmail, caller);
+    if (phone != "") {
+      phoneIndex.add(phone, caller);
+    };
+    AnalyticsLib.recordRegistrationEvent(activityLog, caller, name, #Admin);
+    #ok(UserTypes.toPublic(profile));
+  };
+
+  /// Admin — list all registered users (public profiles, no password hash).
+  public query ({ caller }) func getAllUsers() : async [UserTypes.PublicProfile] {
+    UserLib.requireRole(profiles, caller, #Admin);
+    profiles.values().map<UserTypes.UserProfile, UserTypes.PublicProfile>(
+      func(p) { UserTypes.toPublic(p) }
+    ).toArray();
+  };
+
+  /// Admin — list all pending users awaiting approval.
+  public query ({ caller }) func listPendingUsers() : async [UserTypes.PublicProfile] {
+    UserLib.requireRole(profiles, caller, #Admin);
+    UserLib.listPendingUsers(profiles);
+  };
+
+  /// Admin — approve a pending user.
+  public shared ({ caller }) func approveUser(userId : Common.UserId) : async { #ok; #err : Text } {
+    UserLib.approveUser(profiles, profiles, caller, userId);
+  };
+
+  /// Admin — reject a pending user.
+  public shared ({ caller }) func rejectUser(userId : Common.UserId) : async { #ok; #err : Text } {
+    UserLib.rejectUser(profiles, profiles, caller, userId);
+  };
+
+  /// Admin — directly create a user with any role, immediately active.
+  public shared ({ caller }) func adminCreateUser(
+    email : Text,
+    name : Text,
+    phone : Text,
+    passwordHash : Text,
+    role : UserTypes.UserRole,
+    address : ?Text,
+    studentDetails : ?UserTypes.StudentDetails,
+  ) : async { #ok : UserTypes.PublicProfile; #err : Text } {
+    UserLib.adminCreateUser(profiles, emailIndex, phoneIndex, profiles, caller, email, name, phone, passwordHash, role, address, studentDetails);
+  };
+
+  /// Admin — delete any user account permanently.
+  public shared ({ caller }) func deleteUser(userId : Common.UserId) : async { #ok; #err : Text } {
+    UserLib.deleteUser(profiles, emailIndex, phoneIndex, profiles, caller, userId);
+  };
+
+  /// Admin — bulk fetch multiple user profiles.
+  public query ({ caller }) func bulkGetUserProfiles(userIds : [Common.UserId]) : async [UserTypes.PublicProfile] {
+    UserLib.requireRole(profiles, caller, #Admin);
+    UserLib.bulkGetUserProfiles(profiles, userIds);
   };
 };

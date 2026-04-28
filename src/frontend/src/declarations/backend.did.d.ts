@@ -373,6 +373,7 @@ export type PaymentStatus__1 = { 'PartiallyPaid' : null } |
   { 'Overdue' : null } |
   { 'Pending' : null };
 export type PaymentType = { 'BookingBalance' : null } |
+  { 'CertificateDownload' : null } |
   { 'CourseEnrollment' : null } |
   { 'BookingUpfront' : null };
 export interface PaymentVerificationStatus {
@@ -577,6 +578,13 @@ export interface _SERVICE {
   'approveUser' : ActorMethod<[UserId], { 'ok' : null } | { 'err' : string }>,
   'assignCallerUserRole' : ActorMethod<[Principal, UserRole__1], undefined>,
   'assignWork' : ActorMethod<[WorkAssignmentInput], WorkAssignment>,
+  'bootstrapAdminProfile' : ActorMethod<
+    [string, string, string, string],
+    { 'ok' : PublicProfile } |
+      { 'err' : string }
+  >,
+  'bulkGetUserProfiles' : ActorMethod<[Array<UserId>], Array<PublicProfile>>,
+  'clearStaleEnrollments' : ActorMethod<[], bigint>,
   'confirmBooking' : ActorMethod<[BookingId], boolean>,
   'confirmPayment' : ActorMethod<[StripeConfirmation], boolean>,
   'createBookingRequest' : ActorMethod<[BookingInput], BookingRequest>,
@@ -600,7 +608,60 @@ export interface _SERVICE {
   'editQuizQuestion' : ActorMethod<[bigint, QuizQuestionInput], boolean>,
   'enrollCourse' : ActorMethod<[CourseId], CourseEnrollment>,
   'generateCertificate' : ActorMethod<[EnrollmentId], Certificate>,
+  'getAdminBookings' : ActorMethod<
+    [],
+    Array<
+      {
+        'id' : BookingId,
+        'status' : BookingStatus,
+        'duration' : string,
+        'clientName' : string,
+        'rejectedReason' : [] | [string],
+        'userId' : UserId,
+        'date' : string,
+        'createdAt' : Timestamp,
+        'clientEmail' : string,
+        'rescheduledDate' : [] | [string],
+        'rescheduledTime' : [] | [string],
+        'subService' : string,
+        'notes' : [] | [string],
+        'serviceId' : string,
+        'location' : LocationType,
+        'timeSlot' : TimeSlot,
+      }
+    >
+  >,
   'getAdminCourseBlob' : ActorMethod<[CourseId], [] | [Uint8Array]>,
+  'getAdminDashboardData' : ActorMethod<
+    [],
+    {
+      'totalEnrollments' : bigint,
+      'pendingUsers' : Array<PublicProfile>,
+      'totalPayments' : bigint,
+      'totalBookings' : bigint,
+      'analytics' : AnalyticsSummary,
+      'recentActivity' : Array<ActivityEvent>,
+      'totalUsers' : bigint,
+    }
+  >,
+  'getAdminEnrollments' : ActorMethod<
+    [],
+    Array<
+      {
+        'id' : EnrollmentId,
+        'completedAt' : [] | [Timestamp],
+        'studentEmail' : string,
+        'paymentStatus' : PaymentStatus__1,
+        'studentName' : string,
+        'userId' : UserId,
+        'progress' : bigint,
+        'enrolledAt' : Timestamp,
+        'courseName' : string,
+        'certificateCode' : [] | [string],
+        'courseId' : CourseId,
+      }
+    >
+  >,
   'getAdminPaymentDashboard' : ActorMethod<[], Array<AdminPaymentEntry>>,
   'getAdminPayments' : ActorMethod<[], Array<PaymentOrderExtended>>,
   'getAdminServiceBlob' : ActorMethod<[ServiceId], [] | [Uint8Array]>,
@@ -625,14 +686,28 @@ export interface _SERVICE {
   'getCmsContent' : ActorMethod<[string], [] | [CmsContent]>,
   'getCourse' : ActorMethod<[CourseId], [] | [Course]>,
   'getCourseProgress' : ActorMethod<[CourseId], [] | [CourseLessonProgress]>,
+  'getCourseProgressByEnrollment' : ActorMethod<
+    [EnrollmentId],
+    [] | [CourseLessonProgress]
+  >,
   'getEmailLogs' : ActorMethod<[], Array<EmailLog>>,
   'getEnrollmentById' : ActorMethod<[EnrollmentId], [] | [CourseEnrollment]>,
+  'getEnrollmentsByCourse' : ActorMethod<
+    [CourseId],
+    Array<
+      {
+        'progress' : [] | [CourseLessonProgress],
+        'enrollment' : CourseEnrollment,
+      }
+    >
+  >,
   'getFeedbackForTarget' : ActorMethod<[string], Array<Feedback>>,
   'getLessonProgressForCourse' : ActorMethod<[CourseId], Array<LessonProgress>>,
   'getLessons' : ActorMethod<[CourseId], Array<Lesson>>,
   'getMediaItems' : ActorMethod<[[] | [string]], Array<MediaItem>>,
   'getMyAssignedWork' : ActorMethod<[], Array<WorkAssignment>>,
   'getMyBookings' : ActorMethod<[], Array<BookingRequest>>,
+  'getMyCertificate' : ActorMethod<[EnrollmentId], [] | [Certificate]>,
   'getMyEnrollments' : ActorMethod<[], Array<CourseEnrollment>>,
   'getMyFeedback' : ActorMethod<[], Array<Feedback>>,
   'getMyMultiServiceBookings' : ActorMethod<[], Array<MultiServiceBooking>>,
@@ -654,6 +729,7 @@ export interface _SERVICE {
   'getSubServiceImageBlob' : ActorMethod<[string, string], [] | [Uint8Array]>,
   'getWhatsAppLogs' : ActorMethod<[], Array<WhatsAppLog>>,
   'isCallerAdmin' : ActorMethod<[], boolean>,
+  'isCertificatePaymentDone' : ActorMethod<[EnrollmentId], boolean>,
   'listMyPayments' : ActorMethod<[], Array<PaymentOrder>>,
   'listPendingUsers' : ActorMethod<[], Array<PublicProfile>>,
   'loginByEmail' : ActorMethod<
@@ -676,6 +752,15 @@ export interface _SERVICE {
   'markNotificationRead' : ActorMethod<[NotificationId], boolean>,
   'markVideoWatched' : ActorMethod<[bigint], LessonProgress>,
   'markWorkDelivered' : ActorMethod<[BookingId], boolean>,
+  'ping' : ActorMethod<
+    [],
+    {
+      'status' : string,
+      'userCount' : bigint,
+      'bookingCount' : bigint,
+      'enrollmentCount' : bigint,
+    }
+  >,
   'register' : ActorMethod<
     [
       string,
@@ -726,6 +811,7 @@ export interface _SERVICE {
   >,
   'triggerPaymentRequest' : ActorMethod<[BookingId, string], string>,
   'updateAssignmentStatus' : ActorMethod<[bigint, AssignmentStatus], boolean>,
+  'updateCourseMode' : ActorMethod<[CourseId, CourseMode], boolean>,
   'updateCourseProgress' : ActorMethod<[CourseId, boolean], boolean>,
   'updateProfile' : ActorMethod<[string, string, [] | [string]], boolean>,
   'uploadMedia' : ActorMethod<[MediaInput], MediaItem>,

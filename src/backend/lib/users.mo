@@ -1,7 +1,7 @@
 import Map "mo:core/Map";
+import List "mo:core/List";
 import Time "mo:core/Time";
 import Runtime "mo:core/Runtime";
-import Iter "mo:core/Iter";
 import Principal "mo:core/Principal";
 import Text "mo:core/Text";
 import Common "../types/common";
@@ -494,6 +494,21 @@ module {
       phoneIndex.add(normalPhone, newUserId);
     };
     #ok(Types.toPublic(profile));
+  };
+
+  /// Return multiple public profiles by userId list — efficient batch lookup for admin dashboard.
+  public func bulkGetUserProfiles(
+    profiles : Map.Map<Common.UserId, Types.UserProfile>,
+    userIds : [Common.UserId],
+  ) : [Types.PublicProfile] {
+    let result = List.empty<Types.PublicProfile>();
+    for (uid in userIds.values()) {
+      switch (profiles.get(uid)) {
+        case null {};
+        case (?p) { result.add(Types.toPublic(p)) };
+      };
+    };
+    result.toArray();
   };
 
   /// Admin only — permanently remove a user from the platform.

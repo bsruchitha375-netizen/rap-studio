@@ -8,17 +8,38 @@ interface ThemeToggleProps {
   className?: string;
 }
 
+const THEME_KEY = "rap-studio-theme";
+
 export function ThemeToggle({ className = "" }: ThemeToggleProps) {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
-  // Avoid hydration mismatch — wait until mounted to render icon
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    // Read persisted theme and apply immediately on mount
+    const stored = localStorage.getItem(THEME_KEY);
+    const resolved = stored === "light" ? "light" : "dark";
+    if (!stored) {
+      localStorage.setItem(THEME_KEY, "dark");
+    }
+    // Sync DOM class immediately to avoid flash
+    document.documentElement.classList.remove("light", "dark");
+    document.documentElement.classList.add(resolved);
+    document.documentElement.setAttribute("data-theme", resolved);
+    setTheme(resolved);
+    setMounted(true);
+  }, [setTheme]);
 
-  const isDark = theme === "dark";
+  const resolvedTheme = mounted ? theme : "dark";
+  const isDark = resolvedTheme === "dark";
 
   const toggle = () => {
-    setTheme(isDark ? "light" : "dark");
+    const next = isDark ? "light" : "dark";
+    setTheme(next);
+    localStorage.setItem(THEME_KEY, next);
+    // Eagerly apply class so there's no flash
+    document.documentElement.classList.remove("light", "dark");
+    document.documentElement.classList.add(next);
+    document.documentElement.setAttribute("data-theme", next);
   };
 
   if (!mounted) {
@@ -31,7 +52,7 @@ export function ThemeToggle({ className = "" }: ThemeToggleProps) {
         data-ocid="theme.toggle"
       >
         {/* Placeholder to prevent layout shift */}
-        <span className="w-[17px] h-[17px] block" />
+        <Sun className="w-[17px] h-[17px] text-primary opacity-60" />
       </Button>
     );
   }

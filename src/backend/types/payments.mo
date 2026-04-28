@@ -9,9 +9,10 @@ module {
   };
 
   public type PaymentType = {
-    #BookingUpfront;    // deposit (40% of total)
-    #BookingBalance;    // remainder 60% after service
-    #CourseEnrollment;  // full course fee
+    #BookingUpfront;       // deposit (40% of total)
+    #BookingBalance;       // remainder 60% after service
+    #CourseEnrollment;     // full course fee (legacy — kept for backward compat)
+    #CertificateDownload;  // certificate download fee after course completion
   };
 
   public type PaymentOrder = {

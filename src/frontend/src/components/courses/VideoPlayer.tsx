@@ -43,12 +43,10 @@ interface YTPlayerOptions {
 interface YTEvent {
   target: YTPlayer;
 }
-
 interface YTStateEvent {
   data: number;
   target: YTPlayer;
 }
-
 interface YTPlayer {
   destroy(): void;
   getCurrentTime(): number;
@@ -97,6 +95,8 @@ export interface VideoPlayerProps {
   isLocked: boolean;
   isCompleted: boolean;
   onVideoComplete: () => void;
+  /** Called when video reaches ~90% progress */
+  onNearComplete?: () => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -106,20 +106,24 @@ export function VideoPlayer({
   isLocked,
   isCompleted,
   onVideoComplete,
+  onNearComplete,
 }: VideoPlayerProps) {
   const safeUrl = youtubeUrl ?? "";
   const videoId = extractYouTubeId(safeUrl);
   const playerContainerId = `yt-player-${lessonId}`;
   const playerRef = useRef<YTPlayer | null>(null);
   const progressTimerRef = useRef<number | null>(null);
+  const nearCompleteCalledRef = useRef(false);
+  // Fallback: if video was playing and stopped at >95%, trigger complete
+  const lastProgressRef = useRef(0);
 
   const [playerReady, setPlayerReady] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0); // 0–100
+  const [progress, setProgress] = useState(0);
   const [completed, setCompleted] = useState(isCompleted);
   const [showOverlay, setShowOverlay] = useState(!isCompleted);
+  const [imgError, setImgError] = useState(false);
 
-  // Sync completed state from props (when backend confirms)
   useEffect(() => {
     if (isCompleted) {
       setCompleted(true);
@@ -128,7 +132,32 @@ export function VideoPlayer({
     }
   }, [isCompleted]);
 
-  // Poll playback position to drive progress bar
+  const prevVideoIdRef = useRef(videoId);
+  if (prevVideoIdRef.current !== videoId) {
+    prevVideoIdRef.current = videoId;
+    nearCompleteCalledRef.current = false;
+  }
+
+  const onVideoCompleteRef = useRef(onVideoComplete);
+  useEffect(() => {
+    onVideoCompleteRef.current = onVideoComplete;
+  }, [onVideoComplete]);
+
+  const onNearCompleteRef = useRef(onNearComplete);
+  useEffect(() => {
+    onNearCompleteRef.current = onNearComplete;
+  }, [onNearComplete]);
+
+  const triggerComplete = useCallback(() => {
+    setIsPlaying(false);
+    setProgress(100);
+    stopProgressPolling();
+    setCompleted(true);
+    setShowOverlay(false);
+    onVideoCompleteRef.current();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const startProgressPolling = useCallback(() => {
     if (progressTimerRef.current) return;
     progressTimerRef.current = window.setInterval(() => {
@@ -137,13 +166,25 @@ export function VideoPlayer({
         const current = playerRef.current.getCurrentTime();
         const duration = playerRef.current.getDuration();
         if (duration > 0) {
-          setProgress(Math.min(100, (current / duration) * 100));
+          const pct = Math.min(100, (current / duration) * 100);
+          setProgress(pct);
+          lastProgressRef.current = pct;
+          if (pct >= 90 && !nearCompleteCalledRef.current) {
+            nearCompleteCalledRef.current = true;
+            onNearCompleteRef.current?.();
+          }
+          // Fallback: auto-complete if stuck at 99%+ without ENDED firing
+          if (pct >= 99.5) {
+            window.clearInterval(progressTimerRef.current ?? undefined);
+            progressTimerRef.current = null;
+            triggerComplete();
+          }
         }
       } catch {
         // player may not be ready
       }
     }, 500);
-  }, []);
+  }, [triggerComplete]);
 
   const stopProgressPolling = useCallback(() => {
     if (progressTimerRef.current) {
@@ -151,12 +192,6 @@ export function VideoPlayer({
       progressTimerRef.current = null;
     }
   }, []);
-
-  // Stable refs to avoid re-creating the player on every render
-  const onVideoCompleteRef = useRef(onVideoComplete);
-  useEffect(() => {
-    onVideoCompleteRef.current = onVideoComplete;
-  }, [onVideoComplete]);
 
   const startProgressPollingRef = useRef(startProgressPolling);
   useEffect(() => {
@@ -168,10 +203,13 @@ export function VideoPlayer({
     stopProgressPollingRef.current = stopProgressPolling;
   }, [stopProgressPolling]);
 
-  // Initialize YouTube player once API is ready
+  const triggerCompleteRef = useRef(triggerComplete);
+  useEffect(() => {
+    triggerCompleteRef.current = triggerComplete;
+  }, [triggerComplete]);
+
   useEffect(() => {
     if (!videoId || isLocked || completed) return;
-
     const containerId = playerContainerId;
 
     loadYTApi(() => {
@@ -194,7 +232,6 @@ export function VideoPlayer({
           onStateChange: (event) => {
             const state = event.data;
             const PS = window.YT.PlayerState;
-
             if (state === PS.PLAYING) {
               setIsPlaying(true);
               setShowOverlay(false);
@@ -203,12 +240,7 @@ export function VideoPlayer({
               setIsPlaying(false);
               stopProgressPollingRef.current();
             } else if (state === PS.ENDED) {
-              setIsPlaying(false);
-              setProgress(100);
-              stopProgressPollingRef.current();
-              setCompleted(true);
-              setShowOverlay(false);
-              onVideoCompleteRef.current();
+              triggerCompleteRef.current();
             }
           },
         },
@@ -221,7 +253,7 @@ export function VideoPlayer({
         try {
           playerRef.current.destroy();
         } catch {
-          // ignore
+          /* ignore */
         }
         playerRef.current = null;
       }
@@ -230,28 +262,13 @@ export function VideoPlayer({
 
   // ── Locked state ──────────────────────────────────────────────────────────────
   if (isLocked) {
-    const thumbnailUrl = videoId
-      ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
-      : null;
-
     return (
       <div
         className="relative w-full rounded-2xl overflow-hidden border"
-        style={{
-          border: "1px solid oklch(0.68 0.2 290 / 0.3)",
-          boxShadow:
-            "0 0 0 1px oklch(0.68 0.2 290 / 0.1), 0 8px 32px oklch(0.07 0.01 270 / 0.6)",
-        }}
+        style={{ border: "1px solid oklch(0.68 0.2 290 / 0.3)" }}
         data-ocid="video_player.locked"
       >
         <div className="aspect-video relative bg-background/80">
-          {thumbnailUrl && (
-            <img
-              src={thumbnailUrl}
-              alt="Locked lesson"
-              className="w-full h-full object-cover opacity-25"
-            />
-          )}
           <div
             className="absolute inset-0 flex flex-col items-center justify-center gap-3"
             style={{
@@ -264,7 +281,6 @@ export function VideoPlayer({
               style={{
                 background: "oklch(0.22 0.06 290 / 0.8)",
                 borderColor: "oklch(0.68 0.2 290 / 0.5)",
-                boxShadow: "0 0 24px oklch(0.68 0.2 290 / 0.25)",
               }}
             >
               <svg
@@ -289,12 +305,6 @@ export function VideoPlayer({
             >
               Complete previous lesson to unlock this video
             </p>
-            <p
-              className="text-xs text-center px-8 leading-relaxed"
-              style={{ color: "oklch(0.55 0.01 280)" }}
-            >
-              Watch the video and pass the quiz to progress
-            </p>
           </div>
         </div>
       </div>
@@ -305,41 +315,38 @@ export function VideoPlayer({
   if (!videoId) {
     return (
       <div
-        className="aspect-video w-full rounded-2xl flex flex-col items-center justify-center gap-3 border-2 border-dashed"
+        className="aspect-video w-full rounded-2xl flex flex-col items-center justify-center gap-4"
         style={{
-          background: "oklch(var(--card) / 0.4)",
-          borderColor: "oklch(var(--border) / 0.4)",
+          background:
+            "linear-gradient(135deg, oklch(0.10 0.015 280), oklch(0.14 0.020 285))",
+          border: "2px dashed oklch(var(--border) / 0.4)",
         }}
         data-ocid="video_player.no_video"
       >
-        <div className="text-4xl">🎬</div>
-        <div className="text-center">
-          <p className="text-sm font-semibold text-foreground">
-            No video for this lesson
+        <div className="text-5xl">🎬</div>
+        <div className="text-center px-8">
+          <p className="text-sm font-semibold text-foreground mb-1">
+            Video Coming Soon
           </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            The instructor hasn&apos;t added a YouTube link yet.
+          <p className="text-xs text-muted-foreground">
+            The instructor hasn't added a YouTube link yet.
           </p>
         </div>
       </div>
     );
   }
 
-  // ── Active/completed player ───────────────────────────────────────────────────
   const isActive = isPlaying || playerReady;
+  const thumbnailSrc = videoId
+    ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`
+    : null;
 
   return (
     <div
       className="relative w-full rounded-2xl overflow-hidden transition-all duration-500"
       style={{
         background: "oklch(0.06 0.012 275)",
-        border: `1px solid ${
-          completed
-            ? "oklch(0.65 0.18 150 / 0.5)"
-            : isActive
-              ? "oklch(var(--primary) / 0.5)"
-              : "oklch(var(--border) / 0.4)"
-        }`,
+        border: `1px solid ${completed ? "oklch(0.65 0.18 150 / 0.5)" : isActive ? "oklch(var(--primary) / 0.5)" : "oklch(var(--border) / 0.4)"}`,
         boxShadow: completed
           ? "0 0 0 1px oklch(0.65 0.18 150 / 0.15), 0 8px 40px oklch(0.07 0.01 270 / 0.7)"
           : isActive
@@ -373,10 +380,9 @@ export function VideoPlayer({
 
       {/* 16:9 player container */}
       <div className="aspect-video relative">
-        {/* YouTube IFrame target */}
         <div id={playerContainerId} className="w-full h-full" />
 
-        {/* Play overlay — shown before first play */}
+        {/* Play overlay */}
         <AnimatePresence>
           {showOverlay && !isPlaying && videoId && (
             <motion.div
@@ -392,15 +398,16 @@ export function VideoPlayer({
               }}
               data-ocid="video_player.play_overlay"
             >
-              {/* YouTube thumbnail */}
-              <img
-                src={`https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`}
-                alt=""
-                aria-hidden="true"
-                className="absolute inset-0 w-full h-full object-cover -z-10 opacity-50"
-              />
+              {thumbnailSrc && !imgError && (
+                <img
+                  src={thumbnailSrc}
+                  alt=""
+                  aria-hidden="true"
+                  className="absolute inset-0 w-full h-full object-cover -z-10 opacity-50"
+                  onError={() => setImgError(true)}
+                />
+              )}
 
-              {/* Play button */}
               <motion.div
                 className="w-20 h-20 rounded-full flex items-center justify-center mb-3"
                 style={{
@@ -424,7 +431,6 @@ export function VideoPlayer({
                   <polygon points="5 3 19 12 5 21 5 3" />
                 </svg>
               </motion.div>
-
               <p
                 className="font-display font-semibold text-sm tracking-wide"
                 style={{ color: "oklch(0.92 0.01 80)" }}
@@ -450,7 +456,6 @@ export function VideoPlayer({
                 border: "1px solid oklch(0.65 0.18 150 / 0.6)",
                 backdropFilter: "blur(12px)",
                 color: "oklch(0.75 0.18 150)",
-                boxShadow: "0 2px 12px oklch(0.65 0.18 150 / 0.25)",
               }}
               data-ocid="video_player.complete_badge"
             >
@@ -469,6 +474,27 @@ export function VideoPlayer({
                 <polyline points="20 6 9 17 4 12" />
               </svg>
               Video Complete
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Near-complete indicator */}
+        <AnimatePresence>
+          {progress >= 90 && progress < 100 && isPlaying && (
+            <motion.div
+              key="near-complete"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0 }}
+              className="absolute top-3 left-3 z-30 flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold"
+              style={{
+                background: "oklch(0.68 0.2 290 / 0.18)",
+                border: "1px solid oklch(0.68 0.2 290 / 0.5)",
+                backdropFilter: "blur(12px)",
+                color: "oklch(0.78 0.18 290)",
+              }}
+            >
+              📝 Almost done — quiz coming up!
             </motion.div>
           )}
         </AnimatePresence>

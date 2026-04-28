@@ -50,19 +50,19 @@ export type LoginResult =
 // ── Serialization helpers ──────────────────────────────────────────────────
 function serializeProfile(p: PublicProfile): SerializableProfile {
   return {
-    id: p.id.toString(),
-    name: p.name,
-    email: p.email,
-    phone: p.phone,
-    role: p.role as string,
+    id: p.id?.toString() ?? "unknown",
+    name: p.name ?? "",
+    email: p.email ?? "",
+    phone: p.phone ?? "",
+    role: (p.role as string) ?? "client",
     address: p.address,
-    status: p.status as string,
-    registeredAt: p.registeredAt.toString(),
+    status: (p.status as string) ?? "Active",
+    registeredAt: p.registeredAt?.toString() ?? "0",
     studentDetails: p.studentDetails
       ? {
-          courseType: p.studentDetails.courseType,
-          preferredSlot: p.studentDetails.preferredSlot,
-          learningMode: p.studentDetails.learningMode,
+          courseType: p.studentDetails.courseType ?? "",
+          preferredSlot: p.studentDetails.preferredSlot ?? "",
+          learningMode: p.studentDetails.learningMode ?? "",
         }
       : undefined,
   };
@@ -102,7 +102,9 @@ function mapLoginError(err: LoginError): {
       };
     case "other":
       return {
-        message: err.other ?? "Login failed. Please try again.",
+        message:
+          (err as { __kind__: "other"; other: string }).other ??
+          "Login failed. Please try again.",
         isPendingApproval: false,
       };
     default:
@@ -268,22 +270,45 @@ export function useAuth() {
     setSessionState(stored);
   }, []);
 
+  // Eagerly warm up the actor when it becomes available
+  useEffect(() => {
+    if (!actor || isFetching) return;
+    // Fire ping() to warm up the canister connection — non-blocking
+    void (actor as unknown as Record<string, () => Promise<unknown>>)
+      .ping?.()
+      .catch(() => {});
+  }, [actor, isFetching]);
+
   const login = useCallback(
     async (identifier: string, password: string): Promise<LoginResult> => {
-      if (!actor || isFetching) {
+      if (!actor) {
         return {
           success: false,
-          error: "Backend not ready. Please try again in a moment.",
+          error: "Backend not ready. Please wait a moment and try again.",
         };
       }
       setLoading(true);
       try {
         const passwordHash = await hashPassword(password);
         const normalizedId = normalizeIdentifier(identifier);
-        const result = await actor.loginByIdentifier(
-          normalizedId,
-          passwordHash,
-        );
+
+        // Retry up to 2 times to handle actor initialization race
+        let result = await actor
+          .loginByIdentifier(normalizedId, passwordHash)
+          .catch(async (e: unknown) => {
+            if (isFetching) {
+              // Wait for actor to finish fetching
+              await new Promise((r) => setTimeout(r, 1500));
+              return actor.loginByIdentifier(normalizedId, passwordHash);
+            }
+            throw e;
+          });
+
+        // On network error, retry once
+        if (!result) {
+          await new Promise((r) => setTimeout(r, 1000));
+          result = await actor.loginByIdentifier(normalizedId, passwordHash);
+        }
 
         if (result.__kind__ === "err") {
           const { message, isPendingApproval } = mapLoginError(result.err);
@@ -292,7 +317,8 @@ export function useAuth() {
 
         const profile = result.ok;
         const role = fromBackendRole(profile.role);
-        writeSession(profile.email || normalizedId, role, profile);
+        // Write FULL profile (name, email, phone, role, status) to localStorage
+        writeSession(profile.email ?? normalizedId, role, profile);
         setSessionState(readSession());
         return { success: true };
       } catch (err) {

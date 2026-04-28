@@ -65,6 +65,8 @@ const PAYMENT_TYPE_MAP: Record<string, BackendPaymentType> = {
   booking_initial: BackendPaymentType.BookingUpfront,
   booking_final: BackendPaymentType.BookingBalance,
   course_enrollment: BackendPaymentType.CourseEnrollment,
+  // CertificateDownload falls back to CourseEnrollment if not yet on backend
+  certificate_download: BackendPaymentType.CourseEnrollment,
 };
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -83,7 +85,11 @@ export interface InitiateStripePaymentParams {
   name: string;
   description: string;
   referenceId?: string;
-  paymentType?: "booking_initial" | "booking_final" | "course_enrollment";
+  paymentType?:
+    | "booking_initial"
+    | "booking_final"
+    | "course_enrollment"
+    | "certificate_download";
   prefillName?: string;
   prefillEmail?: string;
   onRedirecting?: () => void;

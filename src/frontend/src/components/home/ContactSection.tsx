@@ -1,33 +1,57 @@
 import { Button } from "@/components/ui/button";
-import { Mail, MessageSquare } from "lucide-react";
-
+import { Mail, MessageSquare, Phone } from "lucide-react";
 import { motion, useInView } from "motion/react";
 import { useRef } from "react";
 
-const CONTACT_IMAGES = [
+// CSS gradient tiles — no external images needed
+const SHOWCASE_TILES = [
   {
-    src: "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?q=80&w=800&fit=crop",
-    alt: "Portrait Session",
+    gradient:
+      "linear-gradient(135deg, oklch(0.28 0.08 70), oklch(0.18 0.05 75))",
+    emoji: "💑",
+    label: "Wedding Shoot",
   },
   {
-    src: "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?q=80&w=800&fit=crop",
-    alt: "Couple Shoot",
+    gradient:
+      "linear-gradient(135deg, oklch(0.22 0.08 290), oklch(0.16 0.05 280))",
+    emoji: "📸",
+    label: "Portrait Session",
   },
   {
-    src: "https://images.unsplash.com/photo-1607462109225-6b64ae2dd3cb?q=80&w=800&fit=crop",
-    alt: "Product Photography",
+    gradient:
+      "linear-gradient(135deg, oklch(0.24 0.08 30), oklch(0.17 0.05 40))",
+    emoji: "🎥",
+    label: "Film Production",
   },
   {
-    src: "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?q=80&w=800&fit=crop",
-    alt: "Event Coverage",
+    gradient:
+      "linear-gradient(135deg, oklch(0.22 0.07 190), oklch(0.15 0.05 180))",
+    emoji: "✨",
+    label: "Fashion Shoot",
   },
   {
-    src: "https://images.unsplash.com/photo-1485846234645-a62644f84728?q=80&w=800&fit=crop",
-    alt: "Film Production",
+    gradient:
+      "linear-gradient(135deg, oklch(0.26 0.08 82), oklch(0.18 0.05 70))",
+    emoji: "🎬",
+    label: "Short Film",
   },
   {
-    src: "https://images.unsplash.com/photo-1554048612-b6a482bc67e5?q=80&w=800&fit=crop",
-    alt: "Studio Lighting",
+    gradient:
+      "linear-gradient(135deg, oklch(0.22 0.07 155), oklch(0.15 0.05 145))",
+    emoji: "🎭",
+    label: "Event Coverage",
+  },
+  {
+    gradient:
+      "linear-gradient(135deg, oklch(0.2 0.06 250), oklch(0.14 0.04 260))",
+    emoji: "🏢",
+    label: "Corporate Shoot",
+  },
+  {
+    gradient:
+      "linear-gradient(135deg, oklch(0.24 0.07 25), oklch(0.17 0.05 35))",
+    emoji: "💍",
+    label: "Pre-Wedding",
   },
 ];
 
@@ -45,13 +69,29 @@ export function ContactSection() {
           "linear-gradient(180deg, oklch(0.13 0.018 280) 0%, oklch(0.10 0.015 275) 100%)",
       }}
     >
-      {/* Ambient glow */}
+      {/* Ambient gold glow */}
       <div
         className="absolute inset-0 pointer-events-none"
         aria-hidden="true"
         style={{
           background:
-            "radial-gradient(ellipse 70% 40% at 50% 100%, oklch(0.7 0.22 70 / 0.06) 0%, transparent 70%)",
+            "radial-gradient(ellipse 70% 40% at 50% 100%, oklch(0.7 0.22 70 / 0.07) 0%, transparent 70%)",
+        }}
+      />
+
+      {/* Teal glow top-right */}
+      <motion.div
+        className="absolute -top-32 right-0 w-96 h-96 pointer-events-none"
+        animate={{ opacity: [0.03, 0.1, 0.03] }}
+        transition={{
+          duration: 9,
+          repeat: Number.POSITIVE_INFINITY,
+          ease: "easeInOut",
+        }}
+        style={{
+          background:
+            "radial-gradient(circle, oklch(0.66 0.18 180 / 0.4) 0%, transparent 70%)",
+          filter: "blur(60px)",
         }}
       />
 
@@ -68,7 +108,7 @@ export function ContactSection() {
             className="section-heading text-foreground"
             style={{ fontFamily: "var(--font-display)" }}
           >
-            Let's Create{" "}
+            Let&apos;s Create{" "}
             <span
               className="bg-clip-text text-transparent"
               style={{ backgroundImage: "var(--gradient-gold)" }}
@@ -78,47 +118,107 @@ export function ContactSection() {
           </h2>
           <p className="mt-4 text-muted-foreground max-w-xl mx-auto leading-relaxed">
             Ready to book a session, enrol in a course, or just ask a question?
-            Reach out — we'd love to hear from you.
+            Reach out — we&apos;d love to hear from you.
           </p>
         </motion.div>
 
-        {/* Contact actions — email only, no phone number */}
+        {/* Contact cards */}
         <motion.div
-          className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-16"
+          className="grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-3xl mx-auto mb-12"
           initial={{ opacity: 0, y: 20 }}
           animate={isInView ? { opacity: 1, y: 0 } : {}}
           transition={{ duration: 0.7, delay: 0.2 }}
         >
-          {/* Email — only contact info shown on page */}
+          {/* Email */}
           <a
             href="mailto:ruchithabs550@gmail.com"
-            data-ocid="contact-email-cta"
-            className="flex items-center gap-3 px-7 py-4 rounded-xl border font-semibold text-base transition-smooth hover:-translate-y-0.5"
+            data-ocid="contact.email.link"
+            className="flex flex-col items-center gap-3 px-6 py-6 rounded-2xl border font-semibold transition-smooth hover:-translate-y-1 group"
             style={{
-              background: "oklch(0.14 0.02 280 / 0.8)",
-              borderColor: "oklch(0.7 0.22 70 / 0.35)",
-              color: "oklch(0.7 0.22 70)",
+              background: "oklch(0.14 0.02 280 / 0.7)",
+              borderColor: "oklch(0.7 0.22 70 / 0.3)",
+              backdropFilter: "blur(12px)",
             }}
           >
-            <Mail size={20} />
-            ruchithabs550@gmail.com
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center"
+              style={{
+                background: "oklch(0.7 0.22 70 / 0.15)",
+                border: "1px solid oklch(0.7 0.22 70 / 0.4)",
+              }}
+            >
+              <Mail size={22} style={{ color: "oklch(0.7 0.22 70)" }} />
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground mb-1 uppercase tracking-widest">
+                Email
+              </p>
+              <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-smooth break-all">
+                ruchithabs550@gmail.com
+              </p>
+            </div>
           </a>
 
+          {/* WhatsApp */}
+          <a
+            href="https://wa.me/917338501228"
+            target="_blank"
+            rel="noopener noreferrer"
+            data-ocid="contact.whatsapp.link"
+            className="flex flex-col items-center gap-3 px-6 py-6 rounded-2xl border font-semibold transition-smooth hover:-translate-y-1 group"
+            style={{
+              background: "oklch(0.14 0.02 280 / 0.7)",
+              borderColor: "oklch(0.55 0.2 150 / 0.35)",
+              backdropFilter: "blur(12px)",
+            }}
+          >
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center"
+              style={{
+                background: "oklch(0.55 0.2 150 / 0.15)",
+                border: "1px solid oklch(0.55 0.2 150 / 0.4)",
+              }}
+            >
+              <Phone size={22} style={{ color: "oklch(0.62 0.2 150)" }} />
+            </div>
+            <div className="text-center">
+              <p className="text-xs text-muted-foreground mb-1 uppercase tracking-widest">
+                WhatsApp
+              </p>
+              <p className="text-sm font-semibold text-foreground group-hover:text-primary transition-smooth">
+                +91 73385 01228
+              </p>
+            </div>
+          </a>
+
+          {/* Book CTA */}
           <Button
             asChild
-            variant="default"
-            className="btn-primary-luxury px-7 py-4 h-auto text-base rounded-xl"
-            data-ocid="contact-book-cta"
+            className="btn-primary-luxury h-auto rounded-2xl py-6 flex flex-col gap-3 items-center"
+            data-ocid="contact.book_cta.primary_button"
           >
-            <a href="/booking">
-              <MessageSquare size={18} className="mr-2" />
-              Book a Session
+            <a href="/booking" className="flex flex-col gap-3 items-center">
+              <div
+                className="w-12 h-12 rounded-full flex items-center justify-center"
+                style={{
+                  background: "oklch(0.1 0.01 270 / 0.4)",
+                  border: "1px solid oklch(0.99 0.002 80 / 0.3)",
+                }}
+              >
+                <MessageSquare size={22} />
+              </div>
+              <div className="text-center">
+                <p className="text-xs opacity-70 mb-1 uppercase tracking-widest">
+                  Studio
+                </p>
+                <p className="text-sm font-semibold">Book a Session</p>
+              </div>
             </a>
           </Button>
         </motion.div>
       </div>
 
-      {/* Infinite scroll image carousel */}
+      {/* Infinite scroll CSS gradient tiles */}
       <div
         className="w-full overflow-hidden"
         aria-label="Studio photography showcase"
@@ -130,24 +230,38 @@ export function ContactSection() {
         >
           <div
             className="flex gap-4"
-            style={{ animation: "contactCarousel 30s linear infinite" }}
+            style={{ animation: "contactCarousel 32s linear infinite" }}
             aria-hidden="true"
           >
-            {[...CONTACT_IMAGES, ...CONTACT_IMAGES, ...CONTACT_IMAGES].map(
-              (img, i) => {
-                const key = `contact-img-${i}`;
+            {[...SHOWCASE_TILES, ...SHOWCASE_TILES, ...SHOWCASE_TILES].map(
+              (tile, i) => {
+                const key = `contact-tile-${i}`;
                 return (
                   <div
                     key={key}
-                    className="flex-shrink-0 w-72 h-48 rounded-2xl overflow-hidden border"
-                    style={{ borderColor: "oklch(0.7 0.22 70 / 0.18)" }}
+                    className="flex-shrink-0 w-72 h-48 rounded-2xl overflow-hidden border relative flex items-end p-4"
+                    style={{
+                      background: tile.gradient,
+                      borderColor: "oklch(0.7 0.22 70 / 0.18)",
+                    }}
                   >
-                    <img
-                      src={img.src}
-                      alt={img.alt}
-                      className="w-full h-full object-cover transition-transform duration-700 hover:scale-110"
-                      loading="lazy"
-                    />
+                    {/* Emoji backdrop */}
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <span
+                        className="text-7xl opacity-15"
+                        style={{ filter: "blur(2px)" }}
+                      >
+                        {tile.emoji}
+                      </span>
+                    </div>
+                    {/* Shine */}
+                    <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
+                    {/* Bottom overlay */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    {/* Label */}
+                    <span className="relative z-10 text-xs font-semibold text-white/80 tracking-wide">
+                      {tile.label}
+                    </span>
                   </div>
                 );
               },

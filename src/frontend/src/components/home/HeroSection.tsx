@@ -1,41 +1,56 @@
 import { Link } from "@tanstack/react-router";
-import { Camera, ChevronDown, Play, Sparkles } from "lucide-react";
+import { Camera, ChevronDown, Crown, Sparkles } from "lucide-react";
 import { motion, useScroll, useTransform } from "motion/react";
 import { useEffect, useRef, useState } from "react";
 import { useCmsSection } from "../../hooks/useCmsContent";
 
-const PARTICLES = Array.from({ length: 20 }, (_, i) => ({
+// Pure CSS bokeh particles — no images needed
+const PARTICLES = Array.from({ length: 26 }, (_, i) => ({
   id: i,
   x: (i * 17 + 3) % 100,
   y: (i * 23 + 7) % 100,
-  size: (i % 4) + 1,
-  duration: 7 + (i % 7),
-  delay: (i % 5) * 1.1,
+  size: 2 + (i % 5),
+  duration: 6 + (i % 8),
+  delay: (i % 6) * 0.9,
+  color:
+    i % 4 === 0
+      ? "oklch(0.82 0.18 82 / 0.8)"
+      : i % 4 === 1
+        ? "oklch(0.68 0.2 290 / 0.6)"
+        : i % 4 === 2
+          ? "oklch(0.66 0.18 180 / 0.55)"
+          : "oklch(0.92 0.01 80 / 0.4)",
 }));
 
 const SHUTTER_BLADES = Array.from({ length: 8 }, (_, i) => i);
 
-const FILM_IMAGES = [
-  "https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=120&h=80&fit=crop",
-  "https://images.unsplash.com/photo-1554048612-b6a482bc67e5?w=120&h=80&fit=crop",
-  "https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=120&h=80&fit=crop",
-  "https://images.unsplash.com/photo-1452587925148-ce544e77e70d?w=120&h=80&fit=crop",
-  "https://images.unsplash.com/photo-1528360983277-13d401cdc186?w=120&h=80&fit=crop",
-  "https://images.unsplash.com/photo-1583244532610-2cf4ba9e3f73?w=120&h=80&fit=crop",
-  "https://images.unsplash.com/photo-1519741347686-c1e0aadf4611?w=120&h=80&fit=crop",
-  "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=120&h=80&fit=crop",
+const FILM_GRADIENT_COLORS = [
+  "linear-gradient(135deg, oklch(0.2 0.04 70), oklch(0.15 0.03 80))",
+  "linear-gradient(135deg, oklch(0.18 0.04 290), oklch(0.14 0.03 280))",
+  "linear-gradient(135deg, oklch(0.22 0.04 30), oklch(0.16 0.03 40))",
+  "linear-gradient(135deg, oklch(0.18 0.04 190), oklch(0.14 0.03 180))",
+  "linear-gradient(135deg, oklch(0.2 0.04 70), oklch(0.15 0.03 65))",
+  "linear-gradient(135deg, oklch(0.16 0.04 155), oklch(0.13 0.03 145))",
+  "linear-gradient(135deg, oklch(0.22 0.05 82), oklch(0.17 0.04 75))",
+  "linear-gradient(135deg, oklch(0.18 0.04 250), oklch(0.14 0.03 260))",
 ];
 
 const DEFAULT_HEADING = "Turning Visions Into Timeless Art";
 const DEFAULT_SUBHEADING =
   "India's premier photography, videography & short film studio — where every frame becomes a masterpiece";
 const DEFAULT_CTA = "Book a Session";
-const DEFAULT_CTA_SECONDARY = "View Services";
+const DEFAULT_CTA_SECONDARY = "Explore Courses";
 
 const STATS = [
   ["500+", "Happy Clients"],
   ["23", "Services"],
   ["50+", "Courses"],
+];
+
+const FOUNDERS = [
+  { name: "Ruchitha B S", initial: "R", color: "oklch(0.72 0.14 82)" },
+  { name: "Ashitha S", initial: "A", color: "oklch(0.72 0.2 290)" },
+  { name: "Prarthana R", initial: "P", color: "oklch(0.66 0.18 180)" },
 ];
 
 export function HeroSection() {
@@ -91,7 +106,7 @@ export function HeroSection() {
     if (cmsHero.ctaSecondaryText) setCtaSecondaryText(cmsHero.ctaSecondaryText);
   }, [cmsHero]);
 
-  const headingParts = heading.split(/\b(Timeless Art|Art|Visions|Studio)\b/);
+  const isDefaultHeading = heading === DEFAULT_HEADING;
 
   return (
     <section
@@ -99,22 +114,22 @@ export function HeroSection() {
       className="relative min-h-screen flex flex-col items-center justify-center overflow-hidden"
       data-ocid="hero.section"
     >
-      {/* Parallax background */}
+      {/* Multi-layer cinematic background */}
       <motion.div
-        className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-110"
+        className="absolute inset-0 scale-110"
         style={{
-          backgroundImage:
-            "url('/assets/generated/hero-studio-cinematic.dim_1920x1080.jpg'), url('https://images.unsplash.com/photo-1516035069371-29a1b244cc32?w=1920&q=80')",
+          background:
+            "linear-gradient(160deg, oklch(0.07 0.025 265) 0%, oklch(0.1 0.035 280) 35%, oklch(0.08 0.02 295) 65%, oklch(0.06 0.015 270) 100%)",
           y: bgY,
         }}
       />
 
-      {/* Dark cinematic overlay */}
+      {/* Cinematic overlay */}
       <motion.div
         className="absolute inset-0"
         style={{
           background:
-            "linear-gradient(160deg, oklch(0.05 0.015 270 / 0.94) 0%, oklch(0.07 0.02 280 / 0.78) 50%, oklch(0.04 0.01 265 / 0.96) 100%)",
+            "linear-gradient(180deg, oklch(0.05 0.015 270 / 0.9) 0%, oklch(0.08 0.025 285 / 0.65) 50%, oklch(0.04 0.01 265 / 0.95) 100%)",
           opacity: overlayOpacity,
         }}
       />
@@ -124,14 +139,14 @@ export function HeroSection() {
         className="absolute inset-0 pointer-events-none"
         style={{
           background:
-            "radial-gradient(ellipse 80% 75% at 50% 50%, transparent 35%, oklch(0.04 0.01 270 / 0.85) 100%)",
+            "radial-gradient(ellipse 80% 75% at 50% 50%, transparent 30%, oklch(0.04 0.01 270 / 0.9) 100%)",
         }}
       />
 
-      {/* Gold light pulse */}
+      {/* Gold ambient glow */}
       <motion.div
         className="absolute inset-0 pointer-events-none"
-        animate={{ opacity: [0.2, 0.5, 0.2] }}
+        animate={{ opacity: [0.2, 0.55, 0.2] }}
         transition={{
           duration: 6,
           repeat: Number.POSITIVE_INFINITY,
@@ -139,28 +154,44 @@ export function HeroSection() {
         }}
         style={{
           background:
-            "radial-gradient(ellipse 55% 35% at 20% 70%, oklch(0.72 0.14 82 / 0.12) 0%, transparent 70%)",
+            "radial-gradient(ellipse 55% 35% at 20% 70%, oklch(0.72 0.14 82 / 0.15) 0%, transparent 70%)",
         }}
       />
+      {/* Teal accent glow */}
       <motion.div
         className="absolute inset-0 pointer-events-none"
-        animate={{ opacity: [0.1, 0.35, 0.1] }}
+        animate={{ opacity: [0.08, 0.28, 0.08] }}
         transition={{
-          duration: 9,
+          duration: 10,
           repeat: Number.POSITIVE_INFINITY,
           ease: "easeInOut",
-          delay: 3,
+          delay: 2,
         }}
         style={{
           background:
-            "radial-gradient(ellipse 45% 45% at 80% 30%, oklch(0.68 0.2 290 / 0.1) 0%, transparent 70%)",
+            "radial-gradient(ellipse 45% 40% at 75% 25%, oklch(0.66 0.18 180 / 0.12) 0%, transparent 70%)",
+        }}
+      />
+      {/* Violet glow */}
+      <motion.div
+        className="absolute inset-0 pointer-events-none"
+        animate={{ opacity: [0.06, 0.22, 0.06] }}
+        transition={{
+          duration: 8,
+          repeat: Number.POSITIVE_INFINITY,
+          ease: "easeInOut",
+          delay: 4,
+        }}
+        style={{
+          background:
+            "radial-gradient(ellipse 40% 45% at 85% 60%, oklch(0.68 0.2 290 / 0.1) 0%, transparent 70%)",
         }}
       />
 
-      {/* Top-left light leak */}
+      {/* Top-left gold light leak */}
       <motion.div
         className="absolute -top-20 -left-20 w-80 h-80 pointer-events-none"
-        animate={{ opacity: [0.04, 0.16, 0.04], scale: [1, 1.12, 1] }}
+        animate={{ opacity: [0.04, 0.18, 0.04], scale: [1, 1.12, 1] }}
         transition={{
           duration: 12,
           repeat: Number.POSITIVE_INFINITY,
@@ -168,12 +199,29 @@ export function HeroSection() {
         }}
         style={{
           background:
-            "radial-gradient(circle, oklch(0.82 0.18 88 / 0.3) 0%, transparent 70%)",
+            "radial-gradient(circle, oklch(0.82 0.18 88 / 0.35) 0%, transparent 70%)",
           filter: "blur(40px)",
         }}
       />
 
-      {/* Floating bokeh particles */}
+      {/* Coral accent top-right */}
+      <motion.div
+        className="absolute -top-10 -right-10 w-64 h-64 pointer-events-none"
+        animate={{ opacity: [0.02, 0.1, 0.02], scale: [1, 1.15, 1] }}
+        transition={{
+          duration: 14,
+          repeat: Number.POSITIVE_INFINITY,
+          ease: "easeInOut",
+          delay: 6,
+        }}
+        style={{
+          background:
+            "radial-gradient(circle, oklch(0.72 0.22 25 / 0.3) 0%, transparent 70%)",
+          filter: "blur(50px)",
+        }}
+      />
+
+      {/* Floating CSS bokeh particles */}
       {PARTICLES.map((p) => (
         <motion.div
           key={p.id}
@@ -183,17 +231,12 @@ export function HeroSection() {
             top: `${p.y}%`,
             width: p.size,
             height: p.size,
-            background:
-              p.id % 3 === 0
-                ? "oklch(0.72 0.14 82 / 0.8)"
-                : p.id % 3 === 1
-                  ? "oklch(0.68 0.2 290 / 0.6)"
-                  : "oklch(0.9 0.01 280 / 0.4)",
+            background: p.color,
           }}
           animate={{
-            y: [0, -30, 0],
-            opacity: [0.15, 0.9, 0.15],
-            scale: [1, 1.5, 1],
+            y: [0, -35, 0],
+            opacity: [0.12, 1, 0.12],
+            scale: [1, 1.6, 1],
           }}
           transition={{
             duration: p.duration,
@@ -223,7 +266,7 @@ export function HeroSection() {
               style={{
                 transform: `rotate(${blade * 45}deg)`,
                 background:
-                  "linear-gradient(0deg, oklch(0.72 0.14 82 / 0.05) 0%, transparent 50%)",
+                  "linear-gradient(0deg, oklch(0.72 0.14 82 / 0.06) 0%, transparent 50%)",
                 clipPath: "polygon(50% 0%, 55% 50%, 50% 100%, 45% 50%)",
               }}
             />
@@ -260,8 +303,8 @@ export function HeroSection() {
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           className="flex items-center gap-2 px-5 py-2 rounded-full border"
           style={{
-            borderColor: "oklch(0.72 0.14 82 / 0.4)",
-            background: "oklch(0.08 0.01 270 / 0.75)",
+            borderColor: "oklch(0.72 0.14 82 / 0.45)",
+            background: "oklch(0.08 0.01 270 / 0.8)",
             backdropFilter: "blur(12px)",
           }}
         >
@@ -269,6 +312,7 @@ export function HeroSection() {
           <span className="section-label text-xs tracking-[2px]">
             RAP Integrated Studio
           </span>
+          <Crown size={11} style={{ color: "oklch(0.72 0.14 82)" }} />
         </motion.div>
 
         {/* Headline */}
@@ -282,7 +326,7 @@ export function HeroSection() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1.1, delay: 0.18, ease: [0.22, 1, 0.36, 1] }}
         >
-          {heading === DEFAULT_HEADING ? (
+          {isDefaultHeading ? (
             <>
               Turning Visions Into{" "}
               <span
@@ -296,22 +340,7 @@ export function HeroSection() {
               </span>
             </>
           ) : (
-            headingParts.map((part, i) =>
-              i % 2 === 1 ? (
-                <span
-                  key={`hl-${part.slice(0, 8)}`}
-                  className="bg-clip-text text-transparent"
-                  style={{
-                    backgroundImage: "var(--gradient-gold)",
-                    textShadow: "none",
-                  }}
-                >
-                  {part}
-                </span>
-              ) : (
-                <span key={`pl-${part.slice(0, 8)}-${i}`}>{part}</span>
-              ),
-            )
+            heading
           )}
         </motion.h1>
 
@@ -372,7 +401,7 @@ export function HeroSection() {
               {ctaText}
             </motion.button>
           </Link>
-          <Link to="/services" data-ocid="hero.services_cta.secondary_button">
+          <Link to="/courses" data-ocid="hero.courses_cta.secondary_button">
             <motion.button
               type="button"
               className="flex items-center gap-2 px-7 py-4 rounded-xl font-semibold text-base transition-smooth"
@@ -389,14 +418,56 @@ export function HeroSection() {
               }}
               whileTap={{ scale: 0.96 }}
             >
-              <Play size={15} />
               {ctaSecondaryText}
             </motion.button>
           </Link>
         </motion.div>
+
+        {/* Founders credits */}
+        <motion.div
+          className="flex flex-wrap items-center justify-center gap-3 mt-2"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, delay: 0.9 }}
+        >
+          <span
+            className="text-xs tracking-widest uppercase"
+            style={{ color: "oklch(0.42 0.008 280)" }}
+          >
+            Founded by
+          </span>
+          <div className="flex items-center gap-2">
+            {FOUNDERS.map((f, i) => (
+              <motion.div
+                key={f.name}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-full border"
+                style={{
+                  borderColor: `${f.color.replace(")", " / 0.3)")}`,
+                  background: `${f.color.replace(")", " / 0.08)")}`,
+                }}
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 1 + i * 0.1 }}
+              >
+                <div
+                  className="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-black"
+                  style={{ background: f.color, color: "oklch(0.08 0.01 270)" }}
+                >
+                  {f.initial}
+                </div>
+                <span
+                  className="text-[10px] font-medium whitespace-nowrap"
+                  style={{ color: f.color }}
+                >
+                  {f.name}
+                </span>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
       </motion.div>
 
-      {/* Film strip */}
+      {/* Film strip — pure CSS gradient tiles */}
       <div className="absolute bottom-0 left-0 right-0 h-20 flex items-center overflow-hidden pointer-events-none">
         <div
           className="absolute inset-0"
@@ -415,22 +486,18 @@ export function HeroSection() {
           }}
         >
           {[
-            ...FILM_IMAGES.map((src, i) => ({ src, key: `a-${i}-${src}` })),
-            ...FILM_IMAGES.map((src, i) => ({ src, key: `b-${i}-${src}` })),
-            ...FILM_IMAGES.map((src, i) => ({ src, key: `c-${i}-${src}` })),
-          ].map(({ src, key }) => (
+            ...FILM_GRADIENT_COLORS.map((bg, i) => ({ bg, key: `a-${i}` })),
+            ...FILM_GRADIENT_COLORS.map((bg, i) => ({ bg, key: `b-${i}` })),
+            ...FILM_GRADIENT_COLORS.map((bg, i) => ({ bg, key: `c-${i}` })),
+          ].map(({ bg, key }) => (
             <div
               key={key}
-              className="flex-shrink-0 w-28 h-16 rounded-sm overflow-hidden border"
-              style={{ borderColor: "oklch(0.72 0.14 82 / 0.22)" }}
-            >
-              <img
-                src={src}
-                alt=""
-                className="w-full h-full object-cover opacity-50"
-                loading="lazy"
-              />
-            </div>
+              className="flex-shrink-0 w-28 h-16 rounded-sm border opacity-40"
+              style={{
+                background: bg,
+                borderColor: "oklch(0.72 0.14 82 / 0.22)",
+              }}
+            />
           ))}
         </motion.div>
       </div>
